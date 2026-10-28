@@ -8,7 +8,7 @@ import { useApp } from "@/lib/store"
 import type { FeatureId } from "@/lib/features"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { IconTile, PageBody, PageHeader, Section } from "@/components/app/page"
 import { PhaseBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 
@@ -49,21 +49,21 @@ export default function IntegrationsPage() {
         {groups.map((g) => (
           <Section key={g.phase} title={g.title} badge={<PhaseBadge phase={g.phase} />}>
             <PremiumGate feature={g.phase === 2 ? "google_calendar" : "wearables"} compact>
-              <div className="space-y-2">
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
                 {INTEGRATIONS.filter((i) => i.phase === g.phase).map((i) => {
                   const on = integrations[i.id]
                   return (
-                    <div key={i.id} className="flex items-center gap-3 rounded-xl border bg-card p-3">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-sage text-forest">
-                        <i.icon className="size-5" aria-hidden />
-                      </span>
+                    <div key={i.id} className="flex min-h-[68px] items-center gap-3 px-4 py-3">
+                      <IconTile>
+                        <i.icon aria-hidden />
+                      </IconTile>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium">{i.name}</p>
-                        <p className="text-sm text-muted-foreground">{on ? "Connected" : i.description}</p>
+                        <p className="text-body font-medium">{i.name}</p>
+                        <p className="text-caption text-muted-foreground">{on ? "Connected" : i.description}</p>
                       </div>
                       <Button
                         size="sm"
-                        variant={on ? "outline" : "default"}
+                        variant={on ? "outline" : "secondary"}
                         onClick={() => {
                           if (on) {
                             setConnected(i.id, false)
@@ -92,20 +92,20 @@ export default function IntegrationsPage() {
             <DialogDescription>NutriPlan will ask {pending?.name} for permission to:</DialogDescription>
           </DialogHeader>
           {pending && (
-            <div className="space-y-3 text-sm">
+            <div className="text-callout space-y-3 rounded-xl bg-muted p-4">
               <div>
-                <p className="font-medium">Read</p>
+                <p className="font-semibold">Read</p>
                 <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">{pending.reads.map((r) => <li key={r}>{r}</li>)}</ul>
               </div>
               {pending.writes.length > 0 && (
                 <div>
-                  <p className="font-medium">Write</p>
+                  <p className="font-semibold">Write</p>
                   <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">{pending.writes.map((r) => <li key={r}>{r}</li>)}</ul>
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">You can disconnect at any time. Prototype: no real connection is made.</p>
-            </div>
+              </div>
           )}
+          <p className="text-caption -mt-2 text-muted-foreground">You can disconnect at any time. Prototype: no real connection is made.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPending(null)}>Not now</Button>
             <Button

@@ -6,6 +6,7 @@ import { FEATURES, tierAllows, type FeatureId } from "@/lib/features"
 import { useApp } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { ListGroup, ListRow } from "@/components/app/page"
 import type { Phase } from "@/lib/types"
 
 /** Release-phase marker for stakeholder reviews (§43). Toggle in Profile → Prototype settings. */
@@ -34,10 +35,17 @@ export function useFeature(feature: FeatureId) {
  * Wraps a premium feature. When the current (proposed) tier doesn't include it,
  * shows a calm upsell card instead of the content. Never wrap safety features.
  */
-export function PremiumGate({ feature, children, compact }: { feature: FeatureId; children: React.ReactNode; compact?: boolean }) {
+export function PremiumGate({ feature, children, compact, variant = "card" }: { feature: FeatureId; children: React.ReactNode; compact?: boolean; variant?: "card" | "row" }) {
   const f = useFeature(feature)
   if (f.allowed) return <>{children}</>
   const tierName = f.tier === "family" ? "Family" : f.tier === "professional" ? "Professional" : "Premium"
+  // Row variant: for screens with several gated sections, so upsells don't stack (UI-SPEC §5.5).
+  if (variant === "row")
+    return (
+      <ListGroup>
+        <ListRow href={`/subscription?feature=${feature}`} icon={<Crown />} iconTone="muted" title={f.name} description={`Included in ${tierName} · see plans`} />
+      </ListGroup>
+    )
   return (
     <div className={cn("rounded-2xl border border-dashed border-input bg-card text-center", compact ? "px-4 py-5" : "px-6 py-8")}>
       <span className="mx-auto mb-4 grid size-12 place-items-center rounded-[14px] bg-sage text-forest">

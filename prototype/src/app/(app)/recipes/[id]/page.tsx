@@ -3,12 +3,13 @@
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
-import { BadgeCheck, CalendarPlus, Clock, Hourglass, Minus, NotebookPen, Plus, Refrigerator, Trash2, Users, Wand2 } from "lucide-react"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { BadgeCheck, CalendarPlus, ChefHat, Clock, Flame, Hourglass, NotebookPen, Refrigerator, Trash2, Wand2 } from "lucide-react"
+import { ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
+import { ChoiceCard, Stepper } from "@/components/app/controls"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
-import { EstimateNote, Macro } from "@/components/app/nutrition"
+import { EstimateNote } from "@/components/app/nutrition"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useActivePlan, useActiveProfile, useApp } from "@/lib/store"
@@ -17,7 +18,6 @@ import { MEAL_LABEL } from "@/lib/planning"
 import { fmt, recipeAllergens, recipeCostPerServing, recipeNutrition, violatesHardConstraints } from "@/lib/nutrition"
 import { formatDay, todayISO } from "@/lib/date"
 import { friendlyGrams, useRecipeLookup } from "@/lib/area-c-utils"
-import { cn } from "@/lib/utils"
 import type { Recipe } from "@/lib/types"
 
 /** Recipe screen (§9.4) with serving scaling (§9.5) and allergen checks (§13.6). */
@@ -36,7 +36,7 @@ export default function RecipePage() {
       <>
         <PageHeader title="Recipe" back="/recipes" />
         <PageBody>
-          <p className="text-sm text-muted-foreground">This recipe isn&apos;t available.</p>
+          <p className="text-callout text-muted-foreground">This recipe isn&apos;t available.</p>
         </PageBody>
       </>
     )
@@ -51,25 +51,30 @@ export default function RecipePage() {
   const allergens = recipeAllergens(recipe)
   const hasOil = recipe.ingredients.some((i) => i.foodId.endsWith("_oil"))
 
+  const canAdd = recipe.profile === "adult" && recipe.reviewStatus === "approved"
+
   return (
     <>
-      <PageHeader title="" back />
-      <PageBody className="pt-0">
-        <RecipeThumb recipe={recipe} size="hero" />
-        <div>
-          <ReviewBadge status={recipe.reviewStatus} />
-          <h1 className="mt-2 font-serif text-[28px] leading-tight">{recipe.name}</h1>
-          <p className="text-muted-foreground" lang="bn">
-            {recipe.nameBn}
-          </p>
-          <p className="mt-2 text-sm">{recipe.description}</p>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Clock className="size-4" /> {recipe.prepMinutes} min prep · {recipe.cookMinutes} min cook
-            </span>
-            <span className="capitalize">{recipe.difficulty}</span>
-            {recipe.texture && <span>{recipe.texture}</span>}
-            {recipe.minAgeMonths && <span>From {recipe.minAgeMonths} months</span>}
+      <PageHeader title="Recipe" back />
+      <PageBody className="pt-1">
+        <div className="space-y-4">
+          <RecipeThumb recipe={recipe} size="hero" />
+          <div>
+            <ReviewBadge status={recipe.reviewStatus} />
+            <h2 className="text-display mt-3">{recipe.name}</h2>
+            <p className="text-body mt-0.5 text-muted-foreground" lang="bn">
+              {recipe.nameBn}
+            </p>
+            <p className="text-body mt-3">{recipe.description}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <Pill icon={<Clock />}>{recipe.prepMinutes} min prep</Pill>
+              <Pill icon={<Flame />}>{recipe.cookMinutes} min cook</Pill>
+              <Pill icon={<ChefHat />} className="capitalize">
+                {recipe.difficulty}
+              </Pill>
+              {recipe.texture && <Pill>{recipe.texture}</Pill>}
+              {recipe.minAgeMonths && <Pill tone="sage">From {recipe.minAgeMonths} months</Pill>}
+            </div>
           </div>
         </div>
 
@@ -80,109 +85,107 @@ export default function RecipePage() {
         )}
 
         {allergens.length > 0 && (
-          <p className="text-sm">
-            <span className="font-medium">Contains:</span> {allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(", ")}
-          </p>
+          <div className="text-callout flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 font-medium">Contains</span>
+            {allergens.map((a) => (
+              <Pill key={a} tone="terracotta">
+                {ALLERGEN_LABELS[a] ?? a}
+              </Pill>
+            ))}
+          </div>
         )}
 
-        <div className="flex items-center justify-between rounded-2xl border bg-card p-3">
-          <span className="flex items-center gap-2 text-sm font-medium">
-            <Users className="size-4.5 text-forest" /> Servings
-          </span>
-          <div className="flex items-center gap-2">
-            <Button size="icon-sm" variant="outline" aria-label="Fewer servings" disabled={s <= 1} onClick={() => setServings(s - 1)}>
-              <Minus />
-            </Button>
-            <span className="tabular w-6 text-center font-semibold">{s}</span>
-            <Button size="icon-sm" variant="outline" aria-label="More servings" disabled={s >= 12} onClick={() => setServings(s + 1)}>
-              <Plus />
+        {!conflict && (
+          <div className="space-y-2">
+            {canAdd && <AddToPlan recipe={recipe} />}
+            <Button variant={canAdd ? "outline" : "default"} size={canAdd ? "default" : "lg"} className="w-full" onClick={() => router.push(`/log/new?recipe=${recipe.id}`)}>
+              <NotebookPen className="size-4" /> I ate this
             </Button>
           </div>
-        </div>
+        )}
 
         <Section title="Nutrition per serving">
-          <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-            <Macro label="Energy" value={perServing.energyKcal} unit="kcal" estimate />
-            <Macro label="Protein" value={perServing.proteinG} estimate />
-            <Macro label="Carbs" value={perServing.carbsG} estimate />
-            <Macro label="Fat" value={perServing.fatG} estimate />
+          <div className="grid grid-cols-2 gap-2">
+            <StatTile label="Energy" value={`~${Math.round(perServing.energyKcal)}`} unit="kcal" />
+            <StatTile label="Protein" value={`~${Math.round(perServing.proteinG)}`} unit="g" />
+            <StatTile label="Carbohydrate" value={`~${Math.round(perServing.carbsG)}`} unit="g" />
+            <StatTile label="Fat" value={`~${Math.round(perServing.fatG)}`} unit="g" />
           </div>
-          <p className="tabular text-sm text-muted-foreground">
-            Whole recipe ({s} servings): ~{fmt.kcal(total.energyKcal)} · about {fmt.bdt(recipeCostPerServing(recipe) * s)}
-          </p>
           <EstimateNote>Calculated from each ingredient&apos;s cooked or raw weight in our food database. Changing ingredients recalculates these values.</EstimateNote>
         </Section>
 
         <Section title="Ingredients">
-          <ul className="divide-y rounded-2xl border bg-card">
+          <ListGroup>
+            <ListRow
+              title="Servings"
+              description={`Whole recipe ~${fmt.kcal(total.energyKcal)} · about ${fmt.bdt(recipeCostPerServing(recipe) * s)}`}
+              trailing={<Stepper label="servings" value={s} decDisabled={s <= 1} incDisabled={s >= 12} onDec={() => setServings(s - 1)} onInc={() => setServings(s + 1)} />}
+            />
             {variant.ingredients.map((i) => {
               const f = FOOD_MAP[i.foodId]
               const grams = i.grams * factor
               const unit = f?.units.find((u) => Math.abs(grams / u.grams - Math.round(grams / u.grams)) < 0.15 && grams / u.grams >= 1)
               return (
-                <li key={i.foodId} className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
-                  <span>
-                    {f?.name ?? i.foodId}
-                    {f && <span className="text-xs text-muted-foreground"> · {f.state}</span>}
-                    {i.note && <span className="block text-xs text-muted-foreground">{i.note}</span>}
-                  </span>
-                  <span className="tabular shrink-0 text-right text-muted-foreground">
-                    {friendlyGrams(grams)}
-                    {unit && <span className="block text-xs">≈ {Math.round(grams / unit.grams)} × {unit.label.replace(/^1 /, "")}</span>}
-                  </span>
-                </li>
+                <div key={i.foodId} className="flex items-start justify-between gap-4 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-body">{f?.name ?? i.foodId}</p>
+                    <p className="text-caption text-muted-foreground">
+                      {f && <span className="capitalize">{f.state}</span>}
+                      {i.note && ` · ${i.note}`}
+                    </p>
+                  </div>
+                  <div className="tabular shrink-0 text-right">
+                    <p className="text-callout font-semibold">{friendlyGrams(grams)}</p>
+                    {unit && (
+                      <p className="text-caption text-muted-foreground">
+                        ≈ {Math.round(grams / unit.grams)} × {unit.label.replace(/^1 /, "")}
+                      </p>
+                    )}
+                  </div>
+                </div>
               )
             })}
-          </ul>
+          </ListGroup>
+          {s !== recipe.servings && <p className="text-caption px-1 text-muted-foreground">Scaled from {recipe.servings} servings. Cooking times and seasoning may not scale exactly.</p>}
         </Section>
 
         <Section title="Steps">
-          <ol className="space-y-3">
+          <ol className="space-y-4">
             {recipe.steps.map((step, i) => (
-              <li key={i} className="flex gap-3 text-sm">
-                <span className="tabular grid size-6 shrink-0 place-items-center rounded-full bg-sage text-xs font-semibold text-forest">{i + 1}</span>
-                <span className="pt-0.5">{step}</span>
+              <li key={i} className="flex gap-3.5">
+                <span className="tabular text-callout grid size-7 shrink-0 place-items-center rounded-full bg-forest font-semibold text-ivory">{i + 1}</span>
+                <p className="text-body pt-0.5">{step}</p>
               </li>
             ))}
           </ol>
         </Section>
 
-        {recipe.safetyNotes.length > 0 && (
-          <CautionNote title="Food safety">
-            <ul className="list-disc pl-4">
-              {recipe.safetyNotes.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
-          </CautionNote>
-        )}
-        {recipe.storage && (
-          <p className="flex gap-2 text-sm text-muted-foreground">
-            <Refrigerator className="size-4.5 shrink-0" /> {recipe.storage}
-          </p>
+        {(recipe.safetyNotes.length > 0 || recipe.storage) && (
+          <Section title="Safety and storage">
+            {recipe.safetyNotes.length > 0 && (
+              <CautionNote title="Food safety">
+                <ul className="list-disc space-y-0.5 pl-4">
+                  {recipe.safetyNotes.map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              </CautionNote>
+            )}
+            {recipe.storage && (
+              <Surface tone="muted" className="text-callout flex gap-3">
+                <Refrigerator className="mt-0.5 size-5 shrink-0 text-forest" />
+                <span>{recipe.storage}</span>
+              </Surface>
+            )}
+          </Section>
         )}
 
         {recipe.profile === "adult" && hasOil && (
           <Section title="Variations" badge={<FeatureBadge feature="ai_recipe_variations" />}>
             <PremiumGate feature="ai_recipe_variations" compact>
-              <button onClick={() => setLessOil(!lessOil)} aria-pressed={lessOil} className={cn("flex w-full items-center gap-3 rounded-2xl border bg-card p-3 text-left", lessOil && "border-forest bg-sage/40")}>
-                <Wand2 className="size-5 text-forest" />
-                <span className="flex-1">
-                  <span className="block text-sm font-medium">Use half the oil</span>
-                  <span className="block text-xs text-muted-foreground">Suggested variation · nutrition recalculated by the engine</span>
-                </span>
-              </button>
+              <ChoiceCard mode="toggle" selected={lessOil} onSelect={() => setLessOil(!lessOil)} icon={<Wand2 />} title="Use half the oil" description="Suggested variation · nutrition recalculated by the engine" />
             </PremiumGate>
           </Section>
-        )}
-
-        {!conflict && (
-          <div className="grid grid-cols-2 gap-2">
-            {recipe.profile === "adult" && recipe.reviewStatus === "approved" && <AddToPlan recipe={recipe} />}
-            <Button variant="outline" onClick={() => router.push(`/log/new?recipe=${recipe.id}`)} className={recipe.profile !== "adult" || recipe.reviewStatus !== "approved" ? "col-span-2" : ""}>
-              <NotebookPen /> I ate this
-            </Button>
-          </div>
         )}
 
         {recipe.reviewStatus === "personal" && (
@@ -195,7 +198,7 @@ export default function RecipePage() {
               router.replace("/recipes/library")
             }}
           >
-            <Trash2 /> Delete my recipe
+            <Trash2 className="size-4" /> Delete my recipe
           </Button>
         )}
       </PageBody>
@@ -206,17 +209,17 @@ export default function RecipePage() {
 function ReviewBadge({ status }: { status: Recipe["reviewStatus"] }) {
   if (status === "approved")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-sage px-2.5 py-0.5 text-xs font-medium text-forest">
-        <BadgeCheck className="size-3.5" /> Verified recipe
-      </span>
+      <Pill tone="sage" icon={<BadgeCheck />}>
+        Verified recipe
+      </Pill>
     )
   if (status === "pending")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-caution-surface px-2.5 py-0.5 text-xs font-medium text-caution">
-        <Hourglass className="size-3.5" /> Awaiting clinical review
-      </span>
+      <Pill tone="caution" icon={<Hourglass />}>
+        Awaiting clinical review
+      </Pill>
     )
-  return <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">Your recipe · not reviewed</span>
+  return <Pill>Your recipe · not reviewed</Pill>
 }
 
 function AddToPlan({ recipe }: { recipe: Recipe }) {
@@ -229,11 +232,11 @@ function AddToPlan({ recipe }: { recipe: Recipe }) {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} disabled={!plan}>
-        <CalendarPlus /> Add to plan
+      <Button size="lg" className="w-full" onClick={() => setOpen(true)} disabled={!plan}>
+        <CalendarPlus className="size-5" /> Add to plan
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-[400px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Add to your plan</DialogTitle>
             <DialogDescription>Choose a meal to replace. Daily totals and your shopping list are recalculated.</DialogDescription>
@@ -241,21 +244,17 @@ function AddToPlan({ recipe }: { recipe: Recipe }) {
           {slots.length === 0 ? (
             <InfoNote>No upcoming {recipe.mealTypes.map((t) => MEAL_LABEL[t].toLowerCase()).join(" or ")} slots in your active plan.</InfoNote>
           ) : (
-            <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+            <ul className="-mx-1 max-h-72 space-y-2 overflow-y-auto px-1">
               {slots.map((m) => (
                 <li key={m.id}>
-                  <button onClick={() => setMealId(m.id)} aria-pressed={mealId === m.id} className={cn("w-full rounded-xl border p-2.5 text-left text-sm", mealId === m.id && "border-forest bg-sage/40")}>
-                    <span className="font-medium">
-                      {formatDay(m.date)} · {MEAL_LABEL[m.mealType]}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">Currently: {lookup(m.recipeId)?.name}</span>
-                  </button>
+                  <ChoiceCard className="min-h-0 py-3" selected={mealId === m.id} onSelect={() => setMealId(m.id)} title={`${formatDay(m.date)} · ${MEAL_LABEL[m.mealType]}`} description={`Currently: ${lookup(m.recipeId)?.name ?? "—"}`} />
                 </li>
               ))}
             </ul>
           )}
           <DialogFooter>
             <Button
+              className="w-full"
               disabled={!mealId}
               onClick={() => {
                 if (!mealId) return

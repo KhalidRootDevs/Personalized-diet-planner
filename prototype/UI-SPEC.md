@@ -187,7 +187,7 @@ Order:
 Child profiles replace items 2–6 with the feeding view (§12): no calories, sage-led and in caregiver language.
 
 ### 5.2 Task flows
-A compact header with ✕ or back and a step indicator (a 4 px progress track under the header, or "Step 2 of 9" in caption). Show one question group per screen. The primary action ("Continue", "Confirm", "Activate plan") sits in the sticky footer; a secondary action ("Skip", "Back") goes above it as an outline button or ghost text.
+Use the shared flow header: back on the left, ✕ on the right, the title with "Step 2 of 9" in caption, and a 4 px progress bar below it (segmented for up to 5 steps, continuous above that). Show one question group per screen. The primary action ("Continue", "Confirm", "Activate plan") sits in the sticky footer; a secondary action ("Skip", "Back") goes above it as an outline button or ghost text.
 
 ### 5.3 Detail screens
 Hero (thumbnail or summary) → key facts as stat tiles → content sections → the primary action in a sticky footer when the screen exists to act (e.g. "Add to plan").
@@ -196,7 +196,7 @@ Hero (thumbnail or summary) → key facts as stat tiles → content sections →
 Only grouped lists with labels, using switches as trailing controls. No free-floating cards.
 
 ### 5.5 Gated (premium) content
-A dashed outline card with a 48 px icon tile, the feature name, a one-line value statement and a **See plans** button (sm). It is never shown for safety features.
+A dashed outline card with a 48 px icon tile, the feature name, a one-line value statement and a **See plans** button (sm). It is never shown for safety features. When a screen has several gated sections, use the **row** variant instead (a single grouped-list row reading "Included in Premium · see plans") so upsell cards never stack.
 
 ### 5.6 Release-phase badges (prototype only)
 P1, P2 and P3 pills (11 px) appear next to feature titles and can be turned off in settings. Production builds omit them.
@@ -244,7 +244,9 @@ P1, P2 and P3 pills (11 px) appear next to feature titles and can be turned off 
 | Spec item | Component |
 |---|---|
 | Frame, tab bar | `components/app/shell.tsx` |
-| Headers, body, sections, surfaces, lists, pills, stat tiles, sticky footer, empty state | `components/app/page.tsx` |
+| Headers (incl. flow header), body, sections, surfaces, lists, pills, stat tiles, sticky footer, empty state | `components/app/page.tsx` |
+| Segmented control, stepper, choice card, chips, form field | `components/app/controls.tsx` |
+| Meal row and meal list (Home, Plan) | `components/plan/meal-row.tsx` |
 | Alerts | `components/app/alerts.tsx` |
 | Nutrient bar, estimate note, confidence chip | `components/app/nutrition.tsx` |
 | Food tile | `components/app/recipe-thumb.tsx` |

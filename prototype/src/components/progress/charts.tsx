@@ -1,8 +1,21 @@
 import { formatDay } from "@/lib/date"
 
+const GRID = "#E8E5DC"
+const AXIS = "#616762"
+
+/** Legend item for charts (UI-SPEC §4.10): swatch + caption label. */
+export function LegendItem({ swatch, children }: { swatch: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <span className="text-caption inline-flex items-center gap-1.5 text-muted-foreground">
+      {swatch}
+      {children}
+    </span>
+  )
+}
+
 /**
- * Simple labelled bar chart (§44.10): consumed bars, planned markers, units and a
- * text equivalent for screen readers.
+ * Daily bar chart (§44.10, UI-SPEC §4.10): logged bars (forest) beside planned bars (sage),
+ * hairline gridlines, caption axis labels and a text equivalent for screen readers.
  */
 export function DailyBars({
   data,
@@ -13,48 +26,63 @@ export function DailyBars({
   unit: string
   label: string
 }) {
-  const max = Math.max(1, ...data.map((d) => Math.max(d.value, d.planned ?? 0))) * 1.1
-  const W = 320
-  const H = 140
-  const bw = W / data.length
+  const peak = Math.max(1, ...data.map((d) => Math.max(d.value, d.planned ?? 0)))
+  const step = peak > 1000 ? 1000 : peak > 200 ? 100 : 50
+  const top = Math.ceil(peak / step) * step
+  const ticks = [0, top / 2, top]
+  const W = 340
+  const H = 150
+  const left = 34
+  const plotW = W - left
+  const bw = plotW / data.length
+  const bar = 8
+  const T = 10 // headroom so the top axis label isn't clipped
+  const y = (v: number) => T + H - (v / top) * H
   const summary = data.map((d) => `${formatDay(d.date, { weekday: "short" })}: ${d.value ? `about ${Math.round(d.value)} ${unit}` : "not logged"}${d.planned ? `, planned ${Math.round(d.planned)}` : ""}`).join("; ")
   return (
     <figure>
-      <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full" role="img" aria-label={`${label}. ${summary}`}>
-        {[0.5, 1].map((f) => (
-          <line key={f} x1={0} x2={W} y1={H - (H * f) / 1.1} y2={H - (H * f) / 1.1} stroke="var(--border)" strokeDasharray="3 3" />
+      <svg viewBox={`0 0 ${W} ${T + H + 24}`} className="w-full" role="img" aria-label={`${label}. ${summary}`}>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={left} x2={W} y1={y(t)} y2={y(t)} stroke={GRID} strokeWidth={1} />
+            <text x={left - 6} y={y(t) + 4} textAnchor="end" fontSize={10.5} fill={AXIS} className="tabular">
+              {t >= 1000 ? `${(t / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k` : t}
+            </text>
+          </g>
         ))}
         {data.map((d, i) => {
-          const h = (d.value / max) * H
-          const x = i * bw + bw * 0.22
-          const w = bw * 0.56
-          const py = d.planned ? H - (d.planned / max) * H : null
+          const cx = left + i * bw + bw / 2
+          const hasPlan = (d.planned ?? 0) > 0
+          const xLogged = hasPlan ? cx - bar - 1 : cx - bar / 2
           return (
             <g key={d.date}>
-              {d.value > 0 ? <rect x={x} y={H - h} width={w} height={h} rx={5} fill="var(--forest-green)" /> : <rect x={x} y={H - 4} width={w} height={4} rx={2} fill="var(--border)" />}
-              {py !== null && <line x1={x - 4} x2={x + w + 4} y1={py} y2={py} stroke="var(--terracotta)" strokeWidth={2.5} strokeLinecap="round" />}
-              <text x={x + w / 2} y={H + 16} textAnchor="middle" fontSize={11} fill="var(--muted-grey-text)">
+              {hasPlan && <rect x={cx + 1} y={y(d.planned!)} width={bar} height={T + H - y(d.planned!)} rx={bar / 2} fill="var(--sage)" />}
+              {d.value > 0 ? (
+                <rect x={xLogged} y={y(d.value)} width={bar} height={Math.max(bar, T + H - y(d.value))} rx={bar / 2} fill="var(--forest-green)" />
+              ) : (
+                <rect x={xLogged} y={T + H - 3} width={bar} height={3} rx={1.5} fill={GRID} />
+              )}
+              <text x={cx} y={T + H + 18} textAnchor="middle" fontSize={11} fill={AXIS}>
                 {formatDay(d.date, { weekday: "narrow" })}
               </text>
             </g>
           )
         })}
       </svg>
-      <figcaption className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm bg-forest" /> Logged ({unit})</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-3 rounded bg-terracotta" /> Planned</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block h-1 w-3 rounded bg-border" /> Not logged</span>
+      <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        <LegendItem swatch={<span className="inline-block h-2.5 w-2 rounded-full bg-forest" />}>Logged ({unit})</LegendItem>
+        <LegendItem swatch={<span className="inline-block h-2.5 w-2 rounded-full bg-sage" />}>Planned</LegendItem>
       </figcaption>
     </figure>
   )
 }
 
-/** Small line chart for growth measurements. */
+/** Small line chart for growth measurements. Filled dots = clinic, hollow = home. */
 export function LineTrend({ points, unit, label }: { points: { date: string; value: number; source?: string }[]; unit: string; label: string }) {
   if (points.length === 0) return null
-  const W = 320
-  const H = 120
-  const pad = 26
+  const W = 340
+  const H = 130
+  const pad = 28
   const vals = points.map((p) => p.value)
   const min = Math.min(...vals)
   const max = Math.max(...vals)
@@ -62,19 +90,22 @@ export function LineTrend({ points, unit, label }: { points: { date: string; val
   const t0 = new Date(points[0].date).getTime()
   const t1 = new Date(points[points.length - 1].date).getTime()
   const tx = (d: string) => (t1 === t0 ? W / 2 : pad + ((new Date(d).getTime() - t0) / (t1 - t0)) * (W - pad * 2))
-  const ty = (v: number) => H - 14 - ((v - min) / span) * (H - 34)
+  const ty = (v: number) => H - 16 - ((v - min) / span) * (H - 40)
   const path = points.map((p, i) => `${i ? "L" : "M"}${tx(p.date)},${ty(p.value)}`).join(" ")
-  const summary = points.map((p) => `${formatDay(p.date, { day: "numeric", month: "short" })}: ${p.value} ${unit}`).join("; ")
+  const summary = points.map((p) => `${formatDay(p.date, { day: "numeric", month: "short" })}: ${p.value} ${unit}${p.source ? ` (${p.source})` : ""}`).join("; ")
   return (
-    <svg viewBox={`0 0 ${W} ${H + 18}`} className="w-full" role="img" aria-label={`${label}. ${summary}`}>
-      <path d={path} fill="none" stroke="var(--forest-green)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full" role="img" aria-label={`${label}. ${summary}`}>
+      {[H - 16, (H - 16 + 24) / 2, 24].map((gy) => (
+        <line key={gy} x1={0} x2={W} y1={gy} y2={gy} stroke={GRID} strokeWidth={1} />
+      ))}
+      <path d={path} fill="none" stroke="var(--forest-green)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       {points.map((p) => (
         <g key={p.date}>
           <circle cx={tx(p.date)} cy={ty(p.value)} r={4.5} fill={p.source === "home" ? "var(--white)" : "var(--forest-green)"} stroke="var(--forest-green)" strokeWidth={2} />
-          <text x={tx(p.date)} y={ty(p.value) - 9} textAnchor="middle" fontSize={11} fill="var(--charcoal)" className="tabular">
+          <text x={tx(p.date)} y={ty(p.value) - 10} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--charcoal)" className="tabular">
             {p.value}
           </text>
-          <text x={tx(p.date)} y={H + 14} textAnchor="middle" fontSize={10} fill="var(--muted-grey-text)">
+          <text x={tx(p.date)} y={H + 14} textAnchor="middle" fontSize={10.5} fill={AXIS}>
             {formatDay(p.date, { day: "numeric", month: "short" })}
           </text>
         </g>

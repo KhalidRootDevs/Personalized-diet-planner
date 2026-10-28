@@ -4,9 +4,9 @@ import Link from "next/link"
 import { useState } from "react"
 import { Baby, Plus, Store, UtensilsCrossed, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { PageHeader, PageBody, Section, ListLink, EmptyState } from "@/components/app/page"
+import { EmptyState, HeaderIconButton, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
 import { FeatureBadge } from "@/components/app/badges"
-import { EstimateNote, Macro, NutrientBar } from "@/components/app/nutrition"
+import { EstimateNote, NutrientBar } from "@/components/app/nutrition"
 import { InfoNote } from "@/components/app/alerts"
 import { ProfileSwitcher } from "@/components/app/profile-switcher"
 import { EntryCard } from "@/components/log/entry-card"
@@ -43,15 +43,13 @@ export default function FoodLogPage() {
         action={
           <>
             <ProfileSwitcher />
-            <Button asChild size="icon" aria-label="Log a meal">
-              <Link href="/log/new">
-                <Plus />
-              </Link>
-            </Button>
+            <HeaderIconButton href="/log/new" label="Log a meal" className="border-forest bg-forest text-ivory hover:bg-[#1d3f30]">
+              <Plus className="size-5" />
+            </HeaderIconButton>
           </>
         }
       />
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pt-1 pb-2" role="tablist" aria-label="Choose day">
+      <div className="px-gutter grid grid-cols-7 gap-1.5 pt-1 pb-3" role="tablist" aria-label="Choose day">
         {days.map((d) => {
           const active = d === date
           const has = journal.some((e) => e.profileId === profile.id && e.consumedAt.startsWith(d))
@@ -60,12 +58,13 @@ export default function FoodLogPage() {
               key={d}
               role="tab"
               aria-selected={active}
+              aria-label={formatDay(d)}
               onClick={() => setDate(d)}
-              className={cn("flex min-w-12 flex-1 flex-col items-center rounded-xl border px-2 py-2 transition-colors", active ? "border-forest bg-forest text-primary-foreground" : "bg-card hover:bg-muted/50")}
+              className={cn("flex h-[68px] flex-col items-center justify-center gap-1 rounded-2xl transition-colors", active ? "bg-forest text-primary-foreground" : "text-charcoal hover:bg-muted")}
             >
-              <span className={cn("text-[11px]", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{d === today ? "Today" : fromISO(d).toLocaleDateString("en-US", { weekday: "short" })}</span>
-              <span className="tabular text-base font-semibold">{fromISO(d).getDate()}</span>
-              <span className={cn("mt-0.5 size-1.5 rounded-full", has ? (active ? "bg-primary-foreground" : "bg-forest") : "bg-transparent")} aria-hidden />
+              <span className={cn("text-[11px] font-medium", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{d === today ? "Today" : fromISO(d).toLocaleDateString("en-US", { weekday: "short" })}</span>
+              <span className="tabular text-headline leading-none">{fromISO(d).getDate()}</span>
+              <span className={cn("size-1 rounded-full", has ? (active ? "bg-primary-foreground" : "bg-forest") : "bg-transparent")} aria-hidden />
             </button>
           )
         })}
@@ -83,49 +82,58 @@ export default function FoodLogPage() {
         ) : (
           targets && (
             <Section title={date === today ? "Today so far" : formatDay(date)}>
-              <div className="space-y-4 rounded-2xl border bg-card p-4">
-                {targets.supported ? (
-                  <>
+              {targets.supported ? (
+                <Surface padding="lg">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="tabular text-2xl font-semibold">
-                        ~{Math.round(range.mid.energyKcal).toLocaleString("en-US")} <span className="text-base font-normal text-muted-foreground">kcal</span>
+                      <p className="text-caption text-muted-foreground">Eaten · estimate</p>
+                      <p className="text-metric mt-1">
+                        ~{Math.round(range.mid.energyKcal).toLocaleString("en-US")}
+                        <span className="text-callout ml-1 font-normal tracking-normal text-muted-foreground">kcal</span>
                       </p>
                       {entries.length > 0 && (
-                        <p className="tabular text-xs text-muted-foreground">
-                          Likely between {Math.round(range.low).toLocaleString("en-US")} and {Math.round(range.high).toLocaleString("en-US")} kcal
+                        <p className="tabular text-caption mt-0.5 text-muted-foreground">
+                          Likely {Math.round(range.low).toLocaleString("en-US")}–{Math.round(range.high).toLocaleString("en-US")} kcal
                         </p>
                       )}
                     </div>
+                    <Pill tone="sage">
+                      {entries.length} {entries.length === 1 ? "entry" : "entries"}
+                    </Pill>
+                  </div>
+                  <div className="mt-5">
                     <NutrientBar label="Energy" value={range.mid.energyKcal} low={targets.energy.low} high={targets.energy.high} unit="kcal" estimate />
-                    <div className="grid grid-cols-4 gap-2">
-                      <Macro label="Protein" value={range.mid.proteinG} estimate />
-                      <Macro label="Carbs" value={range.mid.carbsG} estimate />
-                      <Macro label="Fat" value={range.mid.fatG} estimate />
-                      <Macro label="Fiber" value={range.mid.fiberG} estimate />
-                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-4 gap-2">
+                    <StatTile label="Protein" value={`~${Math.round(range.mid.proteinG)}`} unit="g" className="px-2.5" />
+                    <StatTile label="Carbs" value={`~${Math.round(range.mid.carbsG)}`} unit="g" className="px-2.5" />
+                    <StatTile label="Fat" value={`~${Math.round(range.mid.fatG)}`} unit="g" className="px-2.5" />
+                    <StatTile label="Fiber" value={`~${Math.round(range.mid.fiberG)}`} unit="g" className="px-2.5" />
+                  </div>
+                  <div className="mt-4 border-t border-border/70 pt-3">
                     <EstimateNote>
-                      Totals cover {entries.length} logged meal{entries.length === 1 ? "" : "s"} only
+                      Counts logged meals only
                       {unrecorded > 0 ? ` — ${unrecorded} planned meal${unrecorded === 1 ? " is" : "s are"} not recorded yet, so the day may be incomplete.` : "."}
                     </EstimateNote>
-                  </>
-                ) : (
-                  <InfoNote title="Targets set with your care team">{targets.reason}</InfoNote>
-                )}
-              </div>
+                  </div>
+                </Surface>
+              ) : (
+                <InfoNote title="Targets set with your care team">{targets.reason}</InfoNote>
+              )}
             </Section>
           )
         )}
 
         <Section title="Entries" badge={<FeatureBadge feature="journal_photo" />}>
           {entries.length ? (
-            <div className="space-y-2">
+            <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
               {entries.map((e) => (
                 <EntryCard key={e.id} entry={e} hideNutrition={child} />
               ))}
             </div>
           ) : (
             <EmptyState
-              icon={child ? <Baby className="size-5" /> : <UtensilsCrossed className="size-5" />}
+              icon={child ? <Baby /> : <UtensilsCrossed />}
               title={date === today ? "Nothing logged yet today" : "Nothing logged this day"}
               description={child ? "Record a feed or a new food when you're ready." : "Snap a photo, search a food or just describe what you ate."}
               action={
@@ -143,10 +151,10 @@ export default function FoodLogPage() {
 
         {!child && (
           <Section title="Tools">
-            <div className="space-y-2">
-              <ListLink
+            <ListGroup>
+              <ListRow
                 href="/log/simulator"
-                icon={<Wand2 className="size-5" />}
+                icon={<Wand2 />}
                 title={
                   <>
                     What if I eat this? <FeatureBadge feature="what_if" />
@@ -154,9 +162,9 @@ export default function FoodLogPage() {
                 }
                 description="See how a food would fit today before you eat it"
               />
-              <ListLink
+              <ListRow
                 href="/log/restaurant"
-                icon={<Store className="size-5" />}
+                icon={<Store />}
                 title={
                   <>
                     Eating out <FeatureBadge feature="restaurant" />
@@ -164,7 +172,7 @@ export default function FoodLogPage() {
                 }
                 description="Restaurant estimates as ranges, plus ordering ideas"
               />
-            </div>
+            </ListGroup>
           </Section>
         )}
       </PageBody>

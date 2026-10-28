@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { FoodSearchList } from "@/components/log/food-picker"
+import { ListGroup, ListRow, StickyFooter, Surface } from "@/components/app/page"
 import { FOOD_MAP, ALLERGEN_LABELS } from "@/lib/data/foods"
 import { parseMealText } from "@/lib/area-b-text"
 import { BARCODE_PRODUCT } from "@/lib/vision-mock"
@@ -19,8 +20,8 @@ import type { JournalItem, MealType, Profile, SavedMeal } from "@/lib/types"
 export function SearchStep({ items, setItems, profile, onNext }: { items: JournalItem[]; setItems: (i: JournalItem[]) => void; profile?: Profile; onNext: () => void }) {
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex-1 space-y-3 px-4 pb-4">
-        <p className="text-sm text-muted-foreground">Tap each food you had. You&apos;ll set portions on the next screen.</p>
+      <div className="px-gutter flex-1 space-y-4 pt-3 pb-6">
+        <p className="text-callout text-muted-foreground">Tap each food you had. You&apos;ll set portions on the next screen.</p>
         <FoodSearchList
           profile={profile}
           autoFocus
@@ -48,23 +49,26 @@ export function TextStep({ onParsed, initial = "", source = "text" }: { onParsed
     onParsed(items, source)
   }
   return (
-    <div className="space-y-4 px-4 pb-6">
-      <Textarea value={text} onChange={(e) => {
+    <div className="px-gutter space-y-5 pt-3 pb-8">
+      <Textarea className="min-h-32 rounded-2xl p-4" value={text} onChange={(e) => {
           setText(e.target.value)
           setMiss(false)
         }} rows={4} placeholder="e.g. Two roti, one boiled egg and a cup of tea" aria-label="Describe what you ate" autoFocus={!initial} />
-      <div className="flex flex-wrap gap-2">
+      <div>
+        <p className="text-overline mb-2 text-muted-foreground">Examples</p>
+        <div className="flex flex-wrap gap-2">
         {EXAMPLES.map((ex) => (
-          <button key={ex} onClick={() => setText(ex)} className="min-h-9 rounded-full border bg-card px-3 text-sm hover:bg-muted/50" lang={/[ঀ-৿]/.test(ex) ? "bn" : undefined}>
+          <button key={ex} onClick={() => setText(ex)} className="text-callout h-9 rounded-full border border-border/80 bg-card px-3.5 transition-colors hover:bg-muted" lang={/[ঀ-৿]/.test(ex) ? "bn" : undefined}>
             {ex}
           </button>
         ))}
+        </div>
       </div>
       {miss && <CautionNote title="We couldn't match those foods">Try simpler names (rice, dal, egg) or use search instead.</CautionNote>}
       <Button className="w-full" size="lg" disabled={!text.trim()} onClick={run}>
         <Sparkles /> Find foods
       </Button>
-      <p className="text-center text-xs text-muted-foreground">You&apos;ll check every item and portion before anything is saved.</p>
+      <p className="text-caption text-center text-muted-foreground">You&apos;ll check every item and portion before anything is saved.</p>
     </div>
   )
 }
@@ -76,13 +80,13 @@ export function VoiceStep({ onParsed }: { onParsed: (items: JournalItem[], sourc
   const timer = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(timer.current), [])
   return (
-    <div className="space-y-4 px-4 pb-6">
-      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="px-gutter space-y-4 pt-3 pb-8">
+      <p className="text-callout flex items-center gap-2 text-muted-foreground">
         <FeatureBadge feature="voice_logging" /> Speak in English or Bangla.
       </p>
       <PremiumGate feature="voice_logging">
         {state !== "done" ? (
-          <div className="flex flex-col items-center gap-4 py-8">
+          <div className="flex flex-col items-center gap-5 py-12">
             <button
               onClick={() => {
                 setState("listening")
@@ -92,18 +96,20 @@ export function VoiceStep({ onParsed }: { onParsed: (items: JournalItem[], sourc
                 }, 1600)
               }}
               disabled={state === "listening"}
-              className="grid size-24 place-items-center rounded-full bg-forest text-primary-foreground disabled:opacity-80"
+              className="grid size-28 place-items-center rounded-full bg-forest text-primary-foreground shadow-float ring-8 ring-sage/70 transition-transform active:scale-95 disabled:animate-pulse"
               aria-label={state === "listening" ? "Listening" : "Start speaking"}
             >
               <Mic className="size-9" />
             </button>
-            <p className="text-sm text-muted-foreground" aria-live="polite">
+            <p className="text-callout text-muted-foreground" aria-live="polite">
               {state === "listening" ? "Listening… (demo)" : "Tap and say what you ate"}
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            <InfoNote title="Here's what we heard">Edit anything that&apos;s wrong, then find foods.</InfoNote>
+          <div className="-mx-[var(--gutter)] space-y-3">
+            <div className="px-gutter">
+              <InfoNote title="Here's what we heard">Edit anything that&apos;s wrong, then find foods.</InfoNote>
+            </div>
             <TextStep key={transcript} initial={transcript} source="voice" onParsed={onParsed} />
           </div>
         )}
@@ -122,17 +128,17 @@ export function BarcodeStep({ profile, onSearchInstead }: { profile?: Profile; o
   const hits = BARCODE_PRODUCT.listedAllergens.filter((a) => profile?.allergies.includes(a as never))
   const p = BARCODE_PRODUCT.per100g
   return (
-    <div className="space-y-4 px-4 pb-6">
-      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="px-gutter space-y-4 pt-3 pb-8">
+      <p className="text-callout flex items-center gap-2 text-muted-foreground">
         <FeatureBadge feature="barcode_logging" /> Scan a packaged food.
       </p>
       <PremiumGate feature="barcode_logging">
         {!scanned ? (
           <div className="space-y-4">
-            <div className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-2xl bg-charcoal text-ivory">
+            <div className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-[24px] bg-charcoal text-ivory">
               <ScanLine className="size-16 opacity-80" aria-hidden />
               {scanning && <div className="absolute inset-x-8 top-1/2 h-0.5 animate-pulse bg-terracotta" aria-hidden />}
-              <p className="absolute bottom-3 text-xs opacity-80">Camera preview (demo)</p>
+              <p className="text-caption absolute bottom-4 opacity-80">Camera preview (demo)</p>
             </div>
             <Button
               className="w-full"
@@ -154,14 +160,15 @@ export function BarcodeStep({ profile, onSearchInstead }: { profile?: Profile; o
             {hits.length > 0 && (
               <SafetyAlert title={`Label lists ${hits.map((h) => ALLERGEN_LABELS[h] ?? h).join(", ")}`}>This product contains an ingredient recorded as an allergy in your profile.</SafetyAlert>
             )}
-            <div className="rounded-xl border bg-card p-3">
-              <p className="font-medium">{BARCODE_PRODUCT.name}</p>
-              <p className="text-xs text-muted-foreground">{BARCODE_PRODUCT.brand} · serving {BARCODE_PRODUCT.servingGrams} g</p>
-              <p className="tabular mt-2 text-sm">
-                Label, per 100 g: {p.energyKcal} kcal · protein {p.proteinG} g · carbs {p.carbsG} g · fat {p.fatG} g
+            <Surface>
+              <p className="text-headline">{BARCODE_PRODUCT.name}</p>
+              <p className="text-caption text-muted-foreground">{BARCODE_PRODUCT.brand} · serving {BARCODE_PRODUCT.servingGrams} g</p>
+              <p className="text-overline mt-4 text-muted-foreground">Label, per 100 g</p>
+              <p className="tabular text-callout mt-1">
+                {p.energyKcal} kcal · protein {p.proteinG} g · carbs {p.carbsG} g · fat {p.fatG} g
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">Allergens on label: {BARCODE_PRODUCT.listedAllergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(", ")}</p>
-            </div>
+              <p className="text-caption mt-2 text-muted-foreground">Allergens on label: {BARCODE_PRODUCT.listedAllergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(", ")}</p>
+            </Surface>
             <CautionNote title="Not verified yet">
               This product isn&apos;t in our reviewed food database, and its label data is incomplete. We&apos;ve sent it for review. For now, log the closest food from search.
             </CautionNote>
@@ -181,47 +188,53 @@ export function SavedStep({ mealType, onPick }: { mealType: MealType; onPick: (m
   const sorted = [...saved].sort((a, b) => Number(b.mealType === mealType) - Number(a.mealType === mealType) || b.timesConfirmed - a.timesConfirmed)
   const memory = sorted.find((m) => m.mealType === mealType && m.timesConfirmed >= 3)
   return (
-    <div className="space-y-4 px-4 pb-6">
-      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="px-gutter space-y-5 pt-3 pb-8">
+      <p className="text-callout flex items-center gap-2 text-muted-foreground">
         <FeatureBadge feature="saved_meals" /> Meals you&apos;ve saved or log often.
       </p>
       {memory && (
-        <button onClick={() => onPick(memory)} className="w-full rounded-2xl bg-sage p-4 text-left">
-          <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-forest uppercase">
+        <button onClick={() => onPick(memory)} className="w-full rounded-2xl bg-sage/70 p-4 text-left transition-colors hover:bg-sage">
+          <p className="text-overline flex items-center gap-1.5 text-forest">
             <History className="size-3.5" /> Meal memory
           </p>
-          <p className="mt-1 font-semibold">
+          <p className="text-headline mt-2">
             You often have &ldquo;{memory.name}&rdquo; for {MEAL_LABEL[mealType].toLowerCase()}.
           </p>
-          <p className="text-sm text-charcoal/80">Log it again? You can change portions next.</p>
+          <p className="text-callout mt-0.5 text-charcoal/80">Log it again? You can change portions next.</p>
         </button>
       )}
-      {sorted.length === 0 && <p className="text-sm text-muted-foreground">No saved meals yet. Tick &ldquo;Save as a usual meal&rdquo; when you confirm an entry.</p>}
-      <ul className="space-y-2">
-        {sorted.map((m) => (
-          <li key={m.id}>
-            <button onClick={() => onPick(m)} className="flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left hover:bg-muted/50">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{m.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{m.items.map((i) => FOOD_MAP[i.foodId]?.name ?? i.foodId).join(", ")}</p>
-              </div>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {MEAL_LABEL[m.mealType]} · {m.timesConfirmed}×
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {sorted.length === 0 ? (
+        <p className="text-callout text-muted-foreground">No saved meals yet. Tick &ldquo;Save as a usual meal&rdquo; when you confirm an entry.</p>
+      ) : (
+        <ListGroup label="All saved meals">
+          {sorted.map((m) => (
+            <ListRow
+              key={m.id}
+              onClick={() => onPick(m)}
+              icon={<History />}
+              title={m.name}
+              description={
+                <>
+                  <span className="line-clamp-1 block">{m.items.map((i) => FOOD_MAP[i.foodId]?.name ?? i.foodId).join(", ")}</span>
+                  <span className="block">
+                    {MEAL_LABEL[m.mealType]} · logged {m.timesConfirmed}×
+                  </span>
+                </>
+              }
+            />
+          ))}
+        </ListGroup>
+      )}
     </div>
   )
 }
 
 export function StickyAction({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <div className="sticky bottom-0 border-t bg-background/95 px-4 pt-3 pb-safe backdrop-blur-sm">
-      <Button className="mb-3 w-full" size="lg" disabled={disabled} onClick={onClick}>
+    <StickyFooter>
+      <Button className="w-full" size="lg" disabled={disabled} onClick={onClick}>
         {label}
       </Button>
-    </div>
+    </StickyFooter>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Check, RefreshCw, Sparkles, Wand2 } from "lucide-react"
+import { CalendarCheck, Check, ClipboardList, ListChecks, NotebookPen, RefreshCw, ShieldCheck, Shuffle, Sparkles, Wand2 } from "lucide-react"
 import { toast } from "sonner"
 import { formatDay } from "@/lib/date"
 import { adherence } from "@/lib/nutrition"
@@ -10,10 +10,9 @@ import { useActivePlan, useApp, useSelfProfile } from "@/lib/store"
 import { dayStats, lastNDays, mealsInRange, recordConfidence } from "@/lib/area-d-stats"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { FeatureBadge, PremiumGate } from "@/components/app/badges"
+import { FeatureBadge, PremiumGate, useFeature } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, SectionLink, Surface } from "@/components/app/page"
 
 const PRIORITIES = [
   "Log meals on more days",
@@ -31,6 +30,7 @@ export default function WeeklyReviewPage() {
   const habits = useApp((s) => s.habits)
   const [priority, setPriority] = useState<string | null>(null)
   const [suggestion, setSuggestion] = useState<"open" | "accepted" | "dismissed">("open")
+  const insightsAllowed = useFeature("insights").allowed
 
   const days = lastNDays(7)
   const stats = self ? dayStats(journal, plan, self.id, days) : []
@@ -44,99 +44,111 @@ export default function WeeklyReviewPage() {
     <>
       <PageHeader title="Weekly review" subtitle={`${formatDay(days[0], { day: "numeric", month: "short" })} – ${formatDay(days[6], { day: "numeric", month: "short" })}`} back="/progress" />
       <PageBody>
-        <Section title="Your week" badge={<FeatureBadge feature="weekly_review_basic" />}>
-          <Card className="gap-3">
-            <ul className="space-y-2 text-sm">
-              <li className="flex gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-forest" /> You logged meals on <b className="tabular">{loggedDays}</b> of 7 days.
-              </li>
-              <li className="flex gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-forest" /> {ad.resolved ? <>You ate <b className="tabular">{ad.completed}</b> of <b className="tabular">{ad.resolved}</b> recorded planned meals in some form.</> : "No meal outcomes recorded yet."}
-              </li>
-              {ad.replaced + ad.modified > 0 && (
-                <li className="flex gap-2">
-                  <Check className="mt-0.5 size-4 shrink-0 text-forest" /> You adapted <b className="tabular">{ad.replaced + ad.modified}</b> meals to fit your day.
-                </li>
-              )}
-            </ul>
-            <p className="text-xs text-muted-foreground">Based only on what you recorded. Unrecorded meals aren&apos;t counted as missed.</p>
-          </Card>
+        <Section title="Your week" badge={<FeatureBadge feature="weekly_review_basic" />} description="Based only on what you recorded. Unrecorded meals aren't counted as missed.">
+          <ListGroup>
+            <ListRow icon={<NotebookPen />} title="Meals logged" description="Days with at least one entry" trailing={<span className="tabular text-headline">{loggedDays}<span className="text-caption font-normal text-muted-foreground"> / 7</span></span>} />
+            <ListRow
+              icon={<CalendarCheck />}
+              title="Planned meals eaten"
+              description={ad.resolved ? "In any form, including changes" : "No meal outcomes recorded yet"}
+              trailing={ad.resolved ? <span className="tabular text-headline">{ad.completed}<span className="text-caption font-normal text-muted-foreground"> / {ad.resolved}</span></span> : undefined}
+            />
+            {ad.replaced + ad.modified > 0 && <ListRow icon={<Shuffle />} title="Meals adapted to your day" description="Changed or replaced to fit real life" trailing={<span className="tabular text-headline">{ad.replaced + ad.modified}</span>} />}
+          </ListGroup>
         </Section>
 
-        <Section title="Choose one focus for next week">
+        <Section title="Choose one focus for next week" description="Small, specific goals are easier to keep.">
           <div className="space-y-2" role="radiogroup" aria-label="Focus for next week">
-            {PRIORITIES.map((p) => (
-              <button
-                key={p}
-                role="radio"
-                aria-checked={priority === p}
-                onClick={() => setPriority(p)}
-                className={cn("flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left text-sm", priority === p && "border-forest bg-sage/40")}
-              >
-                <span className={cn("grid size-5 place-items-center rounded-full border", priority === p && "border-forest bg-forest text-white")}>{priority === p && <Check className="size-3" />}</span>
-                {p}
-              </button>
-            ))}
+            {PRIORITIES.map((p) => {
+              const on = priority === p
+              return (
+                <button
+                  key={p}
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setPriority(p)}
+                  className={cn("text-body flex min-h-14 w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left transition-colors", on ? "border-forest bg-sage/40 font-medium" : "border-border/80 hover:bg-muted/50")}
+                >
+                  <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors", on ? "border-forest bg-forest text-ivory" : "border-input bg-card")}>{on && <Check className="size-3.5" strokeWidth={3} />}</span>
+                  {p}
+                </button>
+              )
+            })}
           </div>
-          <Button className="w-full" disabled={!priority} onClick={() => toast.success("Focus saved for next week")}>
+          <Button variant="secondary" className="w-full" disabled={!priority} onClick={() => toast.success("Focus saved for next week")}>
             Save focus
           </Button>
         </Section>
 
         <Section title="Does your plan still fit?">
-          <Card className="flex-row items-center gap-3">
-            <RefreshCw className="size-5 shrink-0 text-forest" />
-            <p className="flex-1 text-sm">If your schedule, budget or goals changed, you can create a revised plan. Your current plan stays until you activate a new one.</p>
-          </Card>
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/plan/generate">Revise my plan</Link>
-          </Button>
+          <Surface tone="sage" padding="lg">
+            <div className="flex gap-3">
+              <IconTile tone="white">
+                <RefreshCw />
+              </IconTile>
+              <p className="text-callout flex-1 text-charcoal/90">If your schedule, budget or goals changed, create a revised plan. Your current plan stays active until you choose to switch.</p>
+            </div>
+            <Button asChild className="mt-4 w-full">
+              <Link href="/plan/generate">Revise my plan</Link>
+            </Button>
+          </Surface>
         </Section>
 
         <Section title="Habits" badge={<FeatureBadge feature="habits" />}>
-          <PremiumGate feature="habits" compact>
-            <Card className="gap-2">
-              <p className="text-sm">
-                You checked off habits <b className="tabular">{habitDone}</b> times across {habits.length} habits.
-              </p>
-              <Link href="/progress/habits" className="text-sm font-medium text-forest underline underline-offset-2">
-                Review habits
-              </Link>
-            </Card>
+          <PremiumGate variant="row" feature="habits">
+            <ListGroup>
+              <ListRow href="/progress/habits" icon={<ListChecks />} title="Review your habits" description={`Checked off ${habitDone} times across ${habits.length} ${habits.length === 1 ? "habit" : "habits"}`} />
+            </ListGroup>
           </PremiumGate>
         </Section>
 
-        <Section title="Insights" badge={<FeatureBadge feature="insights" />}>
-          <PremiumGate feature="insights" compact>
-            <Card className="gap-2">
-              <p className="text-sm">On days you prepared breakfast the night before, your recorded breakfasts were more often eaten as planned.</p>
-              <p className="text-xs text-muted-foreground">A pattern in your records, not proof of cause.</p>
-              <Link href="/progress/insights" className="text-sm font-medium text-forest underline underline-offset-2">
-                See all insights
-              </Link>
-            </Card>
+        <Section title="Insights" badge={<FeatureBadge feature="insights" />} action={insightsAllowed && <SectionLink href="/progress/insights">See all</SectionLink>}>
+          <PremiumGate variant="row" feature="insights">
+            <Surface>
+              <div className="flex gap-3">
+                <IconTile>
+                  <Sparkles />
+                </IconTile>
+                <div className="min-w-0 flex-1">
+                  <p className="text-body font-medium">Prepared breakfasts were more often eaten</p>
+                  <p className="text-callout mt-1 text-muted-foreground">On days you prepared breakfast the night before, your recorded breakfasts were more often eaten as planned.</p>
+                  <Pill tone="neutral" className="mt-3">
+                    Correlation, not cause
+                  </Pill>
+                </div>
+              </div>
+            </Surface>
           </PremiumGate>
         </Section>
 
         <Section title="Suggested adjustment" badge={<FeatureBadge feature="adaptive" />}>
-          <PremiumGate feature="adaptive" compact>
+          <PremiumGate variant="row" feature="adaptive">
             {suggestion === "open" ? (
-              <Card className="gap-3">
-                <p className="flex items-center gap-2 font-medium">
-                  <Sparkles className="size-4 text-forest" /> Swap weekday lunches for quicker options
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Why: you replaced several longer lunches this week. Every quicker option has passed the same safety and nutrition checks as your current plan.
-                </p>
-                <div className="flex gap-2">
-                  <Button className="flex-1" onClick={() => { setSuggestion("accepted"); toast.success("Adjustment approved. Your next week's lunches will update.") }}>
-                    Approve
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={() => setSuggestion("dismissed")}>
+              <Surface>
+                <div className="flex gap-3">
+                  <IconTile>
+                    <ClipboardList />
+                  </IconTile>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-body font-medium">Swap weekday lunches for quicker options</p>
+                    <p className="text-callout mt-1 text-muted-foreground">You replaced several longer lunches this week. Every quicker option has passed the same safety and nutrition checks as your current plan.</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Button variant="outline" onClick={() => setSuggestion("dismissed")}>
                     Not now
                   </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setSuggestion("accepted")
+                      toast.success("Adjustment approved. Next week's lunches will update.")
+                    }}
+                  >
+                    Approve
+                  </Button>
                 </div>
-              </Card>
+              </Surface>
             ) : (
               <InfoNote>{suggestion === "accepted" ? "Approved. You can undo this from your plan at any time." : "Dismissed. Your plan stays as it is."}</InfoNote>
             )}
@@ -144,27 +156,26 @@ export default function WeeklyReviewPage() {
         </Section>
 
         <Section title="Weekly Autopilot" badge={<FeatureBadge feature="autopilot" />}>
-          <PremiumGate feature="autopilot" compact>
-            <Card className="flex-row items-center gap-3">
-              <Wand2 className="size-5 shrink-0 text-forest" />
-              <p className="flex-1 text-sm">Prepare next week&apos;s draft plan and shopping list for you to review.</p>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/plan/autopilot">Open</Link>
-              </Button>
-            </Card>
+          <PremiumGate variant="row" feature="autopilot">
+            <ListGroup>
+              <ListRow href="/plan/autopilot" icon={<Wand2 />} title="Prepare next week" description="A draft plan and shopping list for you to review" />
+            </ListGroup>
           </PremiumGate>
         </Section>
 
         <Section title="Record confidence" badge={<FeatureBadge feature="confidence" />}>
-          <Card className="gap-2">
-            <p className="text-sm">
-              <b className="tabular">{completeDays}</b> of 7 days have complete or mostly complete records.
-            </p>
-            <p className="text-xs text-muted-foreground">This describes how complete your food records are, not your health.</p>
-            <Link href="/progress/insights#confidence" className="text-sm font-medium text-forest underline underline-offset-2">
-              How this works
-            </Link>
-          </Card>
+          <ListGroup>
+            <ListRow
+              href="/progress/insights#confidence"
+              icon={<ShieldCheck />}
+              title={
+                <span>
+                  <span className="tabular">{completeDays}</span> of 7 days well recorded
+                </span>
+              }
+              description="How complete your records are, not your health"
+            />
+          </ListGroup>
         </Section>
       </PageBody>
     </>

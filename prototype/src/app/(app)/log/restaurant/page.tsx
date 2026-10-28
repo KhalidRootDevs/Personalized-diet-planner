@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { Check } from "lucide-react"
-import { PageHeader, PageBody, Section } from "@/components/app/page"
+import { Check, Store } from "lucide-react"
+import { IconTile, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { EstimateNote } from "@/components/app/nutrition"
@@ -53,18 +53,29 @@ function Assistant() {
   const hits = allergenHits(parts.map((p) => itemFromFood(p.foodId, p.grams)), self)
 
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">Choose what you&apos;re ordering. Restaurant portions and oil vary a lot, so estimates are ranges.</p>
-      <ul className="space-y-2" role="radiogroup">
-        {DISHES.map((d) => (
-          <li key={d.id}>
-            <button role="radio" aria-checked={pick === d.id} onClick={() => setPick(d.id)} className={cn("flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left", pick === d.id && "border-forest bg-sage/30")}>
-              <span className="flex-1 text-sm font-medium">{d.name}</span>
-              {pick === d.id && <Check className="size-4 text-forest" />}
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="space-y-7">
+      <Section title="What are you ordering?" description="Restaurant portions and oil vary a lot, so estimates are ranges.">
+        <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card" role="radiogroup">
+          {DISHES.map((d) => (
+            <li key={d.id}>
+              <button
+                role="radio"
+                aria-checked={pick === d.id}
+                onClick={() => setPick(d.id)}
+                className={cn("flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50", pick === d.id && "bg-sage/35 hover:bg-sage/45")}
+              >
+                <IconTile tone={pick === d.id ? "forest" : "sage"}>
+                  <Store />
+                </IconTile>
+                <span className="text-body flex-1 font-medium">{d.name}</span>
+                <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px]", pick === d.id ? "border-forest bg-forest text-ivory" : "border-input")}>
+                  {pick === d.id && <Check className="size-3.5" />}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Section>
 
       {dish && (
         <>
@@ -73,20 +84,22 @@ function Assistant() {
               Ask the restaurant about ingredients. Kitchens can&apos;t always prevent cross-contact.
             </SafetyAlert>
           )}
-          <div className="rounded-2xl border bg-card p-4">
-            <p className="text-xs text-muted-foreground">Typical restaurant serving</p>
-            <p className="tabular text-2xl font-semibold">
-              {Math.round((kcal * 0.7) / 10) * 10}–{Math.round((kcal * 1.35) / 10) * 10} kcal
+          <Surface padding="lg">
+            <p className="text-caption text-muted-foreground">Typical restaurant serving · estimate</p>
+            <p className="tabular text-title mt-1">
+              {(Math.round((kcal * 0.7) / 10) * 10).toLocaleString("en-US")}–{(Math.round((kcal * 1.35) / 10) * 10).toLocaleString("en-US")} kcal
             </p>
-            <p className="tabular text-sm text-muted-foreground">
+            <p className="tabular text-caption mt-1 text-muted-foreground">
               Protein about {Math.round(protein * 0.8)}–{Math.round(protein * 1.2)} g · {parts.map((p) => FOOD_MAP[p.foodId]?.name).join(" + ")}
             </p>
-            <EstimateNote className="mt-2">Restaurant estimates are less certain than home meals.</EstimateNote>
-          </div>
+            <div className="mt-4 border-t border-border/70 pt-3">
+              <EstimateNote>Restaurant estimates are less certain than home meals.</EstimateNote>
+            </div>
+          </Surface>
           <Section title="Ideas when ordering">
-            <ul className="space-y-1.5 text-sm">
+            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
               {dish.tips.map((t) => (
-                <li key={t} className="flex gap-2">
+                <li key={t} className="text-callout flex gap-3 px-4 py-3">
                   <Check className="mt-0.5 size-4 shrink-0 text-forest" aria-hidden /> {t}
                 </li>
               ))}

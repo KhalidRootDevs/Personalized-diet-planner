@@ -73,11 +73,13 @@ export function coachReply(question: string, ctx: CoachContext): CoachReply {
   }
 
   if (/dinner|lunch|breakfast|next meal|what (should|can) i eat|eat (now|tonight)/.test(q)) {
-    const next = remaining[0]
+    // A named meal ("dinner") answers about that meal; otherwise about the next one.
+    const asked = /breakfast/.test(q) ? "breakfast" : /lunch/.test(q) ? "lunch" : /dinner|tonight/.test(q) ? "dinner" : null
+    const next = asked ? remaining.find((m) => m.mealType === asked) : remaining[0]
     const planned = next ? lookup(next.recipeId) : undefined
-    const slot = next?.mealType ?? (/breakfast/.test(q) ? "breakfast" : /lunch/.test(q) ? "lunch" : "dinner")
+    const slot = next?.mealType ?? asked ?? "dinner"
     const alts = safeRecipes(ctx, (r) => r.mealTypes.includes(slot) && r.id !== planned?.id).slice(0, 2)
-    const head = planned && next ? `Your plan has ${planned.name} for ${MEAL_LABEL[next.mealType].toLowerCase()} at ${formatTime(next.time)} (~${Math.round(recipeNutrition(planned, next.servings).energyKcal)} kcal, ${Math.round(recipeNutrition(planned, next.servings).proteinG)} g protein). It fits your day as planned.` : `You don't have another planned meal today.`
+    const head = planned && next ? `Your plan has ${planned.name} for ${MEAL_LABEL[next.mealType].toLowerCase()} at ${formatTime(next.time)} (~${Math.round(recipeNutrition(planned, next.servings).energyKcal)} kcal, ${Math.round(recipeNutrition(planned, next.servings).proteinG)} g protein). It fits your day as planned.` : asked ? `You don't have ${asked} left in today's plan.` : `You don't have another planned meal today.`
     return {
       text: `${head}${alts.length ? `\n\nIf you'd like something different, these also fit your allergies and diet:\n${list(alts, (r) => `~${Math.round(recipeNutrition(r).energyKcal)} kcal, ${r.prepMinutes + r.cookMinutes} min`)}` : ""}`,
       sources: ["Your meal plan", "Verified recipes", "Your allergies and diet"],

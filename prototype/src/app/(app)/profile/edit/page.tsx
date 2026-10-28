@@ -12,7 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { PageBody, PageHeader, Section } from "@/components/app/page"
 import { CautionNote, SafetyAlert } from "@/components/app/alerts"
 import { Splash } from "@/components/app/shell"
-import { ChipGroup, Field, PillGroup } from "@/components/profile/form-bits"
+import { ChipGroup, Field, PillGroup } from "@/components/app/controls"
 import { TargetsCard } from "@/components/profile/targets-card"
 import { ACTIVITY, ALLERGENS, CONDITIONS, DIETS, GOALS, OCCUPATIONS, REVIEW_CONDITIONS } from "@/components/profile/options"
 
@@ -39,16 +39,17 @@ function EditForm({ initial }: { initial: Profile }) {
 
   return (
     <>
-      <PageHeader back="/profile" title="Personal details" action={<Button size="sm" disabled={!dirty} onClick={save}>Save</Button>} />
+      <PageHeader back="/profile" title="Personal details" action={<Button size="sm" variant="ghost" disabled={!dirty} onClick={save}>Save</Button>} />
       <PageBody>
         <Section title="Your starting ranges">
           <TargetsCard profile={p} />
         </Section>
 
-        <Accordion type="multiple" defaultValue={["body"]} className="rounded-2xl border bg-card px-4">
+        <Section title="Your details">
+        <Accordion type="multiple" defaultValue={["body"]} className="divide-y divide-border/70 rounded-2xl border border-border/80 bg-card px-4 [&>[data-slot=accordion-item]]:border-b-0">
           <AccordionItem value="body">
-            <AccordionTrigger>Body and basics</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+            <AccordionTrigger className="text-body py-4 font-semibold hover:no-underline">Body and basics</AccordionTrigger>
+            <AccordionContent className="space-y-5 pt-1 pb-5">
               <Field label="Name" htmlFor="name">
                 <Input id="name" value={p.name} onChange={(e) => set({ name: e.target.value })} />
               </Field>
@@ -69,8 +70,8 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="goal">
-            <AccordionTrigger>Goal and lifestyle</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+            <AccordionTrigger className="text-body py-4 font-semibold hover:no-underline">Goal and lifestyle</AccordionTrigger>
+            <AccordionContent className="space-y-5 pt-1 pb-5">
               <Field label="Main goal">
                 <PillGroup label="Goal" value={p.goal} onChange={(v) => set({ goal: v })} options={GOALS.map((g) => ({ value: g.value, label: g.label }))} />
               </Field>
@@ -94,8 +95,8 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="food">
-            <AccordionTrigger>Food, budget and cooking</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+            <AccordionTrigger className="text-body py-4 font-semibold hover:no-underline">Food, budget and cooking</AccordionTrigger>
+            <AccordionContent className="space-y-5 pt-1 pb-5">
               <Field label="Dietary preferences">
                 <ChipGroup label="Dietary preferences" value={p.diet} onChange={(v) => set({ diet: v })} options={DIETS} />
               </Field>
@@ -110,15 +111,15 @@ function EditForm({ initial }: { initial: Profile }) {
               <Field label="Meals per day">
                 <PillGroup label="Meals per day" value={String(p.mealsPerDay ?? 3)} onChange={(v) => set({ mealsPerDay: Number(v) })} options={["3", "4", "5"].map((v) => ({ value: v, label: v }))} />
               </Field>
-              <label className="flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm">
+              <label className="text-body flex min-h-12 items-center justify-between rounded-xl bg-muted px-4">
                 Include snacks
                 <Switch checked={!!p.includeSnacks} onCheckedChange={(v) => set({ includeSnacks: v })} />
               </label>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="health" className="border-b-0">
-            <AccordionTrigger>Allergies and health</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+            <AccordionTrigger className="text-body py-4 font-semibold hover:no-underline">Allergies and health</AccordionTrigger>
+            <AccordionContent className="space-y-5 pt-1 pb-5">
               {!healthConsent ? (
                 <CautionNote title="Health permission is off">Turn it on in Privacy and data to record allergies and conditions.</CautionNote>
               ) : (
@@ -142,11 +143,12 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+        </Section>
 
         <Button size="lg" className="w-full" disabled={!dirty} onClick={save}>
           Save changes
         </Button>
-        <p className="text-center text-xs text-muted-foreground">Saving doesn&apos;t change your active plan. Generate a new plan to use updated targets.</p>
+        <p className="text-caption -mt-4 text-center text-muted-foreground">Saving doesn&apos;t change your active plan. Generate a new plan to use updated targets.</p>
       </PageBody>
     </>
   )

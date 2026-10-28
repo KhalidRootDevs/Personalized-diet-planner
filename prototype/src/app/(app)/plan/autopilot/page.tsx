@@ -3,13 +3,12 @@
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CalendarCheck, ShoppingBasket, Sparkles } from "lucide-react"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { Sparkles } from "lucide-react"
+import { ListGroup, ListRow, PageBody, PageHeader, Section, StatTile } from "@/components/app/page"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { useActivePlan, useApp, useSelfProfile } from "@/lib/store"
 import { generatePlan, buildShoppingList } from "@/lib/planning"
 import { adherence, fmt } from "@/lib/nutrition"
@@ -58,46 +57,41 @@ function AutopilotContent() {
   const a = current ? adherence(current.meals) : null
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl bg-sage p-4">
-        <p className="flex items-center gap-2 text-sm font-medium text-forest">
-          <Sparkles className="size-4" /> Next week is ready to review
+    <div className="space-y-7">
+      <div className="rounded-2xl bg-sage/70 p-5">
+        <p className="text-overline flex items-center gap-1.5 text-forest">
+          <Sparkles className="size-3.5" /> Ready to review
         </p>
-        <p className="mt-1 font-serif text-2xl">Week of {formatDay(nextMonday, { day: "numeric", month: "long" })}</p>
-        <ul className="mt-3 space-y-1.5 text-sm">
-          <li className="flex items-center gap-2">
-            <CalendarCheck className="size-4 text-forest" /> {draft.meals.length} meals across 7 days
-          </li>
-          <li className="flex items-center gap-2">
-            <ShoppingBasket className="size-4 text-forest" /> Shopping about <span className="tabular">{fmt.bdt(cost)}</span>
-            {profile.budgetPerWeekBdt ? ` (budget ${fmt.bdt(profile.budgetPerWeekBdt)})` : ""}
-          </li>
-        </ul>
+        <p className="text-display mt-2">Week of {formatDay(nextMonday, { day: "numeric", month: "long" })}</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <StatTile className="bg-card" label="Meals planned" value={draft.meals.length} hint="across 7 days" />
+          <StatTile className="bg-card" label="Shopping" value={fmt.bdt(cost)} hint={profile.budgetPerWeekBdt ? `budget ${fmt.bdt(profile.budgetPerWeekBdt)}` : "estimate"} />
+        </div>
       </div>
 
       {a && a.resolved > 0 && (
         <InfoNote title="What we learned this week">
-          You recorded {a.resolved} meals; {a.asPlanned} were eaten as planned. We kept recipes you ate as planned and favoured quicker options where meals were changed.
+          You recorded {a.resolved} meals; {a.asPlanned} were eaten as planned. We kept recipes you ate as planned and favored quicker options where meals were changed.
         </InfoNote>
       )}
 
       <Section title="Preferences">
-        <div className="space-y-3 rounded-2xl border bg-card p-4">
+        <ListGroup>
           {(
             [
-              ["keepFavorites", "Repeat meals I enjoyed"],
-              ["matchBudget", "Stay within my weekly budget"],
-              ["usePantry", "Use what's in my pantry first"],
+              ["keepFavorites", "Repeat meals I enjoyed", "Keeps recipes you ate as planned"],
+              ["matchBudget", "Stay within my weekly budget", "Prefers lower-cost safe options"],
+              ["usePantry", "Use my pantry first", "Plans around what you already have"],
             ] as const
-          ).map(([k, label]) => (
-            <div key={k} className="flex items-center justify-between gap-3">
-              <Label htmlFor={k} className="font-normal">
-                {label}
-              </Label>
-              <Switch id={k} checked={settings[k]} onCheckedChange={(v) => setSettings({ ...settings, [k]: v })} />
-            </div>
+          ).map(([k, label, hint]) => (
+            <ListRow
+              key={k}
+              title={<label htmlFor={k}>{label}</label>}
+              description={hint}
+              trailing={<Switch id={k} checked={settings[k]} onCheckedChange={(v) => setSettings({ ...settings, [k]: v })} />}
+            />
           ))}
-        </div>
+        </ListGroup>
       </Section>
 
       <div className="space-y-2">
@@ -117,7 +111,7 @@ function AutopilotContent() {
           Customize instead
         </Button>
       </div>
-      <p className="text-center text-xs text-muted-foreground">Autopilot never activates a plan without your approval, and never makes a week stricter because of missed targets.</p>
+      <p className="text-caption text-center text-muted-foreground">Autopilot never activates a plan without your approval, and never makes a week stricter because of missed targets.</p>
     </div>
   )
 }

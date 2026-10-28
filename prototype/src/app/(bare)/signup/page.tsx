@@ -7,7 +7,7 @@ import { useApp } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Field } from "@/components/profile/form-bits"
+import { Field } from "@/components/app/controls"
 import { AuthShell, OrDivider, SocialButtons } from "@/components/profile/auth-shell"
 
 export default function SignupPage() {
@@ -39,7 +39,7 @@ export default function SignupPage() {
       footer={
         <>
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-forest underline underline-offset-2">
+          <Link href="/login" className="font-semibold text-forest hover:underline underline-offset-4">
             Sign in
           </Link>
         </>
@@ -52,7 +52,7 @@ export default function SignupPage() {
         }}
       />
       <OrDivider />
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form onSubmit={submit} className="space-y-5" noValidate>
         <Field label="Your name" htmlFor="name" error={errors.name}>
           <Input id="name" autoComplete="given-name" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
@@ -63,15 +63,15 @@ export default function SignupPage() {
           <Input id="password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <div className="space-y-1">
-          <label className="flex items-start gap-3 text-sm">
+          <label className="text-callout flex items-start gap-3">
             <Checkbox checked={terms} onCheckedChange={(v) => setTerms(v === true)} className="mt-0.5" />
             <span className="text-muted-foreground">
               I agree to the Terms and Privacy Policy. NutriPlan offers nutrition guidance and does not replace medical advice.
             </span>
           </label>
-          {errors.terms && <p className="text-xs font-medium text-safety">{errors.terms}</p>}
+          {errors.terms && <p className="text-caption pl-8 font-medium text-safety">{errors.terms}</p>}
         </div>
-        <Button type="submit" size="lg" className="w-full">
+        <Button type="submit" size="lg" className="mt-2 w-full">
           Continue
         </Button>
       </form>

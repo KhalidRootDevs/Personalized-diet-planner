@@ -4,11 +4,12 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
-import { Barcode, Bookmark, Camera, ChevronLeft, CircleCheck, ImageUp, Keyboard, Loader2, Mic, Search, ShieldCheck, SkipForward, X } from "lucide-react"
+import { Barcode, Bookmark, Camera, CircleCheck, EyeOff, ImageUp, Keyboard, Loader2, Lock, Mic, Search, ShieldCheck, SkipForward, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PhaseBadge } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
+import { FlowHeader, IconTile, ListGroup, ListRow, StickyFooter, Surface } from "@/components/app/page"
 import { BarcodeStep, SavedStep, SearchStep, TextStep, VoiceStep } from "@/components/log/input-steps"
 import { ReviewStep, TEXTURES, type ChildInfo, type Oil } from "@/components/log/review-step"
 import { ResultStep } from "@/components/log/result-step"
@@ -36,6 +37,9 @@ const TITLES: Record<Step, string> = {
   review: "Confirm your meal",
   result: "Saved",
 }
+
+// Step indicator (UI-SPEC §5.2): choose an input → confirm → done.
+const PHASE: Record<Step, number> = { method: 1, consent: 1, analyzing: 1, search: 1, text: 1, voice: 1, barcode: 1, saved: 1, review: 2, result: 3 }
 
 const PICKABLE: MealType[] = ["breakfast", "morning_snack", "lunch", "afternoon_snack", "dinner", "evening_snack", "drinks"]
 
@@ -194,21 +198,7 @@ export function LogFlow() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-20 bg-background/95 pt-safe backdrop-blur-sm">
-        <div className="flex h-14 items-center gap-2 px-2">
-          {step !== "result" && step !== "method" ? (
-            <button onClick={back} className="grid size-11 place-items-center rounded-full hover:bg-muted" aria-label="Back">
-              <ChevronLeft className="size-5" />
-            </button>
-          ) : (
-            <span className="size-11" aria-hidden />
-          )}
-          <h1 className="flex-1 truncate text-center text-lg font-semibold">{TITLES[step]}</h1>
-          <Link href={isChild ? "/log" : "/home"} className="grid size-11 place-items-center rounded-full hover:bg-muted" aria-label="Close">
-            <X className="size-5" />
-          </Link>
-        </div>
-      </header>
+      <FlowHeader title={TITLES[step]} step={PHASE[step]} total={3} onBack={step !== "result" && step !== "method" ? back : undefined} closeHref={isChild ? "/log" : "/home"} />
 
       <input
         ref={fileRef}
@@ -226,129 +216,163 @@ export function LogFlow() {
       />
 
       {step === "method" && (
-        <div className="space-y-5 px-4 pb-8">
+        <div className="px-gutter space-y-6 pt-3 pb-8">
           {isChild ? (
-            <p className="text-sm text-muted-foreground">Logging for {profile.name}. We record foods, textures and how it went — not calories.</p>
+            <p className="text-callout text-muted-foreground">Logging for {profile.name}. We record foods, textures and how it went — not calories.</p>
           ) : (
-            <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="radiogroup" aria-label="Meal">
-              {PICKABLE.map((t) => (
-                <button
-                  key={t}
-                  role="radio"
-                  aria-checked={mealType === t}
-                  onClick={() => setMealType(t)}
-                  className={cn("min-h-10 shrink-0 rounded-full border px-4 text-sm", mealType === t ? "border-forest bg-forest text-primary-foreground" : "bg-card")}
-                >
-                  {MEAL_LABEL[t]}
-                </button>
-              ))}
+            <div>
+              <p className="text-overline mb-2 text-muted-foreground">Meal</p>
+              <div className="no-scrollbar -mx-[var(--gutter)] flex gap-2 overflow-x-auto px-[var(--gutter)]" role="radiogroup" aria-label="Meal">
+                {PICKABLE.map((t) => (
+                  <button
+                    key={t}
+                    role="radio"
+                    aria-checked={mealType === t}
+                    onClick={() => setMealType(t)}
+                    className={cn(
+                      "text-callout h-9 shrink-0 rounded-full border px-4 font-medium transition-colors",
+                      mealType === t ? "border-forest bg-forest text-primary-foreground" : "border-border/80 bg-card text-charcoal hover:bg-muted",
+                    )}
+                  >
+                    {MEAL_LABEL[t]}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
           {linkedMeal && plannedRecipe && (
-            <div className="rounded-2xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Planned for {MEAL_LABEL[linkedMeal.mealType].toLowerCase()}</p>
-              <div className="mt-1 flex items-center gap-3">
+            <Surface>
+              <div className="flex items-center gap-3">
                 <RecipeThumb recipe={plannedRecipe} size="sm" />
-                <p className="flex-1 font-medium">{plannedRecipe.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-caption text-muted-foreground">Planned for {MEAL_LABEL[linkedMeal.mealType].toLowerCase()}</p>
+                  <p className="text-body font-medium">{plannedRecipe.name}</p>
+                </div>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button onClick={eatAsPlanned}>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Button variant="secondary" onClick={eatAsPlanned}>
                   <CircleCheck /> Ate as planned
                 </Button>
                 <Button variant="outline" onClick={skipPlanned}>
                   <SkipForward /> Skipped it
                 </Button>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Ate something different? Use a photo or search below.</p>
-            </div>
+              <p className="text-caption mt-3 text-muted-foreground">Ate something different? Use a photo or search below.</p>
+            </Surface>
           )}
 
           {!isChild && (
-            <button onClick={() => choosePhoto()} className="flex w-full items-center gap-4 rounded-2xl bg-forest p-5 text-left text-primary-foreground">
-              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/15">
+            <button onClick={() => choosePhoto()} className="flex w-full items-center gap-4 rounded-2xl bg-forest p-5 text-left text-primary-foreground transition-colors hover:bg-[#1d3f30]">
+              <span className="grid size-14 shrink-0 place-items-center rounded-[16px] bg-white/12">
                 <Camera className="size-7" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-lg font-semibold">
+                <span className="text-headline flex items-center gap-2">
                   Take or upload a photo <PhaseBadge phase={1} className="bg-white/20 text-primary-foreground" />
                 </span>
-                <span className="block text-sm text-primary-foreground/80">We suggest the foods and portions — you confirm.</span>
+                <span className="text-callout mt-0.5 block text-primary-foreground/80">We suggest the foods and portions — you confirm.</span>
               </span>
             </button>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
-            <MethodTile icon={<Search />} label="Search foods" hint="Pick from the list" onClick={() => {
-                setSource("manual")
-                setHasPhoto(false)
-                setItems([])
-                go("search")
-              }} />
-            <MethodTile icon={<Keyboard />} label="Type it" hint="“2 roti and dal”" onClick={() => {
-                setHasPhoto(false)
-                go("text")
-              }} />
-            {!isChild && (
-              <>
-                <MethodTile icon={<Bookmark />} label="Saved meals" hint="Your usual meals" onClick={() => go("saved")} phase={2} />
-                <MethodTile icon={<Mic />} label="Voice" hint="Say what you ate" onClick={() => {
-                    setHasPhoto(false)
-                    go("voice")
-                  }} phase={2} />
-                <MethodTile icon={<Barcode />} label="Barcode" hint="Packaged food" onClick={() => go("barcode")} phase={2} />
-                <MethodTile icon={<ImageUp />} label="Sample photo" hint="Demo without a camera" onClick={() => choosePhoto(true)} />
-              </>
-            )}
+          <div>
+            <p className="text-overline mb-2 text-muted-foreground">{isChild ? "Add what was offered" : "Other ways to log"}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <MethodTile
+                icon={<Search />}
+                label="Search foods"
+                hint="Pick from the list"
+                onClick={() => {
+                  setSource("manual")
+                  setHasPhoto(false)
+                  setItems([])
+                  go("search")
+                }}
+              />
+              <MethodTile
+                icon={<Keyboard />}
+                label="Type it"
+                hint="“2 roti and dal”"
+                onClick={() => {
+                  setHasPhoto(false)
+                  go("text")
+                }}
+              />
+              {!isChild && (
+                <>
+                  <MethodTile icon={<Bookmark />} label="Saved meals" hint="Your usual meals" onClick={() => go("saved")} phase={2} />
+                  <MethodTile
+                    icon={<Mic />}
+                    label="Voice"
+                    hint="Say what you ate"
+                    onClick={() => {
+                      setHasPhoto(false)
+                      go("voice")
+                    }}
+                    phase={2}
+                  />
+                  <MethodTile icon={<Barcode />} label="Barcode" hint="Packaged food" onClick={() => go("barcode")} phase={2} />
+                  <MethodTile icon={<ImageUp />} label="Sample photo" hint="Demo without a camera" onClick={() => choosePhoto(true)} />
+                </>
+              )}
+            </div>
           </div>
-          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <p className="text-caption flex items-start gap-2 text-muted-foreground">
+            <ShieldCheck className="mt-px size-4 shrink-0 text-forest" aria-hidden />
             If photo analysis isn&apos;t available, search and typing always work and nothing you enter is lost.
           </p>
         </div>
       )}
 
       {step === "consent" && (
-        <div className="space-y-4 px-4 pb-8">
-          <div className="mx-auto grid size-14 place-items-center rounded-full bg-sage text-forest">
-            <ShieldCheck className="size-7" />
+        <div className="flex flex-1 flex-col">
+          <div className="px-gutter space-y-6 pt-6 pb-6">
+            <div className="text-center">
+              <IconTile size="lg" className="mx-auto">
+                <ShieldCheck />
+              </IconTile>
+              <p className="text-title mt-4">Before you add photos</p>
+              <p className="text-callout mx-auto mt-1 max-w-[18rem] text-muted-foreground">Here&apos;s how we handle your meal photos.</p>
+            </div>
+            <ListGroup>
+              <ListRow icon={<Lock />} title="Stored privately" description="Never on a public link. Location data is removed." />
+              <ListRow icon={<EyeOff />} title="No personal details shared" description="An AI service suggests foods from the photo. It doesn't receive your name or health details." />
+              <ListRow icon={<Trash2 />} title="Delete any time" description="Removing a photo keeps your nutrition history." />
+            </ListGroup>
+            <p className="text-caption text-center text-muted-foreground">
+              Change this any time in{" "}
+              <Link href="/profile/privacy" className="font-medium text-forest underline-offset-2 hover:underline">
+                Privacy
+              </Link>
+              .
+            </p>
           </div>
-          <p className="text-center text-lg font-semibold">Before you add photos</p>
-          <ul className="space-y-2 rounded-2xl border bg-card p-4 text-sm">
-            <li>• Photos are stored privately — never on a public link — and location data is removed.</li>
-            <li>• An AI service looks at the photo to suggest foods. It doesn&apos;t receive your name or health details.</li>
-            <li>• You can delete a photo any time and keep your nutrition history.</li>
-          </ul>
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={() => {
-              setConsent("food_photos", true)
-              if (afterConsent.current === "sample") return startPhoto(undefined, true)
-              setHistory((h) => h.slice(0, -1))
-              setStep("method")
-              fileRef.current?.click()
-            }}
-          >
-            Allow photo logging
-          </Button>
-          <Button variant="ghost" className="w-full" onClick={() => setStep("search")}>
-            Not now — search instead
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Change this any time in{" "}
-            <Link href="/profile/privacy" className="underline underline-offset-2">
-              Privacy
-            </Link>
-            .
-          </p>
+          <StickyFooter>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => {
+                setConsent("food_photos", true)
+                if (afterConsent.current === "sample") return startPhoto(undefined, true)
+                setHistory((h) => h.slice(0, -1))
+                setStep("method")
+                fileRef.current?.click()
+              }}
+            >
+              Allow photo logging
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => setStep("search")}>
+              Not now — search instead
+            </Button>
+          </StickyFooter>
         </div>
       )}
 
       {step === "analyzing" && (
-        <div className="flex flex-1 flex-col items-center gap-4 px-6 pt-10 text-center">
+        <div className="px-gutter flex flex-1 flex-col items-center gap-3 pt-12 text-center">
           <div className="relative">
-            <div className="size-40 overflow-hidden rounded-2xl">
+            <div className="size-44 overflow-hidden rounded-[24px] border border-border/80">
               {photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photoUrl} alt="Your meal" className="size-full object-cover" />
@@ -358,10 +382,10 @@ export function LogFlow() {
             </div>
             <Loader2 className="absolute -right-3 -bottom-3 size-9 animate-spin rounded-full bg-card p-1.5 text-forest motion-reduce:animate-none" aria-hidden />
           </div>
-          <p className="font-semibold" aria-live="polite">
+          <p className="text-title mt-4" aria-live="polite">
             Finding foods and portions…
           </p>
-          <p className="max-w-xs text-sm text-muted-foreground">You&apos;ll check everything before it&apos;s saved.</p>
+          <p className="text-callout max-w-xs text-muted-foreground">You&apos;ll check everything before it&apos;s saved.</p>
           <Button
             variant="ghost"
             onClick={() => {
@@ -436,7 +460,7 @@ export function LogFlow() {
       {step === "result" && entryId && <ResultStep entryId={entryId} firstTime={isChild && child.firstTime} />}
 
       {step === "method" && isChild && (
-        <div className="px-4 pb-8">
+        <div className="px-gutter pb-8">
           <InfoNote>Breast milk or formula stays the main food in the first year. Offer solids alongside, never instead.</InfoNote>
         </div>
       )}
@@ -446,14 +470,14 @@ export function LogFlow() {
 
 function MethodTile({ icon, label, hint, onClick, phase }: { icon: React.ReactNode; label: string; hint: string; onClick: () => void; phase?: 1 | 2 | 3 }) {
   return (
-    <button onClick={onClick} className="flex min-h-20 flex-col items-start gap-1.5 rounded-xl border bg-card p-3 text-left transition-colors hover:bg-muted/50">
-      <span className="flex w-full items-center justify-between">
-        <span className="grid size-9 place-items-center rounded-lg bg-sage text-forest [&_svg]:size-4.5">{icon}</span>
+    <button onClick={onClick} className="flex min-h-[112px] flex-col items-start justify-between gap-3 rounded-2xl border border-border/80 bg-card p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted">
+      <span className="flex w-full items-start justify-between">
+        <IconTile>{icon}</IconTile>
         {phase && <PhaseBadge phase={phase} />}
       </span>
       <span>
-        <span className="block text-sm font-medium">{label}</span>
-        <span className="block text-xs text-muted-foreground">{hint}</span>
+        <span className="text-callout block font-semibold">{label}</span>
+        <span className="text-caption block text-muted-foreground">{hint}</span>
       </span>
     </button>
   )

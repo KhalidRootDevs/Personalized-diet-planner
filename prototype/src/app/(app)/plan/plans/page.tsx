@@ -3,8 +3,8 @@
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
-import { Lightbulb, Pause, Play, ShieldAlert } from "lucide-react"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { Lightbulb, Pause, Play, Plus, ShieldAlert } from "lucide-react"
+import { IconTile, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { Button } from "@/components/ui/button"
@@ -30,8 +30,10 @@ export default function PlansPage() {
         title="My plans"
         back="/plan"
         action={
-          <Button asChild size="sm">
-            <Link href="/plan/generate">New plan</Link>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/plan/generate">
+              <Plus className="size-4" /> New plan
+            </Link>
           </Button>
         }
       />
@@ -43,54 +45,74 @@ export default function PlansPage() {
         </Section>
 
         <Section title="All plans">
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {sorted.map((p) => {
               const a = adherence(p.meals)
               return (
-                <li key={p.id} className={cn("rounded-2xl border bg-card p-4", p.status === "active" && "border-forest")}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{p.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDay(p.startDate)} – {formatDay(addDays(p.startDate, p.durationDays - 1))}
-                      </p>
+                <li key={p.id}>
+                  <Surface className={cn(p.status === "active" && "border-forest/50")}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-body font-semibold">{p.title}</p>
+                        <p className="text-caption text-muted-foreground">
+                          {p.durationDays} days · {formatDay(p.startDate, { day: "numeric", month: "short" })} – {formatDay(addDays(p.startDate, p.durationDays - 1), { day: "numeric", month: "short" })}
+                        </p>
+                      </div>
+                      <Pill tone={p.status === "active" ? "forest" : p.status === "draft" ? "outline" : "neutral"}>{STATUS_LABEL[p.status]}</Pill>
                     </div>
-                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", p.status === "active" ? "bg-forest text-primary-foreground" : "bg-muted text-muted-foreground")}>{STATUS_LABEL[p.status]}</span>
-                  </div>
-                  {a.resolved > 0 && (
-                    <p className="tabular mt-2 text-sm text-muted-foreground">
-                      {a.completed} of {a.resolved} recorded meals eaten ({a.asPlanned} as planned, {a.modified + a.replaced} changed)
-                    </p>
-                  )}
-                  {!p.validation.safety && (
-                    <p className="mt-2 flex items-center gap-1.5 text-sm text-safety">
-                      <ShieldAlert className="size-4" /> Failed safety validation — can&apos;t be activated
-                    </p>
-                  )}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {(p.status === "draft" || p.status === "archived") && (
-                      <Button
-                        size="sm"
-                        disabled={!p.validation.safety || p.validation.requiresReview}
-                        onClick={() => {
-                          activatePlan(p.id)
-                          toast("Plan activated")
-                        }}
-                      >
-                        <Play /> Activate
-                      </Button>
+                    {a.resolved > 0 && (
+                      <p className="tabular text-callout mt-3 text-muted-foreground">
+                        {a.completed} of {a.resolved} recorded meals eaten · {a.asPlanned} as planned, {a.modified + a.replaced} changed
+                      </p>
                     )}
-                    {p.status === "active" && (
-                      <Button size="sm" variant="outline" onClick={() => { setPlanStatus(p.id, "paused"); toast("Plan paused — reminders stop until you resume") }}>
-                        <Pause /> Pause
-                      </Button>
+                    {!p.validation.safety && (
+                      <p className="text-callout mt-3 flex items-center gap-1.5 font-medium text-safety">
+                        <ShieldAlert className="size-4" /> Failed safety validation — can&apos;t be activated
+                      </p>
                     )}
-                    {p.status === "paused" && (
-                      <Button size="sm" variant="outline" onClick={() => { setPlanStatus(p.id, "active"); toast("Plan resumed") }}>
-                        <Play /> Resume
-                      </Button>
-                    )}
-                  </div>
+                    {p.validation.requiresReview && p.validation.safety && <p className="text-callout mt-3 text-caution">Waiting for professional review before it can be activated.</p>}
+                    {p.status !== "archived" || p.validation.safety ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {(p.status === "draft" || p.status === "archived") && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={!p.validation.safety || p.validation.requiresReview}
+                            onClick={() => {
+                              activatePlan(p.id)
+                              toast("Plan activated")
+                            }}
+                          >
+                            <Play className="size-4" /> Activate
+                          </Button>
+                        )}
+                        {p.status === "active" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setPlanStatus(p.id, "paused")
+                              toast("Plan paused — reminders stop until you resume")
+                            }}
+                          >
+                            <Pause className="size-4" /> Pause
+                          </Button>
+                        )}
+                        {p.status === "paused" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setPlanStatus(p.id, "active")
+                              toast("Plan resumed")
+                            }}
+                          >
+                            <Play className="size-4" /> Resume
+                          </Button>
+                        )}
+                      </div>
+                    ) : null}
+                  </Surface>
                 </li>
               )
             })}
@@ -111,7 +133,7 @@ function AdaptiveSuggestions() {
   const replaceMeal = useApp((s) => s.replaceMeal)
   const profile = useSelfProfile()
   const [dismissed, setDismissed] = useState<string[]>([])
-  if (!plan || !profile) return <p className="text-sm text-muted-foreground">Suggestions appear once you have an active plan.</p>
+  if (!plan || !profile) return <p className="text-callout text-muted-foreground">Suggestions appear once you have an active plan.</p>
 
   const past = plan.meals.filter((m) => m.date < todayISO())
   const changedDinners = past.filter((m) => m.mealType === "dinner" && (m.outcome === "replaced" || m.outcome === "eaten_modified" || m.outcome === "skipped")).length
@@ -137,35 +159,41 @@ function AdaptiveSuggestions() {
       id: "repeat_breakfast",
       title: "Keep breakfasts you enjoy",
       why: "You eat breakfast as planned most days. We can repeat your favorites instead of rotating.",
-      apply: () => "We'll favour your usual breakfasts in the next plan",
+      apply: () => "We'll favor your usual breakfasts in the next plan",
     },
   ].filter((s) => !dismissed.includes(s.id))
 
-  if (!suggestions.length) return <p className="text-sm text-muted-foreground">No suggestions right now.</p>
+  if (!suggestions.length) return <p className="text-callout text-muted-foreground">No suggestions right now.</p>
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {suggestions.map((s) => (
-        <div key={s.id} className="rounded-2xl border bg-card p-4">
-          <p className="flex items-center gap-2 font-medium">
-            <Lightbulb className="size-4.5 text-forest" /> {s.title}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">{s.why}</p>
-          <div className="mt-3 flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                toast(s.apply())
-                setDismissed([...dismissed, s.id])
-              }}
-            >
-              Apply
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setDismissed([...dismissed, s.id])}>
-              Not now
-            </Button>
+        <Surface key={s.id}>
+          <div className="flex gap-3">
+            <IconTile>
+              <Lightbulb />
+            </IconTile>
+            <div className="min-w-0 flex-1">
+              <p className="text-body font-semibold">{s.title}</p>
+              <p className="text-callout mt-0.5 text-muted-foreground">{s.why}</p>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    toast(s.apply())
+                    setDismissed([...dismissed, s.id])
+                  }}
+                >
+                  Apply
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setDismissed([...dismissed, s.id])}>
+                  Not now
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
+        </Surface>
       ))}
       <InfoNote>Suggestions never make your plan stricter because a target was missed. Nothing changes until you approve it.</InfoNote>
     </div>

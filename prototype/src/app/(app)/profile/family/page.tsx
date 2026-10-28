@@ -4,7 +4,7 @@
 // permissions and belong to Family Nutrition (Phase 2, §42.9, §29.1).
 import { useState } from "react"
 import Link from "next/link"
-import { Baby, Plus, Trash2, UserPlus, Users } from "lucide-react"
+import { Baby, Trash2, UserPlus } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/lib/store"
 import { ageInMonths } from "@/lib/nutrition"
@@ -14,11 +14,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { PageBody, PageHeader, Section, EmptyState } from "@/components/app/page"
+import { EmptyState, ListGroup, PageBody, PageHeader, Section, SectionLink } from "@/components/app/page"
 import { PhaseBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { ProfileAvatar, profileAgeLabel } from "@/components/app/profile-switcher"
-import { Field, PillGroup } from "@/components/profile/form-bits"
+import { Field, PillGroup } from "@/components/app/controls"
 
 const MOCK_MEMBERS = [
   { id: "m1", name: "Rafiq", relation: "Partner", avatarColor: "terracotta" as const },
@@ -52,27 +52,31 @@ export default function FamilyPage() {
     <>
       <PageHeader back="/profile" title="Family" />
       <PageBody>
-        <Section title="Children you manage" badge={<PhaseBadge phase={1} />} action={<Button size="sm" variant="outline" onClick={() => setAdding(true)}><Plus className="size-4" /> Add</Button>}>
+        <Section title="Children you manage" badge={<PhaseBadge phase={1} />} action={children.length > 0 && <SectionLink onClick={() => setAdding(true)}>Add a child</SectionLink>}>
           {children.length === 0 ? (
-            <EmptyState icon={<Baby className="size-5" />} title="No child profiles yet" description="Add a baby or child to get age-appropriate feeding guidance, first-food tracking and growth records." action={<Button onClick={() => setAdding(true)}>Add a child</Button>} />
+            <EmptyState icon={<Baby />} title="No child profiles yet" description="Add a baby or child to get age-appropriate feeding guidance, first-food tracking and growth records." action={<Button onClick={() => setAdding(true)}>Add a child</Button>} />
           ) : (
-            <div className="space-y-2">
+            <ListGroup>
               {children.map((c) => (
-                <div key={c.id} className="flex items-center gap-3 rounded-xl border bg-card p-3">
+                <div key={c.id} className="flex min-h-[64px] items-center gap-3 py-3 pr-2 pl-4">
                   <ProfileAvatar profile={c} />
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">{c.name}</p>
-                    <p className="text-sm text-muted-foreground">{profileAgeLabel(c)} · {c.type === "infant" ? "Baby feeding" : "Child nutrition"}</p>
+                    <p className="text-body font-medium">{c.name}</p>
+                    <p className="text-caption text-muted-foreground">
+                      {profileAgeLabel(c)} · {c.type === "infant" ? "baby" : "child"}
+                    </p>
                   </div>
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href="/child" onClick={() => setActiveProfile(c.id)}>Open</Link>
+                  <Button asChild size="sm" variant="secondary">
+                    <Link href="/child" onClick={() => setActiveProfile(c.id)}>
+                      Open
+                    </Link>
                   </Button>
-                  <Button size="icon" variant="ghost" aria-label={`Remove ${c.name}`} onClick={() => setRemoving(c)}>
-                    <Trash2 className="size-4" />
+                  <Button size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Remove ${c.name}`} onClick={() => setRemoving(c)}>
+                    <Trash2 className="size-[18px]" />
                   </Button>
                 </div>
               ))}
-            </div>
+            </ListGroup>
           )}
           <InfoNote>Child profiles are free. You see their data as their caregiver; nobody else does unless you allow it.</InfoNote>
         </Section>
@@ -81,17 +85,17 @@ export default function FamilyPage() {
           <PremiumGate feature="family">
             <div className="space-y-3">
               {MOCK_MEMBERS.map((m) => (
-                <div key={m.id} className="rounded-xl border bg-card p-3">
-                  <div className="flex items-center gap-3">
+                <div key={m.id} className="overflow-hidden rounded-2xl border border-border/80 bg-card">
+                  <div className="flex items-center gap-3 px-4 py-3.5">
                     <ProfileAvatar profile={m} />
                     <div className="flex-1">
-                      <p className="font-medium">{m.name}</p>
-                      <p className="text-sm text-muted-foreground">{m.relation} · their own account</p>
+                      <p className="text-body font-medium">{m.name}</p>
+                      <p className="text-caption text-muted-foreground">{m.relation} · their own account</p>
                     </div>
                   </div>
-                  <div className="mt-3 space-y-1 border-t pt-2">
+                  <div className="divide-y divide-border/70 border-t border-border/70">
                     {PERMISSIONS.map((perm) => (
-                      <label key={perm.id} className="flex items-center justify-between py-1.5 text-sm">
+                      <label key={perm.id} className="text-callout flex min-h-12 cursor-pointer items-center justify-between gap-3 px-4 py-2">
                         <span>{perm.label}</span>
                         <Switch
                           checked={perms[m.id][perm.id]}
@@ -106,7 +110,7 @@ export default function FamilyPage() {
                 </div>
               ))}
               <Button variant="outline" className="w-full" onClick={() => toast("Invite link copied", { description: "Prototype: no invitation is sent." })}>
-                <UserPlus className="size-4" /> Invite a household member
+                <UserPlus className="size-[18px]" /> Invite a household member
               </Button>
               <InfoNote>Each adult controls their own health data. Shared meals give everyone the right portion — a baby never gets a smaller adult portion.</InfoNote>
             </div>
@@ -182,7 +186,7 @@ function AddChildDialog({ open, onOpenChange, onSave, needsConsent }: { open: bo
             </Field>
           )}
           {needsConsent && (
-            <label className="flex items-start gap-3 rounded-xl bg-muted/60 p-3 text-sm">
+            <label className="text-callout flex items-start gap-3 rounded-xl bg-muted p-4">
               <Switch checked={consent} onCheckedChange={setConsent} className="mt-0.5" />
               <span className="text-muted-foreground">I&apos;m this child&apos;s parent or caregiver and allow NutriPlan to store their information for feeding guidance.</span>
             </label>
@@ -190,6 +194,8 @@ function AddChildDialog({ open, onOpenChange, onSave, needsConsent }: { open: bo
         </div>
         <DialogFooter>
           <Button
+            size="lg"
+            className="w-full"
             disabled={!name.trim() || !consent || months < 0}
             onClick={() => {
               onSave({
@@ -208,7 +214,7 @@ function AddChildDialog({ open, onOpenChange, onSave, needsConsent }: { open: bo
               setName("")
             }}
           >
-            <Users className="size-4" /> Add child
+            Add child
           </Button>
         </DialogFooter>
       </DialogContent>

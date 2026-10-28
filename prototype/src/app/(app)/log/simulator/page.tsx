@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { PageHeader, PageBody, Section } from "@/components/app/page"
+import { IconTile, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
+import { Scale } from "lucide-react"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { EstimateNote, NutrientBar } from "@/components/app/nutrition"
 import { InfoNote, SafetyAlert } from "@/components/app/alerts"
@@ -54,12 +55,12 @@ function Simulator() {
 
   if (!item)
     return (
-      <div className="space-y-5">
+      <div className="space-y-7">
         <InfoNote>Pick a food to see how it would fit into today, alongside the meals you still have planned.</InfoNote>
         <Section title="Common choices">
           <div className="flex flex-wrap gap-2">
             {QUICK.map((id) => (
-              <button key={id} onClick={() => setItem(itemFromFood(id))} className="min-h-10 rounded-full border bg-card px-4 text-sm hover:bg-muted/50">
+              <button key={id} onClick={() => setItem(itemFromFood(id))} className="text-callout h-9 rounded-full border border-border/80 bg-card px-4 font-medium transition-colors hover:bg-muted">
                 {itemFromFood(id).displayName}
               </button>
             ))}
@@ -77,18 +78,22 @@ function Simulator() {
   const hits = allergenHits([item], self)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {hits.length > 0 && <SafetyAlert title={`Contains ${ALLERGEN_LABELS[hits[0].allergen] ?? hits[0].allergen}`}>This food includes an allergen recorded in your profile. We don&apos;t suggest it.</SafetyAlert>}
       <ItemEditor item={item} profile={self} onChange={setItem} />
       {targets.supported && (
-        <div className="space-y-4 rounded-2xl border bg-card p-4">
-          <p className="font-medium">If you have it now</p>
+        <Surface padding="lg" className="space-y-4">
+          <p className="text-headline">If you have it now</p>
           <NutrientBar label="Energy today" value={after.energyKcal} low={targets.energy.low} high={targets.energy.high} unit="kcal" estimate planned={projected} />
           <NutrientBar label="Protein today" value={after.proteinG} low={targets.proteinG.low} high={targets.proteinG.high} unit="g" estimate />
-          <p className="text-xs text-muted-foreground">The thin marker shows today including your remaining planned meals (~{Math.round(plannedRest)} kcal).</p>
-        </div>
+          <p className="text-caption border-t border-border/70 pt-3 text-muted-foreground">The thin marker shows today including your remaining planned meals (~{Math.round(plannedRest).toLocaleString("en-US")} kcal).</p>
+        </Surface>
       )}
-      <div className="rounded-2xl bg-sage p-4 text-sm">
+      <div className="text-callout flex gap-3 rounded-2xl bg-sage/70 p-4">
+        <IconTile tone="white" size="sm">
+          <Scale />
+        </IconTile>
+        <div className="min-w-0">
         {!targets.supported ? (
           <p>Your care team sets your targets, so we don&apos;t compare this food with a range.</p>
         ) : projected <= targets.energy.high ? (
@@ -102,9 +107,10 @@ function Simulator() {
           </p>
         )}
         {n.proteinG < 5 && n.energyKcal > 150 && <p className="mt-2">Having it with a protein food, like doi or an egg, can help you feel full for longer.</p>}
+        </div>
       </div>
       <EstimateNote />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <Button variant="outline" onClick={() => setItem(null)}>
           Try another
         </Button>
@@ -126,7 +132,7 @@ function Simulator() {
             setItem(null)
           }}
         >
-          I&apos;m having it — log
+          Log it
         </Button>
       </div>
     </div>

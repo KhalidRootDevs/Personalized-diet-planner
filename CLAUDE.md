@@ -15,7 +15,7 @@ Guidance for Claude Code when working in this repository.
 
 **Current state:** specification plus a clickable stakeholder prototype; no production code exists yet. The full Product Requirements Document lives in [`docs/prd/`](docs/prd/). It is the source of truth for features; do not drop, change, or reinterpret features unless the user asks.
 
-**Prototype:** [`prototype/`](prototype/) is an installable PWA demo (Next.js 16, Tailwind v4, shadcn/ui, zustand with localStorage, no backend) covering all phases with P1/P2/P3 badges. See [`prototype/README.md`](prototype/README.md). The production app will be Flutter or React Native, so treat the prototype as a flow/UI reference, not as the codebase. Its data is illustrative and its tier gating (`src/lib/features.ts`) is a proposal pending §43.7. Next 16 has breaking changes: read `prototype/node_modules/next/dist/docs/` before changing it.
+**Prototype:** [`prototype/`](prototype/) is an installable PWA demo (Next.js 16, Tailwind v4, shadcn/ui, zustand with localStorage, no backend) covering all phases with P1/P2/P3 badges. See [`prototype/README.md`](prototype/README.md). Its exact UI contract (spacing, type scale, components, screen patterns) is [`prototype/UI-SPEC.md`](prototype/UI-SPEC.md): the production app reproduces it, and new screens must use its components rather than ad-hoc styling. The production app will be Flutter or React Native, so treat the prototype as a flow/UI reference, not as the codebase. Its data is illustrative and its tier gating (`src/lib/features.ts`) is a proposal pending §43.7. Next 16 has breaking changes: read `prototype/node_modules/next/dist/docs/` before changing it.
 
 ## Non-negotiable rules (apply to all code and content)
 

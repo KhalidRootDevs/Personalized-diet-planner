@@ -3,7 +3,7 @@
 // 9-step progressive onboarding (§5.1–§5.9) with consent before health, photo and child data (§5.10, §21.4).
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Baby, ChevronLeft, Clock, HeartPulse, Lock, Smile, User, Users } from "lucide-react"
+import { Baby, Clock, HeartPulse, Lock, Smile, User, Users } from "lucide-react"
 import { useApp } from "@/lib/store"
 import { ageInMonths, ageInYears } from "@/lib/nutrition"
 import { addDays, todayISO } from "@/lib/date"
@@ -12,11 +12,11 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Progress } from "@/components/ui/progress"
 import { PhaseBadge } from "@/components/app/badges"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { Splash } from "@/components/app/shell"
-import { ChipGroup, ChoiceCard, Field, PillGroup, WhyWeAsk } from "@/components/profile/form-bits"
+import { FlowHeader, StatTile, StickyFooter, Surface } from "@/components/app/page"
+import { ChipGroup, ChoiceCard, Field, PillGroup, WhyWeAsk } from "@/components/app/controls"
 import { TargetsCard } from "@/components/profile/targets-card"
 import { ACTIVITY, ALLERGENS, CONDITIONS, DIETS, GOALS, OCCUPATIONS, REVIEW_CONDITIONS } from "@/components/profile/options"
 
@@ -115,7 +115,6 @@ export default function OnboardingPage() {
 
   const steps = who === "self" ? ADULT_STEPS : CHILD_STEPS
   const id = steps[step]
-  const pct = Math.round(((step + 1) / steps.length) * 100)
 
   const adultAge = p.dateOfBirth ? ageInYears(p.dateOfBirth) : 0
   const childMonths = child.dateOfBirth ? ageInMonths(child.dateOfBirth) : 0
@@ -156,25 +155,13 @@ export default function OnboardingPage() {
   const back = () => (step > 0 ? setStep(step - 1) : router.push("/welcome"))
 
   return (
-    <main className="flex flex-1 flex-col pt-safe">
-      <header className="sticky top-0 z-20 bg-background/95 px-4 backdrop-blur-sm">
-        <div className="flex h-14 items-center gap-2">
-          <button onClick={back} className="-ml-2 grid size-10 place-items-center rounded-full hover:bg-muted" aria-label="Back">
-            <ChevronLeft className="size-5" />
-          </button>
-          <div className="flex-1">
-            <Progress value={pct} aria-label={`Step ${step + 1} of ${steps.length}`} className="h-1.5" />
-          </div>
-          <span className="tabular w-12 text-right text-xs text-muted-foreground">
-            {step + 1} / {steps.length}
-          </span>
-        </div>
-      </header>
+    <main className="flex flex-1 flex-col">
+      <FlowHeader title="Set up your profile" step={step + 1} total={steps.length} onBack={back} />
 
-      <div className="flex-1 space-y-6 px-5 pt-4 pb-6">
+      <div className="px-gutter flex-1 space-y-7 pt-4 pb-8">
         {id === "who" && (
           <StepIntro title="Who is this plan for?" text="We tailor every question to the person the plan is for. Babies and children never get an adult questionnaire.">
-            <div role="radiogroup" className="space-y-3">
+            <div role="radiogroup" className="space-y-2.5">
               <ChoiceCard selected={who === "self"} onSelect={() => setWho("self")} icon={<User className="size-5" />} title="Myself" description="Plans for your body, work and goals" />
               <ChoiceCard selected={who === "baby"} onSelect={() => { setWho("baby"); setC({ dateOfBirth: addDays(todayISO(), -213) }) }} icon={<Baby className="size-5" />} title="My baby" description="First foods from about 6 months, with a caregiver view" />
               <ChoiceCard selected={who === "child"} onSelect={() => { setWho("child"); setC({ dateOfBirth: addDays(todayISO(), -365 * 4) }) }} icon={<Smile className="size-5" />} title="My child" description="Child-appropriate guidance, no calorie counting" />
@@ -200,26 +187,20 @@ export default function OnboardingPage() {
                 <Input id="weight" type="number" inputMode="decimal" min={30} max={250} value={p.weightKg ?? ""} onChange={(e) => set({ weightKg: Number(e.target.value) || undefined })} />
               </Field>
             </div>
-            <p className="text-xs text-muted-foreground">Self-reported values. We keep them separate from clinically measured ones.</p>
+            <p className="text-caption -mt-3 text-muted-foreground">Self-reported values. We keep them separate from clinically measured ones.</p>
             <Field label="Language">
               <PillGroup label="Language" value={language} onChange={(v) => updateSettings({ language: v })} options={[{ value: "en", label: "English" }, { value: "bn", label: "বাংলা" }]} />
             </Field>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-xl border bg-card p-3">
-                <p className="text-muted-foreground">Country</p>
-                <p className="font-medium">Bangladesh</p>
-              </div>
-              <div className="rounded-xl border bg-card p-3">
-                <p className="text-muted-foreground">Time zone · currency</p>
-                <p className="font-medium">Asia/Dhaka · BDT</p>
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              <StatTile label="Country" value="Bangladesh" />
+              <StatTile label="Time zone · currency" value="Dhaka · BDT" />
             </div>
           </StepIntro>
         )}
 
         {id === "goal" && (
           <StepIntro title="What's your main goal?" text="Pick the one that matters most right now.">
-            <div role="radiogroup" className="space-y-2">
+            <div role="radiogroup" className="space-y-2.5">
               {GOALS.map((g) => (
                 <ChoiceCard key={g.value} selected={p.goal === g.value} onSelect={() => set({ goal: g.value })} title={g.label} />
               ))}
@@ -234,7 +215,7 @@ export default function OnboardingPage() {
               <PillGroup label="Occupation" value={p.occupation} onChange={(v) => set({ occupation: v })} options={OCCUPATIONS} />
             </Field>
             <Field label="Daily activity">
-              <div role="radiogroup" className="space-y-2">
+              <div role="radiogroup" className="space-y-2.5">
                 {ACTIVITY.map((a) => (
                   <ChoiceCard key={a.value} selected={p.activity === a.value} onSelect={() => set({ activity: a.value })} title={a.label} description={a.description} />
                 ))}
@@ -277,12 +258,12 @@ export default function OnboardingPage() {
                 <Field label="Diagnosed conditions or circumstances">
                   <ChipGroup label="Conditions" value={p.conditions ?? []} onChange={(v) => set({ conditions: v })} options={CONDITIONS} />
                 </Field>
-                <div className="space-y-2">
+                <ToggleList>
                   <Toggle label="I take medication that affects food or fluids" checked={flags.medications} onChange={(v) => setFlags((f) => ({ ...f, medications: v }))} />
                   <Toggle label="A clinician advised me to follow a specific diet" checked={flags.clinicianDiet} onChange={(v) => setFlags((f) => ({ ...f, clinicianDiet: v }))} />
                   <Toggle label="I've had recent unexplained weight change" checked={flags.weightChange} onChange={(v) => setFlags((f) => ({ ...f, weightChange: v }))} />
                   <Toggle label="I have chest pain, severe breathlessness, fainting or a severe allergic reaction right now" checked={emergency} onChange={setEmergency} />
-                </div>
+                </ToggleList>
                 {emergency && (
                   <SafetyAlert title="Please get urgent help now" emergency>
                     These symptoms need immediate medical attention. In Bangladesh call 999. A meal plan can wait.
@@ -298,7 +279,7 @@ export default function OnboardingPage() {
                 <WhyWeAsk>Health details let the nutrition engine exclude unsafe foods and route complex needs to professionals. We never diagnose a condition from your answers.</WhyWeAsk>
               </>
             ) : (
-              <div className="flex items-start gap-3 rounded-xl bg-muted/60 p-3 text-sm text-muted-foreground">
+              <div className="text-callout flex items-start gap-3 rounded-2xl bg-muted p-4 text-muted-foreground">
                 <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
                 Turn on the permission above to record allergies and conditions. Without it we can&apos;t check meals against your allergies, so a plan can&apos;t be created.
               </div>
@@ -308,7 +289,7 @@ export default function OnboardingPage() {
 
         {id === "budget" && (
           <StepIntro title="Food budget" text="We prioritize affordable local foods. Prices are estimates.">
-            <div role="radiogroup" className="space-y-2">
+            <div role="radiogroup" className="space-y-2.5">
               {BUDGETS.map((b) => (
                 <ChoiceCard key={b.value} selected={p.budgetPerWeekBdt === b.value} onSelect={() => set({ budgetPerWeekBdt: b.value })} title={b.label} description={b.description} />
               ))}
@@ -328,7 +309,9 @@ export default function OnboardingPage() {
             <Field label="Meals per day">
               <PillGroup label="Meals per day" value={String(p.mealsPerDay)} onChange={(v) => set({ mealsPerDay: Number(v) })} options={["3", "4", "5"].map((v) => ({ value: v, label: `${v} meals` }))} />
             </Field>
-            <Toggle label="Include snacks" checked={!!p.includeSnacks} onChange={(v) => set({ includeSnacks: v })} />
+            <ToggleList>
+              <Toggle label="Include snacks" checked={!!p.includeSnacks} onChange={(v) => set({ includeSnacks: v })} />
+            </ToggleList>
             <Field label="What do you have?">
               <ChipGroup label="Equipment" value={equipment} onChange={setEquipment} options={EQUIPMENT} />
             </Field>
@@ -395,7 +378,9 @@ export default function OnboardingPage() {
                 <Field label="Known food allergies">
                   <ChipGroup<Allergen> label="Known food allergies" value={child.allergies ?? []} onChange={(v) => setC({ allergies: v })} options={ALLERGENS} />
                 </Field>
-                <Toggle label="Has had a reaction to a food (rash, vomiting, swelling)" checked={childReactions} onChange={setChildReactions} />
+                <ToggleList>
+                  <Toggle label="Has had a reaction to a food (rash, vomiting, swelling)" checked={childReactions} onChange={setChildReactions} />
+                </ToggleList>
                 {childReactions && (
                   <CautionNote title="Talk to a health professional first">
                     Before introducing common allergens, ask your doctor. We&apos;ll keep allergen introductions out of suggestions until a professional has advised you.
@@ -420,34 +405,34 @@ export default function OnboardingPage() {
                 {(p.allergies?.length ?? 0) > 0 && <SafetyAlert title="Allergy protection on">Excluding {p.allergies!.map((a) => ALLERGENS.find((x) => x.value === a)?.label).join(", ")} from every meal, snack, swap and shopping list.</SafetyAlert>}
               </>
             ) : (
-              <div className="space-y-3 rounded-2xl border bg-sage/40 p-4">
-                <p className="font-serif text-xl">{child.name || "Your child"}</p>
-                <ul className="space-y-2 text-sm">
+              <Surface tone="sage" padding="lg" className="space-y-3">
+                <p className="text-title">{child.name || "Your child"}</p>
+                <ul className="text-callout space-y-2.5">
                   <li className="flex gap-2"><Clock className="mt-0.5 size-4 shrink-0 text-forest" />{childMonths < 24 ? `${childMonths} months old` : `${Math.floor(childMonths / 12)} years old`}</li>
                   <li className="flex gap-2"><Smile className="mt-0.5 size-4 shrink-0 text-forest" />Textures, new foods and milestones — not calories</li>
                   <li className="flex gap-2"><Baby className="mt-0.5 size-4 shrink-0 text-forest" />Responsive feeding: follow your child&apos;s hunger and fullness cues</li>
                 </ul>
-                <p className="text-xs text-muted-foreground">Baby food suggestions are clinically gated and use reviewed recipes only.</p>
-              </div>
+                <p className="text-caption text-muted-foreground">Baby food suggestions are clinically gated and use reviewed recipes only.</p>
+              </Surface>
             )}
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Optional permissions</p>
+            <div>
+              <p className="text-overline mb-2 px-1 text-muted-foreground">Optional permissions</p>
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
               <ConsentCard compact title="Food photos" text="Store meal photos privately to log what you eat. No public links. Delete any time." checked={consents.food_photos} onChange={(v) => toggleConsent("food_photos", v)} />
               <ConsentCard compact title="AI processing" text="Send de-identified meal descriptions and photos to our AI provider to suggest foods. Manual logging always works without it." checked={consents.ai_processing} onChange={(v) => toggleConsent("ai_processing", v)} />
               <ConsentCard compact title="Product analytics" text="Anonymous usage data to improve NutriPlan." checked={consents.analytics} onChange={(v) => toggleConsent("analytics", v)} />
+              </div>
             </div>
           </StepIntro>
         )}
       </div>
 
-      <div className="sticky bottom-0 border-t bg-background/95 px-5 pt-3 pb-safe backdrop-blur-sm">
-        <div className="pb-4">
-          <Button size="lg" className="w-full" disabled={!canNext || (id === "health" && emergency)} onClick={next}>
-            {id === "review" ? (who === "self" ? "Create my first plan" : "Start") : "Continue"}
-          </Button>
-          {id === "review" && <p className="mt-2 text-center text-xs text-muted-foreground">Estimates support healthy eating and don&apos;t replace medical advice.</p>}
-        </div>
-      </div>
+      <StickyFooter>
+        <Button size="lg" className="w-full" disabled={!canNext || (id === "health" && emergency)} onClick={next}>
+          {id === "review" ? (who === "self" ? "Create my first plan" : "Start") : "Continue"}
+        </Button>
+        {id === "review" && <p className="text-caption text-center text-muted-foreground">Estimates support healthy eating and don&apos;t replace medical advice.</p>}
+      </StickyFooter>
     </main>
   )
 }
@@ -456,32 +441,38 @@ function StepIntro({ title, text, children }: { title: string; text?: string; ch
   return (
     <>
       <div>
-        <h1 className="font-serif text-[28px] leading-tight">{title}</h1>
-        {text && <p className="mt-2 text-muted-foreground">{text}</p>}
+        <h1 className="text-display text-[28px] leading-[34px]">{title}</h1>
+        {text && <p className="text-body mt-2 text-muted-foreground">{text}</p>}
       </div>
-      <div className="space-y-5">{children}</div>
+      <div className="space-y-6">{children}</div>
     </>
   )
 }
 
+/** Grouped list of switch rows (UI-SPEC §5.4). */
+function ToggleList({ children }: { children: React.ReactNode }) {
+  return <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">{children}</div>
+}
+
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex min-h-12 items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2 text-sm">
+    <label className="text-body flex min-h-14 cursor-pointer items-center justify-between gap-4 px-4 py-3">
       <span>{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} />
     </label>
   )
 }
 
+/** Consent with an explanation. `compact` renders as a row inside a grouped list. */
 function ConsentCard({ icon, title, text, checked, onChange, compact }: { icon?: React.ReactNode; title: string; text: string; checked: boolean; onChange: (v: boolean) => void; compact?: boolean }) {
   return (
-    <label className={cn("flex gap-3 rounded-xl border bg-card", compact ? "p-3" : "p-4", checked && !compact && "border-forest")}>
-      {icon && <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-sage text-forest">{icon}</span>}
+    <label className={cn("flex cursor-pointer gap-3", compact ? "px-4 py-3.5" : "rounded-2xl border bg-card p-4 transition-colors", !compact && (checked ? "border-forest bg-sage/30" : "border-border/80"))}>
+      {icon && <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sage text-forest [&_svg]:size-5">{icon}</span>}
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium">{title}</span>
-        <span className="mt-0.5 block text-xs text-muted-foreground">{text}</span>
+        <span className="text-body block font-medium">{title}</span>
+        <span className="text-caption mt-0.5 block text-muted-foreground">{text}</span>
       </span>
-      <Switch checked={checked} onCheckedChange={onChange} className="mt-1" />
+      <Switch checked={checked} onCheckedChange={onChange} className="mt-0.5" />
     </label>
   )
 }

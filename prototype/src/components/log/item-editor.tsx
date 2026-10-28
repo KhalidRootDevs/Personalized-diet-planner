@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfidenceChip } from "@/components/app/nutrition"
 import { FoodPickerSheet } from "@/components/log/food-picker"
+import { FoodTile } from "@/components/log/food-tile"
 import { FOOD_MAP } from "@/lib/data/foods"
 import { foodNutrients } from "@/lib/nutrition"
 import { infantFlags } from "@/lib/area-b-log"
@@ -34,6 +35,7 @@ export function ItemEditor({
   profile,
   showConfidence,
   hideNutrition,
+  variant = "card",
 }: {
   item: JournalItem
   onChange: (item: JournalItem) => void
@@ -41,6 +43,8 @@ export function ItemEditor({
   profile?: Profile
   showConfidence?: boolean
   hideNutrition?: boolean
+  /** "card" = standalone surface; "row" = a row inside a grouped list (UI-SPEC §4.4). */
+  variant?: "card" | "row"
 }) {
   const food = FOOD_MAP[item.foodId]
   const units = food?.units ?? []
@@ -58,45 +62,48 @@ export function ItemEditor({
   }
 
   return (
-    <div className={cn("rounded-xl border bg-card p-3", lowId && "border-caution/40")}>
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">{item.displayName}</p>
-          <p className="text-xs text-muted-foreground">
+    <div className={cn(variant === "card" ? "rounded-2xl border border-border/80 bg-card p-4" : "px-4 py-4", lowId && (variant === "card" ? "border-caution/40 bg-caution-surface/30" : "bg-caution-surface/30"))}>
+      <div className="flex items-start gap-3">
+        <FoodTile foodId={item.foodId} name={item.displayName} />
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="text-body font-medium">{item.displayName}</p>
+          <p className="text-caption mt-0.5 text-muted-foreground">
             {food?.state === "cooked" ? "Cooked" : food?.state === "raw" ? "Raw" : food?.state === "dry" ? "Dry weight" : "Prepared"}
             {item.cookingMethod && ` · ${item.cookingMethod}`}
             {!hideNutrition && <span className="tabular"> · ~{Math.round(n.energyKcal)} kcal · {Math.round(n.proteinG)} g protein</span>}
           </p>
         </div>
-        <FoodPickerSheet
-          profile={profile}
-          title="Change food"
-          onPick={(foodId) => onChange({ ...item, foodId, displayName: FOOD_MAP[foodId]?.name ?? foodId, unitLabel: undefined, identificationConfidence: "high", confirmedByUser: true })}
-          trigger={
-            <Button variant="ghost" size="icon-sm" aria-label={`Change ${item.displayName}`}>
-              <Replace />
+        <div className="-mt-1 -mr-2 flex shrink-0">
+          <FoodPickerSheet
+            profile={profile}
+            title="Change food"
+            onPick={(foodId) => onChange({ ...item, foodId, displayName: FOOD_MAP[foodId]?.name ?? foodId, unitLabel: undefined, identificationConfidence: "high", confirmedByUser: true })}
+            trigger={
+              <Button variant="ghost" size="icon-sm" className="text-charcoal" aria-label={`Change ${item.displayName}`}>
+                <Replace />
+              </Button>
+            }
+          />
+          {onRemove && (
+            <Button variant="ghost" size="icon-sm" className="text-charcoal" aria-label={`Remove ${item.displayName}`} onClick={onRemove}>
+              <Trash2 />
             </Button>
-          }
-        />
-        {onRemove && (
-          <Button variant="ghost" size="icon-sm" aria-label={`Remove ${item.displayName}`} onClick={onRemove}>
-            <Trash2 />
-          </Button>
-        )}
+          )}
+        </div>
       </div>
 
       {showConfidence && !item.confirmedByUser && (
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            Food: <ConfidenceChip level={item.identificationConfidence} />
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <span className="text-caption flex items-center gap-1.5 text-muted-foreground">
+            Food <ConfidenceChip level={item.identificationConfidence} />
           </span>
-          <span className="flex items-center gap-1">
-            Portion: <ConfidenceChip level={item.quantityConfidence} />
+          <span className="text-caption flex items-center gap-1.5 text-muted-foreground">
+            Portion <ConfidenceChip level={item.quantityConfidence} />
           </span>
         </div>
       )}
-      {lowId && <p className="mt-2 text-xs text-caution">We&apos;re not sure about this one — tap the swap icon if it&apos;s a different food.</p>}
-      {flag && <p className="mt-2 text-xs font-medium text-safety">{flag}</p>}
+      {lowId && <p className="text-caption mt-2 text-caution">We&apos;re not sure about this one — tap the swap icon if it&apos;s a different food.</p>}
+      {flag && <p className="text-caption mt-2 font-medium text-safety">{flag}</p>}
 
       <div className="mt-3 flex items-center gap-2">
         <Select
@@ -120,33 +127,33 @@ export function ItemEditor({
           </SelectContent>
         </Select>
         {unit ? (
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon-sm" aria-label="Less" disabled={count <= 0.5} onClick={() => setCount(count - 0.5)}>
-              <Minus />
-            </Button>
-            <span className="tabular w-9 text-center text-sm font-semibold" aria-live="polite">
+          <div className="flex h-12 shrink-0 items-center rounded-xl border border-input bg-card px-1">
+            <button type="button" className="grid size-10 place-items-center rounded-lg text-charcoal transition-colors hover:bg-muted disabled:opacity-40" aria-label="Less" disabled={count <= 0.5} onClick={() => setCount(count - 0.5)}>
+              <Minus className="size-4" />
+            </button>
+            <span className="tabular text-body w-8 text-center font-semibold" aria-live="polite">
               {count}
             </span>
-            <Button variant="outline" size="icon-sm" aria-label="More" onClick={() => setCount(count + 0.5)}>
-              <Plus />
-            </Button>
+            <button type="button" className="grid size-10 place-items-center rounded-lg text-charcoal transition-colors hover:bg-muted" aria-label="More" onClick={() => setCount(count + 0.5)}>
+              <Plus className="size-4" />
+            </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-2">
             <Input
               type="number"
               inputMode="numeric"
               min={1}
               value={item.grams}
               onChange={(e) => onChange({ ...item, grams: Math.max(1, Number(e.target.value) || 0), unitLabel: undefined, confirmedByUser: true })}
-              className="tabular w-20"
+              className="tabular w-24"
               aria-label="Grams"
             />
-            <span className="text-sm text-muted-foreground">g</span>
+            <span className="text-callout text-muted-foreground">g</span>
           </div>
         )}
       </div>
-      {unit && <p className="tabular mt-1 text-right text-xs text-muted-foreground">≈ {item.grams} g</p>}
+      {unit && <p className="tabular text-caption mt-1.5 text-right text-muted-foreground">≈ {item.grams} g</p>}
     </div>
   )
 }

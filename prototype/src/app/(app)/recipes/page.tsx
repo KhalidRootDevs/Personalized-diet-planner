@@ -2,8 +2,9 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { BookHeart, Plus, Search, ShieldCheck } from "lucide-react"
-import { PageBody, PageHeader } from "@/components/app/page"
+import { BookHeart, Clock, Plus, Search, ShieldCheck } from "lucide-react"
+import { EmptyState, ListLink, PageBody, PageHeader, Pill } from "@/components/app/page"
+import { Chip } from "@/components/app/controls"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { FeatureBadge } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui/button"
 import { useActiveProfile, useApp } from "@/lib/store"
 import { RECIPES } from "@/lib/data/recipes"
 import { fmt, recipeCostPerServing, recipeNutrition, violatesHardConstraints } from "@/lib/nutrition"
-import { cn } from "@/lib/utils"
 import type { Recipe } from "@/lib/types"
 
 const FILTERS: { id: string; label: string; test: (r: Recipe) => boolean }[] = [
@@ -53,76 +53,83 @@ export default function RecipesPage() {
           !infant && (
             <Button asChild size="sm" variant="outline">
               <Link href="/recipes/new">
-                <Plus /> Add
+                <Plus className="size-4" /> Add
               </Link>
             </Button>
           )
         }
       />
       <PageBody>
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4.5 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search in English or বাংলা" className="pl-10" aria-label="Search recipes" />
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-muted-grey" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search in English or বাংলা" className="pl-10" aria-label="Search recipes" />
+          </div>
+          {!infant && (
+            <div className="no-scrollbar -mx-[var(--gutter)] flex gap-2 overflow-x-auto px-[var(--gutter)]">
+              {FILTERS.map((f) => (
+                <Chip key={f.id} selected={filter === f.id} onClick={() => setFilter(filter === f.id ? null : f.id)}>
+                  {f.label}
+                </Chip>
+              ))}
+            </div>
+          )}
         </div>
 
         {!infant && (
-          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-            {FILTERS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setFilter(filter === f.id ? null : f.id)}
-                aria-pressed={filter === f.id}
-                className={cn("h-9 shrink-0 rounded-full border px-3.5 text-sm", filter === f.id ? "border-forest bg-forest text-primary-foreground" : "bg-card")}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+          <ListLink
+            href="/recipes/library"
+            icon={<BookHeart />}
+            title={
+              <>
+                My recipe library <FeatureBadge feature="recipe_library" />
+              </>
+            }
+            description={userRecipes.length ? `${userRecipes.length} of your own recipes` : "Save family recipes and see their nutrition"}
+          />
         )}
 
-        {!infant && (
-          <Link href="/recipes/library" className="flex items-center gap-3 rounded-2xl border bg-card p-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-sage text-forest">
-              <BookHeart className="size-5" />
-            </span>
-            <span className="flex-1">
-              <span className="block text-sm font-medium">My recipe library</span>
-              <span className="block text-xs text-muted-foreground">{userRecipes.length ? `${userRecipes.length} of your own recipes` : "Save family recipes and see their nutrition"}</span>
-            </span>
-            <FeatureBadge feature="recipe_library" />
-          </Link>
-        )}
+        {infant && <InfoNote title="Pending clinical review">Infant recipes in this prototype are illustrative and would be published only after pediatric review (§12, §43).</InfoNote>}
 
-        {infant && (
-          <InfoNote title="Pending clinical review">
-            Infant recipes in this prototype are illustrative and would be published only after pediatric review (§12, §43).
-          </InfoNote>
+        {list.length === 0 ? (
+          <EmptyState icon={<Search />} title="No recipes match" description="Try another search or filter." />
+        ) : (
+          <ul className="grid grid-cols-2 gap-3">
+            {list.map((r) => {
+              const n = recipeNutrition(r)
+              return (
+                <li key={r.id}>
+                  <Link href={`/recipes/${r.id}`} className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card transition-colors hover:bg-muted/40">
+                    <RecipeThumb recipe={r} size="hero" className="h-28 rounded-none" />
+                    <div className="flex flex-1 flex-col p-3">
+                      <p className="text-callout line-clamp-2 font-semibold">{r.name}</p>
+                      <p className="text-caption mt-0.5 line-clamp-1 text-muted-foreground" lang="bn">
+                        {r.nameBn}
+                      </p>
+                      <div className="text-caption tabular mt-auto flex items-center gap-1.5 pt-2.5 text-muted-foreground">
+                        <Clock className="size-3.5 shrink-0" aria-hidden />
+                        <span>{r.prepMinutes + r.cookMinutes} min</span>
+                        <span aria-hidden>·</span>
+                        <span className="truncate">{infant ? (r.texture ?? "") : `~${Math.round(n.energyKcal)} kcal`}</span>
+                      </div>
+                      {infant ? (
+                        <Pill tone="caution" className="mt-2 self-start">
+                          Pending review
+                        </Pill>
+                      ) : (
+                        <p className="tabular text-caption mt-0.5 font-medium text-charcoal">{fmt.bdt(recipeCostPerServing(r))} / serving</p>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
         )}
-
-        <ul className="grid grid-cols-2 gap-3">
-          {list.map((r) => {
-            const n = recipeNutrition(r)
-            return (
-              <li key={r.id}>
-                <Link href={`/recipes/${r.id}`} className="block rounded-2xl border bg-card p-2 hover:bg-muted/40">
-                  <RecipeThumb recipe={r} size="hero" className="h-28" />
-                  <p className="mt-2 line-clamp-2 text-sm leading-snug font-medium">{r.name}</p>
-                  <p className="text-xs text-muted-foreground" lang="bn">
-                    {r.nameBn}
-                  </p>
-                  <p className="tabular mt-1 text-xs text-muted-foreground">
-                    {infant ? (r.texture ?? "") : `~${Math.round(n.energyKcal)} kcal · ${fmt.bdt(recipeCostPerServing(r))}`} · {r.prepMinutes + r.cookMinutes} min
-                  </p>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-        {list.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No recipes match. Try another search or filter.</p>}
 
         {hidden > 0 && (
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="size-4 text-forest" /> {hidden} recipe{hidden > 1 ? "s are" : " is"} hidden because of {profile?.name}&apos;s allergies, diet or age.
+          <p className="text-caption flex items-start gap-1.5 text-muted-foreground">
+            <ShieldCheck className="mt-px size-4 shrink-0 text-forest" /> {hidden} recipe{hidden > 1 ? "s are" : " is"} hidden because of {profile?.name}&apos;s allergies, diet or age.
           </p>
         )}
       </PageBody>

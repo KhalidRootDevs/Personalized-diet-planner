@@ -7,10 +7,11 @@ import { toast } from "sonner"
 import { useApp } from "@/lib/store"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { IconTile, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
+import { Button } from "@/components/ui/button"
 import { PhaseBadge, PremiumGate } from "@/components/app/badges"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
-import { ChoiceCard } from "@/components/profile/form-bits"
+import { ChoiceCard } from "@/components/app/controls"
 
 const REMINDERS: { key: string; icon: typeof Bell; title: string; text: string; time?: boolean }[] = [
   { key: "meals", icon: UtensilsCrossed, title: "Meal times", text: "A gentle nudge before each planned meal" },
@@ -35,7 +36,7 @@ export default function NotificationsSettingsPage() {
       <PageHeader back="/profile" title="Reminders" />
       <PageBody>
         <Section title="How we reach you">
-          <div role="radiogroup" className="space-y-2">
+          <div role="radiogroup" className="space-y-2.5">
             <ChoiceCard selected={settings.reminderChannel === "push"} onSelect={() => updateSettings({ reminderChannel: "push" })} icon={<Bell className="size-5" />} title="App notifications" description="Works when NutriPlan is installed on your phone" />
             <ChoiceCard selected={settings.reminderChannel === "email"} onSelect={() => updateSettings({ reminderChannel: "email" })} icon={<Mail className="size-5" />} title="Email" description="A daily digest instead of individual alerts" />
           </div>
@@ -43,27 +44,27 @@ export default function NotificationsSettingsPage() {
         </Section>
 
         <Section title="Reminders" badge={<PhaseBadge phase={1} />}>
-          <div className="divide-y rounded-2xl border bg-card">
+          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
             {REMINDERS.filter((r) => r.key !== "baby_feeding" || hasChild).map(({ key, icon: Icon, title, text, time }) => {
               const r = settings.reminders[key] ?? { enabled: false, time: "" }
               return (
-                <div key={key} className="p-3">
-                  <label className="flex items-center gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-sage text-forest">
-                      <Icon className="size-4" aria-hidden />
-                    </span>
+                <div key={key} className="px-4 py-3">
+                  <label className="flex min-h-10 cursor-pointer items-center gap-3">
+                    <IconTile>
+                      <Icon aria-hidden />
+                    </IconTile>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{title}</span>
-                      <span className="block text-xs text-muted-foreground">{text}</span>
+                      <span className="text-body block font-medium">{title}</span>
+                      <span className="text-caption block text-muted-foreground">{text}</span>
                     </span>
-                    <Switch checked={r.enabled} onCheckedChange={(v) => setReminder(key, { enabled: v })} />
+                    <Switch checked={r.enabled} onCheckedChange={(v) => setReminder(key, { enabled: v })} aria-label={title} />
                   </label>
                   {r.enabled && (
-                    <div className="mt-2 ml-12 flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="text-callout mt-2.5 ml-[52px] flex items-center gap-2 text-muted-foreground">
                       {time && /^\d{2}:\d{2}$/.test(r.time) ? (
-                        <Input type="time" value={r.time} onChange={(e) => setReminder(key, { time: e.target.value })} className="h-9 w-32" aria-label={`${title} time`} />
+                        <Input type="time" value={r.time} onChange={(e) => setReminder(key, { time: e.target.value })} className="h-10 w-[9.5rem]" aria-label={`${title} time`} />
                       ) : (
-                        <span className="tabular rounded-full bg-muted px-2.5 py-1 text-xs">{r.time}</span>
+                        <span className="tabular inline-flex h-7 items-center rounded-full bg-muted px-3 text-xs font-medium text-charcoal">{r.time}</span>
                       )}
                     </div>
                   )}
@@ -76,15 +77,17 @@ export default function NotificationsSettingsPage() {
 
         <Section title="Learning reminders" badge={<PhaseBadge phase={2} />}>
           <PremiumGate feature="smart_reminders" compact>
-            <div className="rounded-2xl border bg-card p-4">
-              <p className="flex items-center gap-2 font-medium"><Sparkles className="size-4 text-forest" /> Suggested change</p>
-              <p className="mt-1 text-sm text-muted-foreground">You usually log lunch around 14:10. Move your lunch reminder from 13:00 to 13:50?</p>
-              <div className="mt-3 flex gap-2">
-                <button className="h-9 flex-1 rounded-lg bg-forest text-sm font-medium text-ivory" onClick={() => toast.success("Lunch reminder moved to 13:50")}>Use 13:50</button>
-                <button className="h-9 flex-1 rounded-lg border text-sm font-medium" onClick={() => toast("Kept at 13:00")}>Keep 13:00</button>
+            <Surface tone="sage">
+              <p className="text-overline flex items-center gap-1.5 text-forest">
+                <Sparkles className="size-3.5" aria-hidden /> Suggested change
+              </p>
+              <p className="text-body mt-2">You usually log lunch around 14:10. Move your lunch reminder from 13:00 to 13:50?</p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Button size="sm" variant="outline" onClick={() => toast("Kept at 13:00")}>Keep 13:00</Button>
+                <Button size="sm" onClick={() => toast.success("Lunch reminder moved to 13:50")}>Use 13:50</Button>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Timing changes are suggestions — nothing changes without your approval.</p>
-            </div>
+              <p className="text-caption mt-3 text-muted-foreground">Timing changes are suggestions. Nothing changes without your approval.</p>
+            </Surface>
           </PremiumGate>
         </Section>
       </PageBody>

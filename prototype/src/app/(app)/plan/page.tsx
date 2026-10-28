@@ -2,39 +2,46 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { CalendarDays, ChevronLeft, ChevronRight, ChefHat, Layers, Package, ShoppingBasket, Sparkles, Wand2 } from "lucide-react"
-import { PageBody, PageHeader, Section, EmptyState } from "@/components/app/page"
-import { MealActionsSheet } from "@/components/plan/meal-actions"
-import { RecipeThumb } from "@/components/app/recipe-thumb"
+import { CalendarDays, Check, ChefHat, ChevronLeft, ChevronRight, Layers, Package, Plus, ShieldCheck, ShoppingBasket, Sparkles, TriangleAlert } from "lucide-react"
+import { EmptyState, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
+import { MealList } from "@/components/plan/meal-row"
+import { Segmented } from "@/components/app/controls"
 import { FeatureBadge } from "@/components/app/badges"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
 import { Button } from "@/components/ui/button"
 import { useActivePlan, useActiveProfile, useApp } from "@/lib/store"
-import { MEAL_LABEL } from "@/lib/planning"
-import { addDays, formatDay, formatTime, fromISO, startOfWeek, toISODate, todayISO } from "@/lib/date"
-import { fmt, recipeNutrition } from "@/lib/nutrition"
-import { STATUS_STYLE, mealStatus, useRecipeLookup } from "@/lib/area-c-utils"
+import { addDays, formatDay, fromISO, nowHHMM, startOfWeek, toISODate, todayISO } from "@/lib/date"
+import { fmt, recipeCostPerServing, recipeNutrition } from "@/lib/nutrition"
+import { useRecipeLookup } from "@/lib/area-c-utils"
 import { cn } from "@/lib/utils"
-import type { PlannedMeal } from "@/lib/types"
+import type { MealPlan, PlannedMeal } from "@/lib/types"
 
 type View = "day" | "week" | "month"
 
-/** Plan tab: meal calendar with day/week/month views (§14, FR-016). */
+const byTime = (a: PlannedMeal, b: PlannedMeal) => a.time.localeCompare(b.time)
+
+/** Plan tab: meal calendar with day/week/month views (§14, FR-016, UI-SPEC §5). */
 export default function PlanPage() {
   const plan = useActivePlan()
   const profile = useActiveProfile()
   const [view, setView] = useState<View>("day")
   const [date, setDate] = useState(todayISO())
 
+  const newPlan = (
+    <Button asChild size="sm" variant="outline">
+      <Link href="/plan/generate">
+        <Plus className="size-4" /> New plan
+      </Link>
+    </Button>
+  )
+
   if (profile && profile.type !== "adult") {
     return (
       <>
         <PageHeader title="Plan" large />
         <PageBody>
-          <InfoNote title={`${profile.name}'s feeding is planned in the baby module`}>
-            Infant plans follow age-appropriate textures and responsive feeding, not adult meal plans (§12).
-          </InfoNote>
-          <Button asChild className="w-full">
+          <InfoNote title={`${profile.name}'s feeding is planned in the baby module`}>Infant plans follow age-appropriate textures and responsive feeding, not adult meal plans (§12).</InfoNote>
+          <Button asChild size="lg" className="w-full">
             <Link href="/child">Open feeding plan</Link>
           </Button>
         </PageBody>
@@ -57,69 +64,59 @@ export default function PlanPage() {
               </Button>
             }
           />
-          <Shortcuts />
+          <PlanTools />
         </PageBody>
       </>
     )
   }
 
   const step = view === "day" ? 1 : view === "week" ? 7 : 28
-  const planEnd = addDays(plan.startDate, plan.durationDays - 1)
+  const label =
+    view === "day"
+      ? date === todayISO()
+        ? `Today · ${formatDay(date, { weekday: "short", day: "numeric", month: "short" })}`
+        : formatDay(date, { weekday: "long", day: "numeric", month: "long" })
+      : view === "week"
+        ? `Week of ${formatDay(startOfWeek(date), { day: "numeric", month: "short" })}`
+        : fromISO(date).toLocaleDateString("en-GB", { month: "long", year: "numeric" })
+  const navBtn = "grid size-10 place-items-center rounded-full border border-border/80 bg-card text-charcoal transition-colors hover:bg-muted"
 
   return (
     <>
-      <PageHeader
-        title="Plan"
-        large
-        subtitle={
-          <Link href="/plan/plans" className="underline-offset-2 hover:underline">
-            {plan.title} · {formatDay(plan.startDate, { day: "numeric", month: "short" })}–{formatDay(planEnd, { day: "numeric", month: "short" })}
-          </Link>
-        }
-        action={
-          <Button asChild size="sm" variant="outline">
-            <Link href="/plan/generate">
-              <Wand2 /> New plan
-            </Link>
-          </Button>
-        }
-      />
+      <PageHeader title="Plan" large action={newPlan} />
       <PageBody>
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Calendar view">
-          {(["day", "week", "month"] as View[]).map((v) => (
-            <button
-              key={v}
-              role="tab"
-              aria-selected={view === v}
-              onClick={() => setView(v)}
-              className={cn("h-9 rounded-lg text-sm font-medium capitalize", view === v ? "bg-card text-forest shadow-xs" : "text-muted-foreground")}
-            >
-              {v}
+        <PlanSummary plan={plan} />
+
+        <div className="space-y-4">
+          <Segmented
+            label="Calendar view"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "day", label: "Day" },
+              { value: "week", label: "Week" },
+              { value: "month", label: "Month" },
+            ]}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <button className={navBtn} aria-label="Previous" onClick={() => setDate(addDays(date, -step))}>
+              <ChevronLeft className="size-5" />
             </button>
-          ))}
+            <button className="text-headline min-w-0 truncate rounded-lg px-2 py-1 hover:bg-muted" onClick={() => setDate(todayISO())} title="Go to today">
+              {label}
+            </button>
+            <button className={navBtn} aria-label="Next" onClick={() => setDate(addDays(date, step))}>
+              <ChevronRight className="size-5" />
+            </button>
+          </div>
+          {view === "day" && <DayView date={date} onPick={setDate} meals={plan.meals} />}
+          {view === "week" && <WeekView date={date} meals={plan.meals} />}
+          {view === "month" && <MonthView date={date} meals={plan.meals} onPick={setDate} />}
         </div>
-
-        <div className="flex items-center justify-between">
-          <Button size="icon-sm" variant="ghost" aria-label="Previous" onClick={() => setDate(addDays(date, -step))}>
-            <ChevronLeft />
-          </Button>
-          <button className="text-sm font-semibold" onClick={() => setDate(todayISO())}>
-            {view === "day" && (date === todayISO() ? `Today · ${formatDay(date)}` : formatDay(date, { weekday: "long", day: "numeric", month: "long" }))}
-            {view === "week" && `Week of ${formatDay(startOfWeek(date), { day: "numeric", month: "short" })}`}
-            {view === "month" && fromISO(date).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
-          </button>
-          <Button size="icon-sm" variant="ghost" aria-label="Next" onClick={() => setDate(addDays(date, step))}>
-            <ChevronRight />
-          </Button>
-        </div>
-
-        {view === "day" && <DayView date={date} onPick={setDate} meals={plan.meals} />}
-        {view === "week" && <WeekView date={date} meals={plan.meals} onPick={(d) => { setDate(d); setView("day") }} />}
-        {view === "month" && <MonthView date={date} meals={plan.meals} onPick={(d) => { setDate(d); setView("day") }} />}
 
         {plan.validation.warnings.length > 0 && (
           <CautionNote title="Plan notes">
-            <ul className="list-disc pl-4">
+            <ul className="list-disc space-y-0.5 pl-4">
               {plan.validation.warnings.map((w) => (
                 <li key={w}>{w}</li>
               ))}
@@ -127,29 +124,65 @@ export default function PlanPage() {
           </CautionNote>
         )}
 
-        <Shortcuts />
+        <PlanTools />
       </PageBody>
     </>
   )
 }
 
+function PlanSummary({ plan }: { plan: MealPlan }) {
+  const end = addDays(plan.startDate, plan.durationDays - 1)
+  const v = plan.validation
+  return (
+    <Link href="/plan/plans" className="block rounded-2xl border border-border/80 bg-card p-4 transition-colors hover:bg-muted/40">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sage text-forest">
+          <CalendarDays className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-body font-semibold">{plan.title}</p>
+          <p className="text-caption text-muted-foreground">
+            {plan.durationDays} days · {formatDay(plan.startDate, { day: "numeric", month: "short" })} – {formatDay(end, { day: "numeric", month: "short" })} · {plan.status === "active" ? "Active" : plan.status}
+          </p>
+        </div>
+        <ChevronRight className="mt-2.5 size-[18px] shrink-0 text-muted-grey" aria-hidden />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <Pill tone={v.nutrition ? "sage" : "caution"} icon={v.nutrition ? <Check /> : <TriangleAlert />}>
+          {v.nutrition ? "Nutrition checked" : "Nutrition needs attention"}
+        </Pill>
+        <Pill tone={v.safety ? "sage" : "safety"} icon={<ShieldCheck />}>
+          {v.safety ? "Safety checked" : "Safety check failed"}
+        </Pill>
+        {v.requiresReview && <Pill tone="caution">Review needed</Pill>}
+      </div>
+    </Link>
+  )
+}
+
 function DayStrip({ date, onPick, meals }: { date: string; onPick: (d: string) => void; meals: PlannedMeal[] }) {
   const start = startOfWeek(date)
+  const today = todayISO()
   return (
-    <div className="grid grid-cols-7 gap-1">
+    <div className="grid grid-cols-7 gap-1.5">
       {Array.from({ length: 7 }, (_, i) => addDays(start, i)).map((d) => {
         const has = meals.some((m) => m.date === d)
         const selected = d === date
+        const isToday = d === today
         return (
           <button
             key={d}
             onClick={() => onPick(d)}
             aria-pressed={selected}
-            className={cn("flex flex-col items-center rounded-xl py-2 text-xs", selected ? "bg-forest text-primary-foreground" : "bg-card text-foreground", d === todayISO() && !selected && "ring-1 ring-forest")}
+            aria-label={`${formatDay(d, { weekday: "long", day: "numeric", month: "long" })}${isToday ? ", today" : ""}${has ? ", meals planned" : ""}`}
+            className={cn(
+              "flex h-[68px] flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors",
+              selected ? "border-forest bg-forest text-ivory" : isToday ? "border-forest/60 bg-card text-forest" : "border-border/80 bg-card hover:bg-muted/60",
+            )}
           >
-            <span className={selected ? "" : "text-muted-foreground"}>{formatDay(d, { weekday: "narrow" })}</span>
-            <span className="tabular text-base font-semibold">{fromISO(d).getDate()}</span>
-            <span className={cn("mt-0.5 size-1.5 rounded-full", has ? (selected ? "bg-primary-foreground" : "bg-forest") : "bg-transparent")} />
+            <span className={cn("text-[11px] font-medium", selected ? "text-ivory/80" : "text-muted-foreground")}>{formatDay(d, { weekday: "short" }).slice(0, 2)}</span>
+            <span className="tabular text-headline leading-none">{fromISO(d).getDate()}</span>
+            <span className={cn("mt-1 size-1.5 rounded-full", has ? (selected ? "bg-ivory" : "bg-forest") : "bg-transparent")} aria-hidden />
           </button>
         )
       })}
@@ -157,96 +190,61 @@ function DayStrip({ date, onPick, meals }: { date: string; onPick: (d: string) =
   )
 }
 
-function DayView({ date, onPick, meals }: { date: string; onPick: (d: string) => void; meals: PlannedMeal[] }) {
+function DaySummary({ meals }: { meals: PlannedMeal[] }) {
   const lookup = useRecipeLookup()
-  const day = meals.filter((m) => m.date === date).sort((a, b) => a.time.localeCompare(b.time))
-  const kcal = day.reduce((s, m) => {
-    const r = lookup(m.recipeId)
-    return s + (r ? recipeNutrition(r, m.servings).energyKcal : 0)
-  }, 0)
+  const totals = meals.reduce(
+    (acc, m) => {
+      const r = lookup(m.recipeId)
+      if (!r) return acc
+      const n = recipeNutrition(r, m.servings)
+      return { kcal: acc.kcal + n.energyKcal, protein: acc.protein + n.proteinG, cost: acc.cost + recipeCostPerServing(r) * m.servings }
+    },
+    { kcal: 0, protein: 0, cost: 0 },
+  )
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-3 gap-2">
+      <StatTile label="Energy" value={`~${Math.round(totals.kcal).toLocaleString("en-US")}`} unit="kcal" />
+      <StatTile label="Protein" value={`~${Math.round(totals.protein)}`} unit="g" />
+      <StatTile label="Cost (est.)" value={fmt.bdt(totals.cost)} />
+    </div>
+  )
+}
+
+function DayView({ date, onPick, meals }: { date: string; onPick: (d: string) => void; meals: PlannedMeal[] }) {
+  const day = meals.filter((m) => m.date === date).sort(byTime)
+  const nextId = date === todayISO() ? day.find((m) => !m.outcome && m.time >= nowHHMM())?.id : undefined
+  return (
+    <div className="space-y-4">
       <DayStrip date={date} onPick={onPick} meals={meals} />
       {day.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No meals planned for this day.</p>
+        <EmptyState icon={<CalendarDays />} title="Nothing planned" description="This day is outside your current plan." />
       ) : (
         <>
-          <p className="tabular text-sm text-muted-foreground">
-            {day.length} meals planned · about {fmt.kcal(kcal)} (estimate)
-          </p>
-          <ol className="space-y-2">
-            {day.map((m) => (
-              <li key={m.id}>
-                <MealRow meal={m} />
-              </li>
-            ))}
-          </ol>
+          <DaySummary meals={day} />
+          <MealList meals={day} highlightId={nextId} />
         </>
       )}
     </div>
   )
 }
 
-function MealRow({ meal }: { meal: PlannedMeal }) {
-  const lookup = useRecipeLookup()
-  const r = lookup(meal.recipeId)
-  if (!r) return null
-  const s = mealStatus(meal)
-  return (
-    <MealActionsSheet meal={meal}>
-      <button className="flex w-full items-center gap-3 rounded-2xl border bg-card p-3 text-left hover:bg-muted/40">
-        <RecipeThumb recipe={r} size="sm" />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">
-            {MEAL_LABEL[meal.mealType]} · {formatTime(meal.time)}
-          </p>
-          <p className="truncate font-medium">{r.name}</p>
-          <p className="tabular text-xs text-muted-foreground">
-            ~{Math.round(recipeNutrition(r, meal.servings).energyKcal)} kcal · {r.prepMinutes + r.cookMinutes} min
-            {meal.servings !== 1 && ` · ${meal.servings} servings`}
-            {meal.prepLater && " · prep ahead"}
-          </p>
-        </div>
-        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium", STATUS_STYLE[s.tone])}>{s.label}</span>
-      </button>
-    </MealActionsSheet>
-  )
-}
-
-function WeekView({ date, meals, onPick }: { date: string; meals: PlannedMeal[]; onPick: (d: string) => void }) {
-  const lookup = useRecipeLookup()
+function WeekView({ date, meals }: { date: string; meals: PlannedMeal[] }) {
   const start = startOfWeek(date)
+  const today = todayISO()
   return (
-    <div className="space-y-2">
+    <div className="space-y-5">
       {Array.from({ length: 7 }, (_, i) => addDays(start, i)).map((d) => {
-        const day = meals.filter((m) => m.date === d).sort((a, b) => a.time.localeCompare(b.time))
+        const day = meals.filter((m) => m.date === d).sort(byTime)
         return (
-          <button key={d} onClick={() => onPick(d)} className={cn("w-full rounded-2xl border bg-card p-3 text-left", d === todayISO() && "border-forest")}>
-            <div className="mb-1.5 flex items-center justify-between">
-              <p className="text-sm font-semibold">{formatDay(d)}</p>
-              {d === todayISO() && <span className="text-xs font-medium text-forest">Today</span>}
-            </div>
-            {day.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nothing planned</p>
-            ) : (
-              <ul className="space-y-1">
-                {day.map((m) => {
-                  const s = mealStatus(m)
-                  return (
-                    <li key={m.id} className="flex items-center gap-2 text-sm">
-                      <span className={cn("size-2 shrink-0 rounded-full", s.tone === "planned" ? "border border-muted-grey" : s.tone === "eaten" ? "bg-forest" : s.tone === "changed" ? "bg-terracotta" : "bg-muted-grey")} aria-hidden />
-                      <span className="w-20 shrink-0 text-xs text-muted-foreground">{MEAL_LABEL[m.mealType]}</span>
-                      <span className="truncate">{lookup(m.recipeId)?.name}</span>
-                      <span className="sr-only">({s.label})</span>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </button>
+          <div key={d}>
+            <p className="text-overline mb-2 flex items-center gap-2 px-1 text-muted-foreground">
+              {formatDay(d, { weekday: "long", day: "numeric", month: "short" })}
+              {d === today && <span className="text-forest">· Today</span>}
+            </p>
+            {day.length === 0 ? <p className="text-callout rounded-2xl border border-dashed border-input bg-card px-4 py-3 text-muted-foreground">Nothing planned</p> : <MealList meals={day} />}
+          </div>
         )
       })}
-      <p className="text-xs text-muted-foreground">Filled dot: eaten · terracotta: changed or replaced · outline: planned.</p>
     </div>
   )
 }
@@ -256,62 +254,91 @@ function MonthView({ date, meals, onPick }: { date: string; meals: PlannedMeal[]
   const first = toISODate(new Date(d0.getFullYear(), d0.getMonth(), 1))
   const gridStart = startOfWeek(first)
   const month = d0.getMonth()
+  const today = todayISO()
+  const selectedMeals = meals.filter((m) => m.date === date).sort(byTime)
   return (
-    <div>
-      <div className="mb-1 grid grid-cols-7 text-center text-xs text-muted-foreground">
-        {["M", "T", "W", "T", "F", "S", "S"].map((l, i) => (
-          <span key={i}>{l}</span>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)).map((d) => {
-          const dm = meals.filter((m) => m.date === d)
-          const done = dm.filter((m) => m.outcome && m.outcome !== "skipped" && m.outcome !== "unresolved").length
-          const inMonth = fromISO(d).getMonth() === month
-          return (
-            <button
-              key={d}
-              onClick={() => onPick(d)}
-              className={cn("flex aspect-square flex-col items-center justify-center rounded-lg text-sm", inMonth ? "bg-card" : "text-muted-foreground/60", d === todayISO() && "ring-1 ring-forest")}
-              aria-label={`${formatDay(d)}: ${dm.length} meals planned${dm.length ? `, ${done} recorded` : ""}`}
-            >
-              <span className="tabular">{fromISO(d).getDate()}</span>
-              {dm.length > 0 && <span className="tabular text-[10px] text-forest">{done}/{dm.length}</span>}
-            </button>
-          )
-        })}
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">Numbers show meals recorded out of meals planned.</p>
+    <div className="space-y-4">
+      <Surface padding="sm" className="px-2 pb-3">
+        <div className="grid grid-cols-7 pb-1 text-center">
+          {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((l) => (
+            <span key={l} className="text-caption py-1.5 font-medium text-muted-foreground">
+              {l}
+            </span>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-y-1">
+          {Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)).map((d) => {
+            const dm = meals.filter((m) => m.date === d)
+            const recorded = dm.filter((m) => m.outcome && m.outcome !== "unresolved").length
+            const inMonth = fromISO(d).getMonth() === month
+            const selected = d === date
+            return (
+              <button
+                key={d}
+                onClick={() => onPick(d)}
+                className="flex flex-col items-center gap-0.5 py-0.5"
+                aria-pressed={selected}
+                aria-label={`${formatDay(d)}: ${dm.length} meals planned${dm.length ? `, ${recorded} recorded` : ""}`}
+              >
+                <span
+                  className={cn(
+                    "tabular text-callout grid size-10 place-items-center rounded-full",
+                    selected ? "bg-forest font-semibold text-ivory" : d === today ? "font-semibold text-forest ring-1 ring-forest" : inMonth ? "text-charcoal hover:bg-muted" : "text-muted-foreground/50",
+                  )}
+                >
+                  {fromISO(d).getDate()}
+                </span>
+                <span className={cn("size-1.5 rounded-full", dm.length === 0 ? "bg-transparent" : recorded === dm.length ? "bg-forest" : "border border-forest")} aria-hidden />
+              </button>
+            )
+          })}
+        </div>
+        <div className="text-caption mt-2 flex justify-center gap-4 text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full border border-forest" aria-hidden /> Planned
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-forest" aria-hidden /> All recorded
+          </span>
+        </div>
+      </Surface>
+      <Section title={formatDay(date, { weekday: "long", day: "numeric", month: "long" })}>
+        {selectedMeals.length === 0 ? <p className="text-callout rounded-2xl border border-dashed border-input bg-card px-4 py-3 text-muted-foreground">Nothing planned</p> : <MealList meals={selectedMeals} />}
+      </Section>
     </div>
   )
 }
 
-function Shortcuts() {
+function PlanTools() {
   const prep = useApp((s) => s.plans.find((p) => p.id === s.activePlanId)?.meals.filter((m) => m.prepLater && !m.outcome).length ?? 0)
   const shopping = useApp((s) => s.shopping.filter((i) => !i.purchased).length)
-  const items = [
-    { href: "/plan/shopping", icon: <ShoppingBasket />, title: "Shopping list", hint: shopping ? `${shopping} to buy` : "Up to date" },
-    { href: "/plan/prep", icon: <ChefHat />, title: "Meal prep", hint: prep ? `${prep} meals to prep` : "Batch cooking" },
-    { href: "/plan/pantry", icon: <Package />, title: "Pantry", hint: "What you have", feature: "pantry" as const },
-    { href: "/plan/autopilot", icon: <Sparkles />, title: "Weekly Autopilot", hint: "Next week draft", feature: "autopilot" as const },
-    { href: "/plan/plans", icon: <Layers />, title: "My plans", hint: "History & suggestions" },
-  ]
   return (
     <Section title="Plan tools">
-      <div className="grid grid-cols-2 gap-2">
-        {items.map((i) => (
-          <Link key={i.href} href={i.href} className="flex flex-col gap-2 rounded-2xl border bg-card p-3 hover:bg-muted/40">
-            <span className="flex items-center justify-between">
-              <span className="grid size-9 place-items-center rounded-lg bg-sage text-forest [&_svg]:size-4.5">{i.icon}</span>
-              {i.feature && <FeatureBadge feature={i.feature} />}
-            </span>
-            <span>
-              <span className="block text-sm font-medium">{i.title}</span>
-              <span className="block text-xs text-muted-foreground">{i.hint}</span>
-            </span>
-          </Link>
-        ))}
-      </div>
+      <ListGroup>
+        <ListRow href="/plan/shopping" icon={<ShoppingBasket />} title="Shopping list" description={shopping ? `${shopping} items to buy` : "Up to date"} />
+        <ListRow href="/plan/prep" icon={<ChefHat />} title="Meal prep" description={prep ? `${prep} meals to prepare ahead` : "Batch cooking and storage"} />
+        <ListRow
+          href="/plan/pantry"
+          icon={<Package />}
+          title={
+            <>
+              Pantry <FeatureBadge feature="pantry" />
+            </>
+          }
+          description="What you already have at home"
+        />
+        <ListRow
+          href="/plan/autopilot"
+          icon={<Sparkles />}
+          title={
+            <>
+              Weekly Autopilot <FeatureBadge feature="autopilot" />
+            </>
+          }
+          description="A draft of next week for you to approve"
+        />
+        <ListRow href="/plan/plans" icon={<Layers />} title="My plans" description="Active, drafts, history and suggestions" />
+      </ListGroup>
     </Section>
   )
 }

@@ -2,13 +2,12 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Baby, Check, Plus, Stethoscope } from "lucide-react"
+import { Baby, Plus, Stethoscope, Utensils } from "lucide-react"
 import { toast } from "sonner"
 import { FOODS } from "@/lib/data/foods"
 import { ageInMonths } from "@/lib/nutrition"
 import { formatDay, todayISO, uid } from "@/lib/date"
 import { useApp } from "@/lib/store"
-import { cn } from "@/lib/utils"
 import type { IntroducedFood } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,12 +19,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { FeatureBadge } from "@/components/app/badges"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
-import { EmptyState, PageBody, PageHeader, Section } from "@/components/app/page"
+import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, type PillTone } from "@/components/app/page"
 import { ALLERGENS_TO_INTRODUCE, feedingStage } from "@/components/child/feeding"
 import { useChildProfile } from "@/components/child/use-child"
 
 const TEXTURES = ["Smooth purée", "Smooth mash", "Mashed with soft lumps", "Finely mashed", "Soft finger food", "Chopped soft"]
 const ACCEPTED: Record<IntroducedFood["accepted"], string> = { yes: "Accepted", somewhat: "Tried a little", no: "Not yet" }
+const ACCEPTED_TONE: Record<IntroducedFood["accepted"], PillTone> = { yes: "sage", somewhat: "neutral", no: "outline" }
 
 /** Food introduction tracker (§12.4, §12.8). Reactions are recorded, never auto-labelled as allergies. */
 export default function ChildFoodsPage() {
@@ -39,7 +39,7 @@ export default function ChildFoodsPage() {
       <>
         <PageHeader title="Food introduction" back="/child" />
         <PageBody>
-          <EmptyState icon={<Baby className="size-6" />} title="No child profile yet" description="Add a child profile to start tracking first foods." action={<Button asChild><Link href="/profile/family">Add a child profile</Link></Button>} />
+          <EmptyState icon={<Baby />} title="No child profile yet" description="Add a child profile to start tracking first foods." action={<Button asChild><Link href="/profile/family">Add a child profile</Link></Button>} />
         </PageBody>
       </>
     )
@@ -63,8 +63,9 @@ export default function ChildFoodsPage() {
         }
       />
       <PageBody>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <FeatureBadge feature="baby_module" /> {foods.length} foods introduced so far
+        <div className="grid grid-cols-2 gap-2">
+          <StatTile label={<span className="flex items-center gap-1.5">Foods introduced <FeatureBadge feature="baby_module" /></span>} value={foods.length} />
+          <StatTile label="Reactions noted" value={foods.filter((f) => f.reaction && f.reaction !== "None observed").length} />
         </div>
 
         {foods.some((f) => f.reaction && f.reaction !== "None observed") && (
@@ -75,37 +76,43 @@ export default function ChildFoodsPage() {
 
         <Section title="Introduced foods">
           {foods.length === 0 ? (
-            <InfoNote>No foods recorded yet. Add each new food the first time you offer it.</InfoNote>
+            <EmptyState icon={<Utensils />} title="No foods recorded yet" description="Add each new food the first time you offer it." />
           ) : (
-            <ul className="space-y-2">
+            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
               {foods.map((f) => {
                 const reacted = f.reaction && f.reaction !== "None observed"
                 return (
-                  <li key={f.id} className={cn("rounded-xl border bg-card p-3", reacted && "border-caution/40")}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium">{f.foodName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDay(f.date)} · {f.texture}
+                  <li key={f.id} className="px-4 py-3.5">
+                    <div className="flex items-start gap-3">
+                      <IconTile tone={reacted ? "caution" : "sage"}>
+                        <Utensils />
+                      </IconTile>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-body font-medium">{f.foodName}</p>
+                          <Pill tone={ACCEPTED_TONE[f.accepted]}>{ACCEPTED[f.accepted]}</Pill>
+                        </div>
+                        <p className="text-caption mt-0.5 text-muted-foreground">
+                          {formatDay(f.date, { day: "numeric", month: "short" })} · {f.texture} · {f.preparation}
                         </p>
+                        {reacted ? (
+                          <div className="text-caption mt-2.5 rounded-xl bg-caution-surface px-3 py-2.5 text-charcoal">
+                            <p className="font-semibold text-caution">Reaction noted</p>
+                            <p className="mt-0.5">{f.reaction?.replace(/\s*[—-]\s*discuss with (your )?clinician\.?$/i, "")}</p>
+                            <p className="mt-1.5 flex items-center gap-1.5 font-medium">
+                              <Stethoscope className="size-3.5" /> Discuss with your clinician
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-caption mt-1 text-muted-foreground">No reaction noted</p>
+                        )}
+                        {f.clinicianAdvisedAvoid && (
+                          <Pill tone="safety" className="mt-2">
+                            Clinician advised avoiding for now
+                          </Pill>
+                        )}
                       </div>
-                      <span className="shrink-0 rounded-full bg-sage px-2 py-0.5 text-xs font-medium text-forest">{ACCEPTED[f.accepted]}</span>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{f.preparation}</p>
-                    {reacted ? (
-                      <div className="mt-2 rounded-lg bg-caution-surface p-2.5 text-sm">
-                        <p className="font-medium text-caution">Reaction noted</p>
-                        <p>{f.reaction}</p>
-                        <p className="mt-1 flex items-center gap-1.5 text-charcoal/90">
-                          <Stethoscope className="size-4" /> Discuss with your clinician
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Check className="size-4 text-forest" /> No reaction noted
-                      </p>
-                    )}
-                    {f.clinicianAdvisedAvoid && <p className="mt-2 text-sm font-medium text-safety">Your clinician advised avoiding this food for now.</p>}
                   </li>
                 )
               })}
@@ -114,15 +121,14 @@ export default function ChildFoodsPage() {
         </Section>
 
         {stage.solidsPlanned && next.length > 0 && (
-          <Section title="Foods you could try next">
+          <Section title="Foods you could try next" description="Introduce one new food at a time and wait a few days before the next, so you can notice any reaction.">
             <div className="flex flex-wrap gap-2">
               {next.map((n) => (
-                <span key={n} className="rounded-full border bg-card px-3 py-1.5 text-sm">
+                <span key={n} className="text-callout inline-flex h-9 items-center rounded-full border border-border/80 bg-card px-3.5">
                   {n}
                 </span>
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">Introduce one new food at a time and wait a few days before the next, so you can notice any reaction.</p>
           </Section>
         )}
 
@@ -130,13 +136,12 @@ export default function ChildFoodsPage() {
           <InfoNote title="Introducing allergenic foods">
             Many guidelines suggest offering common allergenic foods during the first year, prepared safely and one at a time. If your baby has severe eczema or a known allergy, ask your clinician first.
           </InfoNote>
-          <ul className="space-y-1.5 text-sm">
-            {ALLERGENS_TO_INTRODUCE.map((a) => (
-              <li key={a} className="flex items-center gap-2">
-                <span className={cn("size-1.5 rounded-full", tried.has(a.split(" ")[0].toLowerCase()) ? "bg-forest" : "bg-muted-grey")} /> {a}
-              </li>
-            ))}
-          </ul>
+          <ListGroup>
+            {ALLERGENS_TO_INTRODUCE.map((a) => {
+              const done = tried.has(a.split(" ")[0].toLowerCase())
+              return <ListRow key={a} title={<span className="text-callout font-medium">{a}</span>} className="min-h-[52px]" trailing={<Pill tone={done ? "sage" : "outline"}>{done ? "Introduced" : "Not yet"}</Pill>} />
+            })}
+          </ListGroup>
         </Section>
 
         <SafetyAlert title="Signs of a serious reaction" emergency>
@@ -203,13 +208,13 @@ function AddFoodSheet({
         if (!o) reset()
       }}
     >
-      <SheetContent side="bottom" className="mx-auto max-h-[90dvh] max-w-[440px] overflow-y-auto rounded-t-3xl pb-safe">
+      <SheetContent side="bottom">
         <SheetHeader>
           <SheetTitle>Add a food</SheetTitle>
           <SheetDescription>Record the first time you offered a new food.</SheetDescription>
         </SheetHeader>
         <form
-          className="space-y-4 px-4 pb-4"
+          className="space-y-5 px-5 pt-2"
           onSubmit={(e) => {
             e.preventDefault()
             if (!foodName.trim() || tooYoung) return
@@ -268,28 +273,30 @@ function AddFoodSheet({
             <Label>How did it go?</Label>
             <ToggleGroup type="single" variant="outline" value={accepted} onValueChange={(v) => v && setAccepted(v as IntroducedFood["accepted"])} className="w-full">
               {(Object.keys(ACCEPTED) as IntroducedFood["accepted"][]).map((k) => (
-                <ToggleGroupItem key={k} value={k} className="flex-1 text-xs">
+                <ToggleGroupItem key={k} value={k} className="flex-1 text-[13px]">
                   {ACCEPTED[k]}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
-            <p className="text-xs text-muted-foreground">It can take many tries before a baby accepts a new food. That&apos;s normal.</p>
+            <p className="text-caption text-muted-foreground">It can take many tries before a baby accepts a new food. That&apos;s normal.</p>
           </div>
-          <div className="flex items-center justify-between gap-3 rounded-xl border bg-card p-3">
-            <Label htmlFor="reaction">Did you notice any reaction?</Label>
-            <Switch id="reaction" checked={hadReaction} onCheckedChange={setHadReaction} />
+          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80">
+            <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
+              <Label htmlFor="reaction" className="text-body leading-snug font-medium">Did you notice any reaction?</Label>
+              <Switch id="reaction" checked={hadReaction} onCheckedChange={setHadReaction} />
+            </div>
+            <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
+              <Label htmlFor="avoid" className="text-body leading-snug font-medium">My clinician advised avoiding this food</Label>
+              <Switch id="avoid" checked={clinicianAdvisedAvoid} onCheckedChange={setAvoid} />
+            </div>
           </div>
           {hadReaction && (
             <div className="space-y-1.5">
               <Textarea value={reaction} onChange={(e) => setReaction(e.target.value)} placeholder="What did you notice, and when?" />
-              <p className="text-xs text-muted-foreground">We&apos;ll record this and suggest discussing it with your clinician. We won&apos;t label it as an allergy.</p>
+              <p className="text-caption text-muted-foreground">We&apos;ll record this and suggest discussing it with your clinician. We won&apos;t label it as an allergy.</p>
             </div>
           )}
-          <div className="flex items-center justify-between gap-3 rounded-xl border bg-card p-3">
-            <Label htmlFor="avoid">My clinician advised avoiding this food</Label>
-            <Switch id="avoid" checked={clinicianAdvisedAvoid} onCheckedChange={setAvoid} />
-          </div>
-          <Button type="submit" className="w-full" disabled={!foodName.trim() || tooYoung}>
+          <Button type="submit" size="lg" className="w-full" disabled={!foodName.trim() || tooYoung}>
             Save food
           </Button>
         </form>

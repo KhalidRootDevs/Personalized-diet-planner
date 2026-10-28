@@ -5,6 +5,7 @@ import { CircleCheck, Lightbulb } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EstimateNote, NutrientBar } from "@/components/app/nutrition"
 import { CautionNote } from "@/components/app/alerts"
+import { IconTile, StickyFooter, Surface } from "@/components/app/page"
 import { useApp, useActivePlan, useSelfProfile } from "@/lib/store"
 import { adultTargets } from "@/lib/nutrition"
 import { nowHHMM, todayISO } from "@/lib/date"
@@ -23,9 +24,10 @@ export function ResultStep({ entryId, firstTime }: { entryId: string; firstTime?
 
   if (profile.type !== "adult") {
     return (
-      <div className="flex flex-1 flex-col gap-5 px-4 pt-6 pb-8">
+      <div className="flex flex-1 flex-col">
+        <div className="px-gutter space-y-6 pt-8 pb-8">
         <Done title="Saved to the diary" body={`${profile.name}'s entry is recorded.`} />
-        {firstTime && <p className="text-center text-sm">Added to the food introduction tracker.</p>}
+        {firstTime && <p className="text-callout text-center">Added to the food introduction tracker.</p>}
         <CautionNote title="Watch for reactions after new foods">
           Hives, vomiting or swelling can mean an allergy. Trouble breathing or swelling of the face or tongue needs{" "}
           <Link href="/safety/emergency" className="font-medium underline underline-offset-2">
@@ -33,14 +35,15 @@ export function ResultStep({ entryId, firstTime }: { entryId: string; firstTime?
           </Link>
           .
         </CautionNote>
-        <div className="mt-auto grid gap-2">
-          <Button asChild size="lg">
+        </div>
+        <StickyFooter>
+          <Button asChild size="lg" className="w-full">
             <Link href="/log">Done</Link>
           </Button>
-          <Button asChild variant="ghost">
+          <Button asChild variant="ghost" className="w-full">
             <Link href="/child/foods">Open introduction tracker</Link>
           </Button>
-        </div>
+        </StickyFooter>
       </div>
     )
   }
@@ -55,53 +58,62 @@ export function ResultStep({ entryId, firstTime }: { entryId: string; firstTime?
   const tip = supportiveSuggestion(day.mid, targets, next)
 
   return (
-    <div className="flex flex-1 flex-col gap-5 px-4 pt-6 pb-8">
-      <Done title="Meal saved" body="Thanks for logging — every entry makes your plan more useful." />
-      <div className="rounded-2xl border bg-card p-4 text-center">
-        <p className="text-xs text-muted-foreground">This meal, estimated</p>
-        <p className="tabular text-3xl font-semibold">~{Math.round(r.mid.energyKcal)} kcal</p>
-        <p className="tabular text-sm text-muted-foreground">
-          Likely {Math.round(r.low)}–{Math.round(r.high)} kcal · protein ~{Math.round(r.mid.proteinG)} g
-        </p>
-      </div>
-      {targets.supported && (
-        <div className="space-y-3 rounded-2xl border bg-card p-4">
-          <p className="font-medium">Today so far</p>
-          <NutrientBar label="Energy" value={day.mid.energyKcal} low={targets.energy.low} high={targets.energy.high} unit="kcal" estimate />
-          <NutrientBar label="Protein" value={day.mid.proteinG} low={targets.proteinG.low} high={targets.proteinG.high} unit="g" estimate />
-          <EstimateNote>
-            Based on {dayEntries.length} logged meal{dayEntries.length === 1 ? "" : "s"}
-            {rest.length > 0 ? `; ${rest.length} planned meal${rest.length === 1 ? " is" : "s are"} still to come.` : "."}
-          </EstimateNote>
+    <div className="flex flex-1 flex-col">
+      <div className="px-gutter space-y-6 pt-8 pb-8">
+        <Done title="Meal saved" body="Thanks for logging — every entry makes your plan more useful." />
+        <Surface padding="lg" className="text-center">
+          <p className="text-caption text-muted-foreground">This meal · estimate</p>
+          <p className="text-metric mt-1">
+            ~{Math.round(r.mid.energyKcal)}
+            <span className="text-callout ml-1 font-normal tracking-normal text-muted-foreground">kcal</span>
+          </p>
+          <p className="tabular text-caption mt-0.5 text-muted-foreground">
+            Likely {Math.round(r.low)}–{Math.round(r.high)} kcal · protein ~{Math.round(r.mid.proteinG)} g
+          </p>
+        </Surface>
+        {targets.supported && (
+          <Surface padding="lg" className="space-y-4">
+            <p className="text-headline">Today so far</p>
+            <NutrientBar label="Energy" value={day.mid.energyKcal} low={targets.energy.low} high={targets.energy.high} unit="kcal" estimate />
+            <NutrientBar label="Protein" value={day.mid.proteinG} low={targets.proteinG.low} high={targets.proteinG.high} unit="g" estimate />
+            <div className="border-t border-border/70 pt-3">
+              <EstimateNote>
+                Based on {dayEntries.length} logged meal{dayEntries.length === 1 ? "" : "s"}
+                {rest.length > 0 ? `; ${rest.length} planned meal${rest.length === 1 ? " is" : "s are"} still to come.` : "."}
+              </EstimateNote>
+            </div>
+          </Surface>
+        )}
+        <div className="flex gap-3 rounded-2xl bg-sage/70 p-4">
+          <IconTile tone="white" size="sm">
+            <Lightbulb />
+          </IconTile>
+          <div className="min-w-0">
+            <p className="text-callout font-semibold">{tip.title}</p>
+            <p className="text-callout mt-0.5 text-charcoal/80">{tip.body}</p>
+          </div>
         </div>
-      )}
-      <div className="flex gap-3 rounded-2xl bg-sage p-4">
-        <Lightbulb className="mt-0.5 size-5 shrink-0 text-forest" aria-hidden />
-        <div>
-          <p className="font-semibold">{tip.title}</p>
-          <p className="text-sm text-charcoal/80">{tip.body}</p>
-        </div>
       </div>
-      <div className="mt-auto grid gap-2">
-        <Button asChild size="lg">
+      <StickyFooter>
+        <Button asChild size="lg" className="w-full">
           <Link href="/home">Done</Link>
         </Button>
-        <Button asChild variant="ghost">
+        <Button asChild variant="ghost" className="w-full">
           <Link href={`/log/entry/${entry.id}`}>View entry</Link>
         </Button>
-      </div>
+      </StickyFooter>
     </div>
   )
 }
 
 function Done({ title, body }: { title: string; body: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 text-center">
-      <div className="grid size-14 place-items-center rounded-full bg-sage text-forest">
-        <CircleCheck className="size-7" />
-      </div>
-      <p className="text-xl font-semibold">{title}</p>
-      <p className="text-sm text-muted-foreground">{body}</p>
+    <div className="flex flex-col items-center text-center">
+      <span className="grid size-16 place-items-center rounded-full bg-sage text-forest">
+        <CircleCheck className="size-8" />
+      </span>
+      <p className="text-title mt-4">{title}</p>
+      <p className="text-callout mt-1 max-w-[18rem] text-muted-foreground">{body}</p>
     </div>
   )
 }

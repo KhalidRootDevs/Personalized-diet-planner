@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { PageBody, PageHeader } from "@/components/app/page"
-import { InfoNote, SafetyAlert } from "@/components/app/alerts"
+import { IconTile, KeyValue, PageBody, PageHeader, Pill } from "@/components/app/page"
+import { CautionNote, InfoNote } from "@/components/app/alerts"
 
 type Kind = "recipe" | "rule" | "plan" | "food"
 type Decision = "approved" | "modify" | "rejected"
@@ -125,7 +125,7 @@ export default function AdminReviewsPage() {
 
   return (
     <>
-      <PageHeader back="/profile" title="Clinical review" subtitle="Admin · prototype" />
+      <PageHeader back="/profile" title="Clinical review" subtitle="Staff view · prototype" />
       <PageBody>
         <InfoNote>Signed in as <strong>Clinical reviewer</strong>. Support agents can&apos;t open this queue, and content editors can&apos;t publish high-risk rules without review.</InfoNote>
 
@@ -135,55 +135,69 @@ export default function AdminReviewsPage() {
             <TabsTrigger value="history">Decisions ({done.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="queue" className="mt-4 space-y-3">
-            {pending.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">Nothing waiting for review.</p>}
-            {pending.map((i) => {
-              const K = KIND[i.kind]
-              const failing = i.checks.filter((c) => !c.ok).length
-              return (
-                <button key={i.id} onClick={() => setOpen(i)} className="w-full rounded-xl border bg-card p-3 text-left hover:bg-muted/50">
-                  <div className="flex items-start gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-sage text-forest">
-                      <K.icon className="size-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground">{K.label} · {i.stage}</p>
-                      <p className="font-medium">{i.title}</p>
-                      <p className="line-clamp-2 text-sm text-muted-foreground">{i.summary}</p>
-                      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium">
-                        {i.risk === "high" && <span className="rounded-full bg-[#f3e2d9] px-2 py-0.5 text-terracotta-text">High risk</span>}
-                        {failing > 0 ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-caution-surface px-2 py-0.5 text-caution"><FileWarning className="size-3" />{failing} check{failing > 1 ? "s" : ""} open</span>
-                        ) : (
-                          <span className="rounded-full bg-sage px-2 py-0.5 text-forest">Checks passed</span>
-                        )}
+          <TabsContent value="queue" className="mt-4">
+            {pending.length === 0 ? (
+              <p className="text-callout py-10 text-center text-muted-foreground">Nothing waiting for review.</p>
+            ) : (
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+                {pending.map((i) => {
+                  const K = KIND[i.kind]
+                  const failing = i.checks.filter((c) => !c.ok).length
+                  return (
+                    <button key={i.id} onClick={() => setOpen(i)} className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 active:bg-muted">
+                      <IconTile>
+                        <K.icon aria-hidden />
+                      </IconTile>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-caption text-muted-foreground">
+                          {K.label} · {i.stage}
+                        </p>
+                        <p className="text-body font-medium">{i.title}</p>
+                        <p className="text-caption mt-0.5 line-clamp-2 text-muted-foreground">{i.summary}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {i.risk === "high" && <Pill tone="terracotta">High risk</Pill>}
+                          {failing > 0 ? (
+                            <Pill tone="caution" icon={<FileWarning />}>
+                              {failing} check{failing > 1 ? "s" : ""} open
+                            </Pill>
+                          ) : (
+                            <Pill tone="sage">Checks passed</Pill>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="history" className="mt-4 space-y-2">
-            {done.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">No decisions yet.</p>}
-            {done.map((i) => {
-              const d = decisions[i.id]
-              return (
-                <div key={i.id} className="flex items-start gap-3 rounded-xl border bg-card p-3">
-                  <History className="mt-0.5 size-4 shrink-0 text-muted-grey" aria-hidden />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{i.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {d.decision === "approved" ? "Approved · v1.0 published · next review in 12 months" : d.decision === "modify" ? "Returned for changes" : "Rejected"}
-                      {" · "}
-                      {new Date(d.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                    {d.note && <p className="mt-1 text-sm">&ldquo;{d.note}&rdquo;</p>}
-                  </div>
-                </div>
-              )
-            })}
+          <TabsContent value="history" className="mt-4">
+            {done.length === 0 ? (
+              <p className="text-callout py-10 text-center text-muted-foreground">No decisions yet.</p>
+            ) : (
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+                {done.map((i) => {
+                  const d = decisions[i.id]
+                  return (
+                    <div key={i.id} className="flex items-start gap-3 px-4 py-3.5">
+                      <IconTile tone="muted">
+                        <History aria-hidden />
+                      </IconTile>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-body font-medium">{i.title}</p>
+                        <p className="text-caption text-muted-foreground">
+                          {d.decision === "approved" ? "Approved · v1.0 published · next review in 12 months" : d.decision === "modify" ? "Returned for changes" : "Rejected"}
+                          {" · "}
+                          {new Date(d.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                        {d.note && <p className="text-callout mt-1">&ldquo;{d.note}&rdquo;</p>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </PageBody>
@@ -196,33 +210,33 @@ export default function AdminReviewsPage() {
                 <DialogTitle>{open.title}</DialogTitle>
                 <DialogDescription>{open.summary}</DialogDescription>
               </DialogHeader>
-              <ol className="flex flex-wrap gap-1 text-[11px]">
+              <ol className="flex flex-wrap gap-1.5 text-[11px] font-medium">
                 {STAGES.map((s) => {
                   const idx = STAGES.indexOf(open.stage)
                   const me = STAGES.indexOf(s)
                   return (
-                    <li key={s} className={cn("rounded-full px-2 py-0.5", me < idx ? "bg-sage text-forest" : me === idx ? "bg-forest text-ivory" : "bg-muted text-muted-foreground")}>
+                    <li key={s} className={cn("inline-flex h-6 items-center rounded-full px-2.5", me < idx ? "bg-sage text-forest" : me === idx ? "bg-forest text-ivory" : "bg-muted text-muted-foreground")}>
                       {s}
                     </li>
                   )
                 })}
               </ol>
-              <dl className="space-y-1.5 text-sm">
-                <div><dt className="inline text-muted-foreground">Population: </dt><dd className="inline">{open.population}</dd></div>
-                <div><dt className="inline text-muted-foreground">Source: </dt><dd className="inline">{open.source}</dd></div>
-                <div><dt className="inline text-muted-foreground">Submitted by: </dt><dd className="inline">{open.submittedBy}</dd></div>
+              <dl className="divide-y divide-border/70 border-y border-border/70">
+                <KeyValue label="Population" value={open.population} />
+                <KeyValue label="Source" value={open.source} />
+                <KeyValue label="Submitted by" value={open.submittedBy} />
               </dl>
-              <ul className="space-y-1.5 rounded-xl bg-muted/60 p-3 text-sm">
+              <ul className="text-callout space-y-2 rounded-xl bg-muted p-4">
                 {open.checks.map((c) => (
                   <li key={c.label} className="flex gap-2">
-                    <span className={cn("mt-0.5 grid size-4 shrink-0 place-items-center rounded-full text-[10px] font-bold", c.ok ? "bg-forest text-ivory" : "bg-caution text-white")} aria-hidden>
+                    <span className={cn("mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-full text-[10px] font-bold", c.ok ? "bg-forest text-ivory" : "bg-caution text-white")} aria-hidden>
                       {c.ok ? "✓" : "!"}
                     </span>
                     <span>{c.label}<span className="sr-only">{c.ok ? " — passed" : " — open"}</span></span>
                   </li>
                 ))}
               </ul>
-              {open.checks.some((c) => !c.ok) && <SafetyAlert title="Can't approve yet">Open checks must pass before this can be published.</SafetyAlert>}
+              {open.checks.some((c) => !c.ok) && <CautionNote title="Can't approve yet">Open checks must pass before this can be published.</CautionNote>}
               <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reviewer note (required to modify or reject)" aria-label="Reviewer note" />
               <DialogFooter className="grid grid-cols-3 gap-2 sm:flex">
                 <Button variant="outline" disabled={!note.trim()} onClick={() => decide("rejected")}>Reject</Button>

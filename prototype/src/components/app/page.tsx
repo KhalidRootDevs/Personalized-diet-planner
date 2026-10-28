@@ -6,7 +6,7 @@
  */
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /* ───────────── Headers ───────────── */
@@ -56,6 +56,65 @@ export function PageHeader({
         </div>
         {action && <div className="flex shrink-0 items-center gap-1.5">{action}</div>}
       </div>
+    </header>
+  )
+}
+
+/**
+ * Header for task flows (UI-SPEC §5.2): back on the left, close on the right, title with
+ * "Step x of n", and a progress bar — segmented for up to 5 steps, continuous above that.
+ */
+export function FlowHeader({
+  title,
+  step,
+  total,
+  onBack,
+  backHref,
+  closeHref,
+  onClose,
+}: {
+  title: React.ReactNode
+  step?: number
+  total?: number
+  onBack?: () => void
+  backHref?: string
+  closeHref?: string
+  onClose?: () => void
+}) {
+  const hasSteps = !!(step && total)
+  return (
+    <header className="sticky top-0 z-20 bg-background/92 pt-safe backdrop-blur-md">
+      <div className="flex h-14 items-center gap-2 pr-[calc(var(--gutter)-4px)] pl-3">
+        {onBack || backHref ? <BackButton href={backHref} onClick={onBack} /> : <span className="w-2" aria-hidden />}
+        <div className="min-w-0 flex-1">
+          <h1 className="text-headline truncate">{title}</h1>
+          {hasSteps && (
+            <p className="tabular text-caption -mt-0.5 text-muted-foreground">
+              Step {step} of {total}
+            </p>
+          )}
+        </div>
+        {(closeHref || onClose) && (
+          <HeaderIconButton href={closeHref} onClick={onClose} label="Close">
+            <X className="size-[18px]" />
+          </HeaderIconButton>
+        )}
+      </div>
+      {hasSteps && (
+        <div className="px-gutter pb-2.5" role="progressbar" aria-valuemin={1} aria-valuemax={total} aria-valuenow={step} aria-label={`Step ${step} of ${total}`}>
+          {total! <= 5 ? (
+            <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}>
+              {Array.from({ length: total! }, (_, i) => (
+                <span key={i} className={cn("h-1 rounded-full transition-colors duration-200", i < step! ? "bg-forest" : "bg-border")} />
+              ))}
+            </div>
+          ) : (
+            <div className="h-1 overflow-hidden rounded-full bg-border">
+              <div className="h-full rounded-full bg-forest transition-[width] duration-300" style={{ width: `${(step! / total!) * 100}%` }} />
+            </div>
+          )}
+        </div>
+      )}
     </header>
   )
 }

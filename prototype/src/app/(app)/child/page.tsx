@@ -14,12 +14,12 @@ export default function ChildPage() {
   return (
     <>
       <PageHeader title={child ? `${child.name}'s feeding` : "Baby feeding"} back="/home" action={<ProfileSwitcher />} />
-      <PageBody>
-        {child ? (
-          <ChildHome profile={child} />
-        ) : (
+      {child ? (
+        <ChildHome profile={child} />
+      ) : (
+        <PageBody>
           <EmptyState
-            icon={<Baby className="size-6" />}
+            icon={<Baby />}
             title="No child profile yet"
             description="Add a baby or young child to get age-appropriate feeding guidance, a food introduction tracker and growth records."
             action={
@@ -28,8 +28,8 @@ export default function ChildPage() {
               </Button>
             }
           />
-        )}
-      </PageBody>
+        </PageBody>
+      )}
     </>
   )
 }

@@ -8,10 +8,10 @@ import { useApp } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { IconTile, KeyValue, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
 import { PhaseBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
-import { Field, PillGroup } from "@/components/profile/form-bits"
+import { Field, PillGroup } from "@/components/app/controls"
 
 const SCOPES = [
   { id: "plan", label: "Meal plans" },
@@ -29,25 +29,25 @@ export default function ProfessionalPage() {
 
   return (
     <>
-      <PageHeader back="/profile" title="Dietitian access" />
+      <PageHeader back="/profile" title={<span className="flex items-center gap-2">Dietitian access <PhaseBadge phase={3} /></span>} subtitle="Professional review and reports" />
       <PageBody>
-        <div className="flex items-center gap-2">
-          <PhaseBadge phase={3} />
-          <span className="text-sm text-muted-foreground">Professional review and reports</span>
-        </div>
         <PremiumGate feature="professional">
-          <div className="space-y-6">
+          <div className="space-y-7">
             <Section title="Access">
               {access ? (
-                <div className="rounded-2xl border bg-card p-4">
+                <Surface>
                   <div className="flex items-center gap-3">
-                    <span className="grid size-10 place-items-center rounded-lg bg-sage text-forest"><UserCheck className="size-5" /></span>
+                    <IconTile>
+                      <UserCheck />
+                    </IconTile>
                     <div className="flex-1">
-                      <p className="font-medium">{access.name}</p>
-                      <p className="text-sm text-muted-foreground">Since {new Date(access.grantedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      <p className="text-body font-medium">{access.name}</p>
+                      <p className="text-caption text-muted-foreground">Since {new Date(access.grantedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm"><span className="text-muted-foreground">Can see: </span>{access.scope}</p>
+                  <div className="mt-3 border-t border-border/70">
+                    <KeyValue label="Can see" value={access.scope} />
+                  </div>
                   <Button
                     variant="outline"
                     className="mt-3 w-full"
@@ -58,23 +58,26 @@ export default function ProfessionalPage() {
                   >
                     Revoke access
                   </Button>
-                </div>
+                </Surface>
               ) : (
-                <div className="space-y-4 rounded-2xl border bg-card p-4">
-                  <p className="flex items-center gap-2 text-sm text-muted-foreground"><Stethoscope className="size-4 text-forest" /> Ask your dietitian for their NutriPlan code.</p>
+                <Surface padding="lg" className="space-y-5">
+                  <p className="text-callout flex items-center gap-2 text-muted-foreground">
+                    <Stethoscope className="size-4 shrink-0 text-forest" aria-hidden /> Ask your dietitian for their NutriPlan code.
+                  </p>
                   <Field label="Professional code" htmlFor="code">
                     <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. RD-4821" />
                   </Field>
-                  <fieldset className="space-y-2">
-                    <legend className="mb-1 text-sm font-medium">What they can see</legend>
+                  <fieldset>
+                    <legend className="text-callout mb-1 font-medium">What they can see</legend>
                     {SCOPES.map((s) => (
-                      <label key={s.id} className="flex items-center gap-3 text-sm">
+                      <label key={s.id} className="text-body flex min-h-11 cursor-pointer items-center gap-3">
                         <Checkbox checked={scopes.includes(s.id)} onCheckedChange={(v) => setScopes((x) => (v ? [...x, s.id] : x.filter((y) => y !== s.id)))} />
                         {s.label}
                       </label>
                     ))}
                   </fieldset>
                   <Button
+                    size="lg"
                     className="w-full"
                     disabled={code.trim().length < 4 || scopes.length === 0}
                     onClick={() => {
@@ -84,25 +87,25 @@ export default function ProfessionalPage() {
                   >
                     Grant access
                   </Button>
-                </div>
+                </Surface>
               )}
               <InfoNote>Professionals only see what you allow. A plan is marked “professionally reviewed” only after a verified professional approves it.</InfoNote>
             </Section>
 
             <Section title="Report for your appointment">
-              <div className="space-y-4 rounded-2xl border bg-card p-4">
+              <Surface padding="lg" className="space-y-5">
                 <Field label="Period">
                   <PillGroup label="Period" value={range} onChange={setRange} options={[{ value: "7", label: "7 days" }, { value: "30", label: "30 days" }, { value: "90", label: "90 days" }]} />
                 </Field>
-                <ul className="space-y-1.5 text-sm text-muted-foreground">
+                <ul className="text-callout space-y-2 text-muted-foreground">
                   <li className="flex gap-2"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" />Planned vs recorded intake as ranges</li>
                   <li className="flex gap-2"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" />Record completeness, so gaps aren&apos;t mistaken for low intake</li>
                   <li className="flex gap-2"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" />Allergies, preferences and notes you add</li>
                 </ul>
                 <Button variant="outline" className="w-full" onClick={() => toast.success("Report ready", { description: `Prototype: a ${range}-day PDF would download now.` })}>
-                  <FileText className="size-4" /> Export PDF
+                  <FileText className="size-[18px]" /> Export PDF
                 </Button>
-              </div>
+              </Surface>
             </Section>
           </div>
         </PremiumGate>

@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { PageBody, PageHeader, Section, StatTile, Surface } from "@/components/app/page"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
-import { EstimateNote, Macro } from "@/components/app/nutrition"
+import { EstimateNote } from "@/components/app/nutrition"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -71,9 +71,9 @@ function RecipeForm() {
   const n = recipeNutrition(draft)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <Section title="Basics">
-        <div className="space-y-3">
+        <Surface className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="name">Recipe name</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ammu's shorshe ilish" />
@@ -103,11 +103,11 @@ function RecipeForm() {
               </Select>
             </div>
           </div>
-        </div>
+        </Surface>
       </Section>
 
-      <Section title="Ingredients (whole recipe)">
-        <div className="space-y-2">
+      <Section title="Ingredients" description="Amounts for the whole recipe. Choose raw or cooked — the values differ a lot (e.g. dry vs cooked rice).">
+        <Surface className="space-y-3">
           {ingredients.map((ing, idx) => (
             <div key={idx} className="flex items-end gap-2">
               <div className="min-w-0 flex-1 space-y-1">
@@ -118,30 +118,29 @@ function RecipeForm() {
                   <SelectContent>
                     {FOODS.filter((f) => f.id !== "breast_milk").map((f) => (
                       <SelectItem key={f.id} value={f.id}>
-                        {f.name} ({f.state})
+                        {f.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <Input
-                className="w-24"
+                className="w-20"
                 inputMode="numeric"
                 aria-label="Grams"
                 value={ing.grams || ""}
                 onChange={(e) => setIngredients(ingredients.map((x, i) => (i === idx ? { ...x, grams: Number(e.target.value.replace(/\D/g, "")) } : x)))}
               />
-              <span className="pb-3 text-sm text-muted-foreground">g</span>
-              <Button size="icon" variant="ghost" aria-label="Remove ingredient" onClick={() => setIngredients(ingredients.filter((_, i) => i !== idx))}>
-                <Trash2 />
-              </Button>
+              <span className="text-callout pb-3.5 text-muted-foreground">g</span>
+              <button className="mb-1 grid size-10 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted" aria-label="Remove ingredient" onClick={() => setIngredients(ingredients.filter((_, i) => i !== idx))}>
+                <Trash2 className="size-[18px]" />
+              </button>
             </div>
           ))}
-          <Button variant="outline" size="sm" onClick={() => setIngredients([...ingredients, { foodId: "dal_cooked", grams: 100 }])}>
-            <Plus /> Add ingredient
+          <Button variant="secondary" size="sm" onClick={() => setIngredients([...ingredients, { foodId: "dal_cooked", grams: 100 }])}>
+            <Plus className="size-4" /> Add ingredient
           </Button>
-          <p className="text-xs text-muted-foreground">Choose whether each ingredient is raw or cooked — the values differ a lot (e.g. dry vs cooked rice).</p>
-        </div>
+        </Surface>
       </Section>
 
       <Section title="Steps">
@@ -149,11 +148,11 @@ function RecipeForm() {
       </Section>
 
       <Section title="Calculated per serving">
-        <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-          <Macro label="Energy" value={n.energyKcal} unit="kcal" estimate />
-          <Macro label="Protein" value={n.proteinG} estimate />
-          <Macro label="Carbs" value={n.carbsG} estimate />
-          <Macro label="Fat" value={n.fatG} estimate />
+        <div className="grid grid-cols-2 gap-2">
+          <StatTile label="Energy" value={`~${Math.round(n.energyKcal)}`} unit="kcal" />
+          <StatTile label="Protein" value={`~${Math.round(n.proteinG)}`} unit="g" />
+          <StatTile label="Carbohydrate" value={`~${Math.round(n.carbsG)}`} unit="g" />
+          <StatTile label="Fat" value={`~${Math.round(n.fatG)}`} unit="g" />
         </div>
         <EstimateNote>
           Calculated from {draft.ingredients.map((i) => FOOD_MAP[i.foodId]?.name).filter(Boolean).length} ingredients in our food database. Your recipe is saved as &quot;not reviewed&quot;.

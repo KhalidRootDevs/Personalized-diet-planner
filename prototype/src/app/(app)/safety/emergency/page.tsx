@@ -1,5 +1,5 @@
-import { Baby, Phone, TriangleAlert, X } from "lucide-react"
-import { PageBody, PageHeader, Section } from "@/components/app/page"
+import { Baby, Phone, Siren, TriangleAlert, X } from "lucide-react"
+import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
 
 const SIGNS = [
   "Trouble breathing, wheezing or a tight throat",
@@ -9,6 +9,14 @@ const SIGNS = [
   "Chest pain, confusion or sudden weakness",
   "Very low or very high blood sugar symptoms that don't improve",
   "In a baby: unusual floppiness, blue lips, or not responding normally",
+]
+
+const CHOKING_STEPS = [
+  "Call 999, or ask someone else to call.",
+  "Lay the baby face down along your forearm, head lower than the chest, supporting the jaw.",
+  "Give up to 5 firm back blows between the shoulder blades.",
+  "If still choking, turn the baby face up and give up to 5 chest thrusts with two fingers in the centre of the chest.",
+  "Repeat until help arrives or the object comes out. Don't put your fingers in the mouth to search blindly.",
 ]
 
 const DONT = [
@@ -24,54 +32,55 @@ export default function EmergencyPage() {
     <>
       <PageHeader title="Emergency help" back />
       <PageBody>
-        <div className="rounded-2xl border-2 border-safety bg-safety-surface p-4" role="alert">
-          <p className="flex items-center gap-2 text-lg font-semibold text-safety">
-            <TriangleAlert className="size-5" /> If this is an emergency, get help now
-          </p>
-          <p className="mt-2 text-sm">NutriPlan cannot assess or manage medical emergencies. Call emergency services or go to the nearest hospital.</p>
-          <a href="tel:999" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl bg-safety text-base font-semibold text-white">
+        <div className="rounded-2xl border border-safety/25 bg-safety-surface p-5" role="alert">
+          <IconTile tone="safety" size="lg" className="bg-card">
+            <Siren />
+          </IconTile>
+          <p className="text-title mt-4 text-safety">If this is an emergency, get help now</p>
+          <p className="text-callout mt-1.5 text-charcoal">NutriPlan cannot assess or manage medical emergencies. Call emergency services or go to the nearest hospital.</p>
+          <a href="tel:999" className="mt-5 flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-safety text-base font-semibold text-white transition-colors hover:bg-[#7a261f]">
             <Phone className="size-5" /> Call 999
           </a>
-          <p className="mt-2 text-center text-xs text-charcoal/80">National emergency number in Bangladesh</p>
+          <p className="text-caption mt-2 text-center text-charcoal/75">National emergency number in Bangladesh</p>
         </div>
 
         <Section title="Get help immediately for">
-          <ul className="space-y-2">
+          <ListGroup>
             {SIGNS.map((s) => (
-              <li key={s} className="flex gap-2.5 rounded-xl border bg-card p-3 text-sm">
-                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-safety" aria-hidden /> {s}
-              </li>
+              <ListRow key={s} icon={<TriangleAlert />} iconTone="safety" title={<span className="text-callout font-medium">{s}</span>} className="min-h-14" />
             ))}
-          </ul>
+          </ListGroup>
         </Section>
 
         <Section title="Infant choking">
-          <div className="rounded-xl border bg-card p-4 text-sm">
-            <p className="flex items-center gap-2 font-medium">
-              <Baby className="size-4 text-forest" /> If a baby can&apos;t cry, cough or breathe
-            </p>
-            <ol className="mt-2 list-decimal space-y-1.5 pl-5">
-              <li>Call 999, or ask someone else to call.</li>
-              <li>Lay the baby face down along your forearm, head lower than the chest, supporting the jaw.</li>
-              <li>Give up to 5 firm back blows between the shoulder blades.</li>
-              <li>If still choking, turn the baby face up and give up to 5 chest thrusts with two fingers in the centre of the chest.</li>
-              <li>Repeat until help arrives or the object comes out. Don&apos;t put your fingers in the mouth to search blindly.</li>
+          <Surface padding="lg">
+            <div className="flex items-center gap-3">
+              <IconTile>
+                <Baby />
+              </IconTile>
+              <p className="text-body font-medium">If a baby can&apos;t cry, cough or breathe</p>
+            </div>
+            <ol className="mt-4 space-y-3">
+              {CHOKING_STEPS.map((step, i) => (
+                <li key={step} className="text-callout flex gap-3">
+                  <span className="tabular grid size-6 shrink-0 place-items-center rounded-full bg-forest text-xs font-semibold text-ivory">{i + 1}</span>
+                  <span className="pt-0.5">{step}</span>
+                </li>
+              ))}
             </ol>
-            <p className="mt-3 text-xs text-muted-foreground">If the baby is coughing strongly, let them keep coughing and watch closely. A first-aid course teaches these steps properly.</p>
-          </div>
+            <p className="text-caption mt-4 border-t border-border/70 pt-3 text-muted-foreground">If the baby is coughing strongly, let them keep coughing and watch closely. A first-aid course teaches these steps properly.</p>
+          </Surface>
         </Section>
 
         <Section title="What not to do">
-          <ul className="space-y-2 text-sm">
+          <ListGroup>
             {DONT.map((d) => (
-              <li key={d} className="flex gap-2.5">
-                <X className="mt-0.5 size-4 shrink-0 text-safety" aria-hidden /> {d}
-              </li>
+              <ListRow key={d} icon={<X />} iconTone="muted" title={<span className="text-callout font-medium">{d}</span>} className="min-h-14" />
             ))}
-          </ul>
+          </ListGroup>
         </Section>
 
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption px-1 text-muted-foreground">
           This page gives general first-response information only and doesn&apos;t replace professional medical care. Content to be confirmed by clinical reviewers before launch.
         </p>
       </PageBody>

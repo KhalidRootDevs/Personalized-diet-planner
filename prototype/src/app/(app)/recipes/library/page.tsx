@@ -1,8 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { BookHeart, Plus } from "lucide-react"
-import { EmptyState, PageBody, PageHeader } from "@/components/app/page"
+import { BookHeart, ChevronRight, Plus } from "lucide-react"
+import { EmptyState, ListGroup, PageBody, PageHeader, Pill } from "@/components/app/page"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
@@ -18,7 +18,7 @@ export default function LibraryPage() {
       <PageHeader title="My recipe library" back="/recipes" action={<FeatureBadge feature="recipe_library" />} />
       <PageBody>
         <PremiumGate feature="recipe_library">
-          <div className="space-y-4">
+          <div className="space-y-5">
             {recipes.length === 0 ? (
               <EmptyState
                 icon={<BookHeart />}
@@ -32,24 +32,26 @@ export default function LibraryPage() {
               />
             ) : (
               <>
-                <ul className="space-y-2">
+                <ListGroup>
                   {recipes.map((r) => (
-                    <li key={r.id}>
-                      <Link href={`/recipes/${r.id}`} className="flex items-center gap-3 rounded-2xl border bg-card p-3">
-                        <RecipeThumb recipe={r} size="md" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{r.name}</p>
-                          <p className="tabular text-xs text-muted-foreground">
-                            ~{Math.round(recipeNutrition(r).energyKcal)} kcal per serving · {r.servings} servings
-                          </p>
+                    <Link key={r.id} href={`/recipes/${r.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
+                      <RecipeThumb recipe={r} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-body line-clamp-2 font-medium">{r.name}</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Pill className="h-[22px] px-2 text-[11px]">Not reviewed</Pill>
+                          <span className="tabular text-caption text-muted-foreground">
+                            ~{Math.round(recipeNutrition(r).energyKcal)} kcal · serves {r.servings}
+                          </span>
                         </div>
-                      </Link>
-                    </li>
+                      </div>
+                      <ChevronRight className="size-[18px] shrink-0 text-muted-grey" aria-hidden />
+                    </Link>
                   ))}
-                </ul>
+                </ListGroup>
                 <Button asChild variant="outline" className="w-full">
                   <Link href="/recipes/new">
-                    <Plus /> Add another recipe
+                    <Plus className="size-4" /> Add another recipe
                   </Link>
                 </Button>
               </>

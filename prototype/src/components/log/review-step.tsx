@@ -1,7 +1,6 @@
 "use client"
 
 import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +12,7 @@ import { ItemEditor } from "@/components/log/item-editor"
 import { FoodPickerSheet } from "@/components/log/food-picker"
 import { PhotoPlaceholder } from "@/components/log/entry-card"
 import { StickyAction } from "@/components/log/input-steps"
+import { Section, StatTile, Surface } from "@/components/app/page"
 import { ALLERGEN_LABELS } from "@/lib/data/foods"
 import { MEAL_LABEL } from "@/lib/planning"
 import { formatTime } from "@/lib/date"
@@ -112,68 +112,78 @@ export function ReviewStep({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex-1 space-y-5 px-4 pb-6">
+      <div className="px-gutter flex-1 space-y-7 pt-3 pb-8">
         {hasPhoto && (
-          <div className="flex items-center gap-3">
-            <PhotoPlaceholder src={photoUrl} className="size-20 shrink-0" />
-            <div>
-              <p className="font-semibold">Check what we found</p>
-              <p className="text-sm text-muted-foreground">These are suggestions from your photo. Fix anything that&apos;s wrong.</p>
+          <Surface padding="sm" className="flex items-center gap-4">
+            <PhotoPlaceholder src={photoUrl} className="size-[72px] shrink-0 rounded-xl" />
+            <div className="min-w-0">
+              <p className="text-headline">Check what we found</p>
+              <p className="text-caption mt-0.5 text-muted-foreground">Suggestions from your photo. Fix anything that&apos;s wrong.</p>
             </div>
-          </div>
+          </Surface>
         )}
         {!hasPhoto && aiProposed && <InfoNote title="Check what we found">We matched your words to foods in our database. Fix anything that&apos;s wrong.</InfoNote>}
 
-        {hits.length > 0 && (
-          <SafetyAlert title={`Contains ${Array.from(new Set(hits.map((h) => ALLERGEN_LABELS[h.allergen] ?? h.allergen))).join(", ")}`} emergency>
-            {hits.map((h) => h.item.displayName).join(", ")} {hits.length > 1 ? "contain" : "contains"} an allergen recorded in {isChild ? `${profile.name}'s` : "your"} profile. You can still record it. If there are signs of a reaction, get help now.
-          </SafetyAlert>
-        )}
-        {infant.length > 0 && (
-          <SafetyAlert title="Check this food for your baby's age">
-            <ul className="list-disc pl-4">
-              {infant.map(({ i, flag }) => (
-                <li key={i.id}>
-                  {i.displayName}: {flag}
-                </li>
-              ))}
-            </ul>
-          </SafetyAlert>
+        {(hits.length > 0 || infant.length > 0) && (
+          <div className="space-y-3">
+            {hits.length > 0 && (
+              <SafetyAlert title={`Contains ${Array.from(new Set(hits.map((h) => ALLERGEN_LABELS[h.allergen] ?? h.allergen))).join(", ")}`} emergency>
+                {hits.map((h) => h.item.displayName).join(", ")} {hits.length > 1 ? "contain" : "contains"} an allergen recorded in {isChild ? `${profile.name}'s` : "your"} profile. You can still record it. If there are signs of a reaction, get help now.
+              </SafetyAlert>
+            )}
+            {infant.length > 0 && (
+              <SafetyAlert title="Check this food for your baby's age">
+                <ul className="list-disc pl-4">
+                  {infant.map(({ i, flag }) => (
+                    <li key={i.id}>
+                      {i.displayName}: {flag}
+                    </li>
+                  ))}
+                </ul>
+              </SafetyAlert>
+            )}
+          </div>
         )}
 
-        <div className="space-y-2">
-          {items.map((it, idx) => (
-            <ItemEditor
-              key={it.id}
-              item={it}
+        <Section title={`Foods (${items.length})`} description={aiProposed ? "Food and portion confidence are shown separately." : undefined}>
+          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+            {items.map((it, idx) => (
+              <ItemEditor
+                key={it.id}
+                variant="row"
+                item={it}
+                profile={profile}
+                showConfidence={aiProposed}
+                hideNutrition={isChild}
+                onChange={(next) => setItems(items.map((x, j) => (j === idx ? next : x)))}
+                onRemove={() => setItems(items.filter((_, j) => j !== idx))}
+              />
+            ))}
+            <FoodPickerSheet
               profile={profile}
-              showConfidence={aiProposed}
-              hideNutrition={isChild}
-              onChange={(next) => setItems(items.map((x, j) => (j === idx ? next : x)))}
-              onRemove={() => setItems(items.filter((_, j) => j !== idx))}
+              onPick={(id) => setItems([...items, { ...itemFromFood(id), confirmedByUser: true }])}
+              trigger={
+                <button type="button" className="text-callout flex min-h-[56px] w-full items-center gap-3 px-4 font-semibold text-forest transition-colors hover:bg-muted/50">
+                  <span className="grid size-8 place-items-center rounded-full border border-dashed border-forest/40">
+                    <Plus className="size-4" />
+                  </span>
+                  Add a food we missed
+                </button>
+              }
             />
-          ))}
-          <FoodPickerSheet
-            profile={profile}
-            onPick={(id) => setItems([...items, { ...itemFromFood(id), confirmedByUser: true }])}
-            trigger={
-              <Button variant="outline" className="w-full border-dashed">
-                <Plus /> Add a food we missed
-              </Button>
-            }
-          />
-        </div>
+          </div>
+          {aiProposed && !isChild && items.some((i) => i.quantityConfidence === "low" && !i.confirmedByUser) && (
+            <CautionNote title="Some portions are hard to judge">Adjust them if you can — a rough guess is fine.</CautionNote>
+          )}
+        </Section>
 
         {askOil && (
-          <fieldset className="space-y-2">
-            <legend className="font-medium">How much oil or ghee was used?</legend>
-            <p className="text-xs text-muted-foreground">Photos can&apos;t show oil, and it changes the estimate a lot.</p>
+          <Section title="How much oil or ghee was used?" description="Photos can't show oil, and it changes the estimate a lot.">
             <Chips options={OIL} value={oil} onChange={setOil} />
-          </fieldset>
+          </Section>
         )}
         {askSugar && (
-          <fieldset className="space-y-2">
-            <legend className="font-medium">Was sugar added to your tea?</legend>
+          <Section title="Was sugar added to your tea?">
             <Chips
               options={[
                 { id: "yes", label: "Yes" },
@@ -182,51 +192,76 @@ export function ReviewStep({
               value={sugar === undefined ? undefined : sugar ? "yes" : "no"}
               onChange={(v) => setSugar(v === "yes")}
             />
-          </fieldset>
+          </Section>
         )}
 
         {isChild ? (
-          <div className="space-y-4 rounded-2xl border bg-card p-4">
-            <div className="space-y-1.5">
-              <Label>Texture</Label>
-              <Select value={child.texture} onValueChange={(texture) => setChild({ ...child, texture })}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TEXTURES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <fieldset className="space-y-1.5">
-              <legend className="text-sm font-medium">How did it go?</legend>
-              <Chips
-                options={[
-                  { id: "yes", label: "Enjoyed it" },
-                  { id: "somewhat", label: "A little" },
-                  { id: "no", label: "Not today" },
-                ]}
-                value={child.accepted}
-                onChange={(accepted) => setChild({ ...child, accepted: accepted as ChildInfo["accepted"] })}
-              />
-              <p className="text-xs text-muted-foreground">Let your baby decide how much. It can take many tries to accept a new food.</p>
-            </fieldset>
-            <div className="space-y-1.5">
-              <Label htmlFor="reaction">Any reaction?</Label>
-              <Textarea id="reaction" rows={2} value={child.reaction} onChange={(e) => setChild({ ...child, reaction: e.target.value })} placeholder="e.g. none observed, mild rash around mouth" />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={child.firstTime} onCheckedChange={(v) => setChild({ ...child, firstTime: v === true })} />
-              First time trying this — add to the introduction tracker
-            </label>
-          </div>
+          <Section title="How it went">
+            <Surface className="space-y-5">
+              <div className="space-y-1.5">
+                <Label>Texture</Label>
+                <Select value={child.texture} onValueChange={(texture) => setChild({ ...child, texture })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEXTURES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <fieldset className="space-y-2">
+                <legend className="text-callout mb-2 font-medium">How much was eaten?</legend>
+                <Chips
+                  options={[
+                    { id: "yes", label: "Enjoyed it" },
+                    { id: "somewhat", label: "A little" },
+                    { id: "no", label: "Not today" },
+                  ]}
+                  value={child.accepted}
+                  onChange={(accepted) => setChild({ ...child, accepted: accepted as ChildInfo["accepted"] })}
+                />
+                <p className="text-caption text-muted-foreground">Let your baby decide how much. It can take many tries to accept a new food.</p>
+              </fieldset>
+              <div className="space-y-1.5">
+                <Label htmlFor="reaction">Any reaction?</Label>
+                <Textarea id="reaction" rows={2} value={child.reaction} onChange={(e) => setChild({ ...child, reaction: e.target.value })} placeholder="e.g. none observed, mild rash around mouth" />
+              </div>
+              <label className="text-callout flex items-start gap-3">
+                <Checkbox className="mt-0.5" checked={child.firstTime} onCheckedChange={(v) => setChild({ ...child, firstTime: v === true })} />
+                First time trying this — add to the introduction tracker
+              </label>
+            </Surface>
+          </Section>
         ) : (
-          <>
-            {openMeals.length > 0 && (
+          <Section title="Estimate for this meal">
+            <Surface padding="lg">
+              <p className="text-metric">
+                ~{Math.round(n.energyKcal)}
+                <span className="text-callout ml-1 font-normal tracking-normal text-muted-foreground">kcal</span>
+              </p>
+              <p className="tabular text-caption mt-0.5 text-muted-foreground">
+                Likely {Math.round(n.energyKcal * (1 - u))}–{Math.round(n.energyKcal * (1 + u))} kcal
+              </p>
+              <div className="mt-4 grid grid-cols-4 gap-2">
+                <StatTile label="Protein" value={`~${Math.round(n.proteinG)}`} unit="g" className="px-2.5" />
+                <StatTile label="Carbs" value={`~${Math.round(n.carbsG)}`} unit="g" className="px-2.5" />
+                <StatTile label="Fat" value={`~${Math.round(n.fatG)}`} unit="g" className="px-2.5" />
+                <StatTile label="Fiber" value={`~${Math.round(n.fiberG)}`} unit="g" className="px-2.5" />
+              </div>
+              <div className="mt-4 border-t border-border/70 pt-3">
+                <EstimateNote>Calculated from our food database after you confirm. The range reflects portion uncertainty.</EstimateNote>
+              </div>
+            </Surface>
+          </Section>
+        )}
+
+        <Section title="Details">
+          <Surface className="space-y-4">
+            {!isChild && openMeals.length > 0 && (
               <div className="space-y-1.5">
                 <Label>Which planned meal was this?</Label>
                 <Select value={linkedMealId} onValueChange={setLinkedMealId}>
@@ -244,32 +279,18 @@ export function ReviewStep({
                 </Select>
               </div>
             )}
-            <div className="rounded-2xl bg-sage/60 p-4">
-              <p className="text-xs text-muted-foreground">Estimate for this meal</p>
-              <p className="tabular text-xl font-semibold">
-                ~{Math.round(n.energyKcal)} kcal <span className="text-sm font-normal text-muted-foreground">({Math.round(n.energyKcal * (1 - u))}–{Math.round(n.energyKcal * (1 + u))})</span>
-              </p>
-              <p className="tabular text-sm text-muted-foreground">
-                Protein ~{Math.round(n.proteinG)} g · Carbs ~{Math.round(n.carbsG)} g · Fat ~{Math.round(n.fatG)} g · Fiber ~{Math.round(n.fiberG)} g
-              </p>
-              <EstimateNote className="mt-2">Calculated from our food database after you confirm. The range reflects portion uncertainty.</EstimateNote>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="when">When did {isChild ? `${profile.name} eat` : "you eat"}?</Label>
+              <Input id="when" type="time" value={time} onChange={(e) => setTime(e.target.value)} className="tabular w-36" />
             </div>
-            {source !== "saved" && (
-              <label className="flex items-center gap-2 text-sm">
+            {!isChild && source !== "saved" && (
+              <label className="text-callout flex items-center gap-3 border-t border-border/70 pt-4">
                 <Checkbox checked={saveAsUsual} onCheckedChange={(v) => setSaveAsUsual(v === true)} />
                 Save as a usual meal for quicker logging
               </label>
             )}
-          </>
-        )}
-
-        <div className="flex items-center justify-between gap-3">
-          <Label htmlFor="when">When did {isChild ? `${profile.name} eat` : "you eat"}?</Label>
-          <Input id="when" type="time" value={time} onChange={(e) => setTime(e.target.value)} className="tabular w-32" />
-        </div>
-        {aiProposed && !isChild && items.some((i) => i.quantityConfidence === "low" && !i.confirmedByUser) && (
-          <CautionNote title="Some portions are hard to judge">Adjust them if you can — a rough guess is fine.</CautionNote>
-        )}
+          </Surface>
+        </Section>
       </div>
       <StickyAction label={isChild ? "Save to diary" : "Confirm and save"} disabled={!items.length} onClick={onConfirm} />
     </div>
@@ -285,7 +306,7 @@ function Chips<T extends string>({ options, value, onChange }: { options: { id: 
           role="radio"
           aria-checked={value === o.id}
           onClick={() => onChange(o.id)}
-          className={cn("min-h-10 rounded-full border px-4 text-sm transition-colors", value === o.id ? "border-forest bg-forest text-primary-foreground" : "bg-card hover:bg-muted/50")}
+          className={cn("text-callout h-9 rounded-full border px-4 font-medium transition-colors", value === o.id ? "border-forest bg-forest text-primary-foreground" : "border-border/80 bg-card text-charcoal hover:bg-muted")}
         >
           {o.label}
         </button>

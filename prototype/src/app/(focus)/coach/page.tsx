@@ -1,13 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
-import { ChevronLeft, Leaf, RotateCcw, SendHorizontal } from "lucide-react"
+import { ArrowUp, Leaf, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { FeatureBadge, PremiumGate } from "@/components/app/badges"
+import { FeatureBadge, PremiumGate, useFeature } from "@/components/app/badges"
 import { SafetyAlert } from "@/components/app/alerts"
+import { HeaderIconButton, IconTile, PageHeader, Pill } from "@/components/app/page"
 import { useApp, useActivePlan, useSelfProfile } from "@/lib/store"
 import { adultTargets } from "@/lib/nutrition"
 import { nowHHMM, todayISO, uid } from "@/lib/date"
@@ -18,31 +17,34 @@ import { cn } from "@/lib/utils"
 
 /** AI Nutrition Coach (§42.2, Phase 2): a contextual helper, not a chat-first tab (§44.17). */
 export default function CoachPage() {
-  const router = useRouter()
   const coach = useApp((s) => s.coach)
   const clear = useApp((s) => s.clearCoach)
+  const { allowed } = useFeature("coach")
   return (
-    <div className="flex min-h-dvh flex-1 flex-col lg:min-h-0">
-      <header className="sticky top-0 z-20 border-b bg-background/95 pt-safe backdrop-blur-sm">
-        <div className="flex h-14 items-center gap-2 px-2">
-          <button onClick={() => router.back()} className="grid size-11 place-items-center rounded-full hover:bg-muted" aria-label="Back">
-            <ChevronLeft className="size-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold">
-              Nutrition coach <FeatureBadge feature="coach" />
-            </h1>
-          </div>
-          {coach.length > 0 && (
-            <Button variant="ghost" size="icon" aria-label="Clear conversation" onClick={clear}>
-              <RotateCcw />
-            </Button>
-          )}
-        </div>
-      </header>
-      <PremiumGate feature="coach">
+    <div className="flex min-h-dvh flex-1 flex-col lg:min-h-full">
+      <PageHeader
+        back
+        title={
+          <span className="flex items-center gap-2">
+            Nutrition coach <FeatureBadge feature="coach" />
+          </span>
+        }
+        subtitle="Answers from your plan and food log"
+        action={
+          coach.length > 0 && (
+            <HeaderIconButton label="Clear conversation" onClick={clear}>
+              <RotateCcw className="size-[18px]" />
+            </HeaderIconButton>
+          )
+        }
+      />
+      {allowed ? (
         <Chat />
-      </PremiumGate>
+      ) : (
+        <div className="px-gutter pt-2">
+          <PremiumGate feature="coach">{null}</PremiumGate>
+        </div>
+      )}
     </div>
   )
 }
@@ -58,7 +60,9 @@ function Chat() {
   const [typing, setTyping] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), [messages.length, typing])
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+  }, [messages.length, typing])
 
   if (!self) return null
 
@@ -86,21 +90,24 @@ function Chat() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex-1 space-y-4 px-4 py-4" aria-live="polite">
-        <div className="rounded-2xl bg-sage p-4 text-sm">
-          <p className="flex items-center gap-2 font-semibold text-forest">
-            <Leaf className="size-4" /> Hi {self.name.split(" ")[0]}
-          </p>
-          <p className="mt-1 text-charcoal/80">
-            I answer from your plan, your food log and our verified food data. I can&apos;t diagnose conditions or advise on medicines. In an emergency, call 999.
-          </p>
+      <div className="px-gutter flex-1 space-y-4 pt-2 pb-4" aria-live="polite">
+        <div className="flex gap-3 rounded-2xl bg-sage/70 p-4">
+          <IconTile tone="white" size="sm">
+            <Leaf />
+          </IconTile>
+          <div className="min-w-0">
+            <p className="text-callout font-semibold text-forest">Hi {self.name.split(" ")[0]}</p>
+            <p className="text-callout mt-0.5 text-charcoal/80">
+              I answer from your plan, your food log and our verified food data. I can&apos;t diagnose conditions or advise on medicines. In an emergency, call 999.
+            </p>
+          </div>
         </div>
 
         {messages.map((m) => {
           if (m.role === "user")
             return (
               <div key={m.id} className="flex justify-end">
-                <p className="max-w-[85%] rounded-2xl rounded-br-md bg-forest px-4 py-2.5 text-sm whitespace-pre-line text-primary-foreground">{m.text}</p>
+                <p className="text-body max-w-[82%] rounded-[18px] rounded-br-md bg-forest px-4 py-2.5 whitespace-pre-line text-primary-foreground">{m.text}</p>
               </div>
             )
           if (m.sources?.includes(EMERGENCY_SOURCE))
@@ -110,52 +117,66 @@ function Chat() {
               </SafetyAlert>
             )
           return (
-            <div key={m.id} className="max-w-[90%] space-y-2">
-              <p className={cn("rounded-2xl rounded-bl-md border bg-card px-4 py-2.5 text-sm whitespace-pre-line", m.sources?.includes(REFERRAL_SOURCE) && "border-forest/30")}>{m.text}</p>
+            <div key={m.id} className="max-w-[88%] space-y-2">
+              <p className={cn("text-body rounded-[18px] rounded-bl-md border border-border/80 bg-card px-4 py-3 whitespace-pre-line", m.sources?.includes(REFERRAL_SOURCE) && "border-forest/30")}>{m.text}</p>
               {m.sources && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5 pl-1">
+                  <span className="text-caption text-muted-foreground">Based on</span>
                   {m.sources.map((s) => (
-                    <span key={s} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <Pill key={s} tone="neutral" className="h-[22px] px-2 text-[11px]">
                       {s}
-                    </span>
+                    </Pill>
                   ))}
                 </div>
               )}
             </div>
           )
         })}
-        {typing && <p className="text-sm text-muted-foreground">Checking your plan…</p>}
-
-        {messages.length === 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Try asking</p>
-            <div className="flex flex-wrap gap-2">
-              {STARTERS.map((s) => (
-                <button key={s} onClick={() => send(s)} className="min-h-10 rounded-full border bg-card px-3.5 text-left text-sm hover:bg-muted/50">
-                  {s}
-                </button>
-              ))}
-            </div>
+        {typing && (
+          <div className="inline-flex items-center gap-1.5 rounded-[18px] rounded-bl-md border border-border/80 bg-card px-4 py-3" role="status" aria-label="Checking your plan">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="size-1.5 animate-pulse rounded-full bg-muted-grey" style={{ animationDelay: `${i * 150}ms` }} />
+            ))}
           </div>
         )}
         <div ref={endRef} />
       </div>
 
-      <form
-        className="sticky bottom-0 flex items-center gap-2 border-t bg-background/95 px-4 pt-3 pb-safe backdrop-blur-sm"
-        onSubmit={(e) => {
-          e.preventDefault()
-          send(text)
-        }}
-      >
-        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask about your meals…" aria-label="Message" className="mb-3 flex-1" />
-        <Button type="submit" size="icon" className="mb-3" aria-label="Send" disabled={!text.trim() || typing}>
-          <SendHorizontal />
-        </Button>
-      </form>
-      <p className="px-4 pb-3 text-center text-[11px] text-muted-foreground">
-        General guidance, not medical advice. <Link href="/safety/emergency" className="underline underline-offset-2">Emergency help</Link>
-      </p>
+      <div className="sticky bottom-0 z-10 border-t border-border/70 bg-background/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+        {messages.length === 0 && (
+          <div className="no-scrollbar px-gutter flex gap-2 overflow-x-auto pt-3" aria-label="Suggested questions">
+            {STARTERS.map((s) => (
+              <button key={s} onClick={() => send(s)} className="text-callout h-9 shrink-0 rounded-full border border-border/80 bg-card px-3.5 whitespace-nowrap transition-colors hover:bg-muted">
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+        <form
+          className="px-gutter flex items-center gap-2 pt-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            send(text)
+          }}
+        >
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Ask about your meals…"
+            aria-label="Message"
+            className="h-12 min-w-0 flex-1 rounded-full border border-input bg-card px-5 text-[15px] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+          <Button type="submit" size="icon" className="size-12 rounded-full" aria-label="Send" disabled={!text.trim() || typing}>
+            <ArrowUp className="size-5" />
+          </Button>
+        </form>
+        <p className="px-gutter text-caption pt-2 text-center text-muted-foreground">
+          General guidance, not medical advice ·{" "}
+          <Link href="/safety/emergency" className="font-medium text-forest underline-offset-2 hover:underline">
+            Emergency help
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }

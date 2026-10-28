@@ -4,15 +4,16 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
-import { History, ImageOff, Pencil, Trash2 } from "lucide-react"
+import { History, ImageOff, Pencil, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { PageHeader, PageBody, Section, EmptyState } from "@/components/app/page"
-import { EstimateNote, Macro } from "@/components/app/nutrition"
+import { EmptyState, HeaderIconButton, KeyValue, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
+import { EstimateNote } from "@/components/app/nutrition"
 import { InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { ItemEditor } from "@/components/log/item-editor"
 import { FoodPickerSheet } from "@/components/log/food-picker"
 import { PhotoPlaceholder } from "@/components/log/entry-card"
+import { FoodTile } from "@/components/log/food-tile"
 import { FOOD_MAP, ALLERGEN_LABELS } from "@/lib/data/foods"
 import { useApp } from "@/lib/store"
 import { MEAL_LABEL } from "@/lib/planning"
@@ -39,7 +40,7 @@ export default function EntryPage() {
       <>
         <PageHeader title="Entry" back="/log" />
         <PageBody>
-          <EmptyState icon={<History className="size-5" />} title="Entry not found" description="It may have been deleted." />
+          <EmptyState icon={<History />} title="Entry not found" description="It may have been deleted." />
         </PageBody>
       </>
     )
@@ -65,22 +66,20 @@ export default function EntryPage() {
         back
         action={
           !editing && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Edit entry"
+            <HeaderIconButton
+              label="Edit entry"
               onClick={() => {
                 setDraft(entry.items)
                 setEditing(true)
               }}
             >
-              <Pencil />
-            </Button>
+              <Pencil className="size-[18px]" />
+            </HeaderIconButton>
           )
         }
       />
       <PageBody>
-        {entry.hasPhoto && <PhotoPlaceholder className="aspect-[4/3] w-full" />}
+        {entry.hasPhoto && <PhotoPlaceholder className="aspect-[4/3] w-full rounded-2xl [&_svg]:size-8" />}
 
         {hits.length > 0 && (
           <SafetyAlert title={`Contains ${Array.from(new Set(hits.map((h) => ALLERGEN_LABELS[h.allergen] ?? h.allergen))).join(", ")}`} emergency>
@@ -89,112 +88,130 @@ export default function EntryPage() {
         )}
 
         {!isChild && (
-          <div className="rounded-2xl border bg-card p-4">
-            <p className="text-xs text-muted-foreground">Estimated for this meal</p>
-            <p className="tabular text-2xl font-semibold">
-              ~{Math.round(r.mid.energyKcal)} kcal <span className="text-sm font-normal text-muted-foreground">({Math.round(r.low)}–{Math.round(r.high)})</span>
+          <Surface padding="lg">
+            <p className="text-caption text-muted-foreground">This meal · estimate</p>
+            <p className="text-metric mt-1">
+              ~{Math.round(r.mid.energyKcal)}
+              <span className="text-callout ml-1 font-normal tracking-normal text-muted-foreground">kcal</span>
             </p>
-            <div className="mt-3 grid grid-cols-4 gap-2">
-              <Macro label="Protein" value={r.mid.proteinG} estimate />
-              <Macro label="Carbs" value={r.mid.carbsG} estimate />
-              <Macro label="Fat" value={r.mid.fatG} estimate />
-              <Macro label="Fiber" value={r.mid.fiberG} estimate />
+            <p className="tabular text-caption mt-0.5 text-muted-foreground">
+              Likely {Math.round(r.low)}–{Math.round(r.high)} kcal
+            </p>
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              <StatTile label="Protein" value={`~${Math.round(r.mid.proteinG)}`} unit="g" className="px-2.5" />
+              <StatTile label="Carbs" value={`~${Math.round(r.mid.carbsG)}`} unit="g" className="px-2.5" />
+              <StatTile label="Fat" value={`~${Math.round(r.mid.fatG)}`} unit="g" className="px-2.5" />
+              <StatTile label="Fiber" value={`~${Math.round(r.mid.fiberG)}`} unit="g" className="px-2.5" />
             </div>
-            {entry.hiddenIngredients.oil && entry.hiddenIngredients.oil !== "none" && <p className="mt-2 text-xs text-muted-foreground">Includes {entry.hiddenIngredients.oil} cooking oil, as you told us.</p>}
-            {entry.hiddenIngredients.sugar && <p className="mt-1 text-xs text-muted-foreground">Includes added sugar in tea.</p>}
-            <EstimateNote className="mt-2" />
-          </div>
+            {(entry.hiddenIngredients.oil && entry.hiddenIngredients.oil !== "none") || entry.hiddenIngredients.sugar ? (
+              <div className="text-caption mt-3 space-y-0.5 text-muted-foreground">
+                {entry.hiddenIngredients.oil && entry.hiddenIngredients.oil !== "none" && <p>Includes {entry.hiddenIngredients.oil} cooking oil, as you told us.</p>}
+                {entry.hiddenIngredients.sugar && <p>Includes added sugar in tea.</p>}
+              </div>
+            ) : null}
+            <div className="mt-4 border-t border-border/70 pt-3">
+              <EstimateNote />
+            </div>
+          </Surface>
         )}
         {isChild && entry.note && <InfoNote title="Notes">{entry.note}</InfoNote>}
 
-        <Section title={editing ? "Edit foods" : "Foods"}>
-          <div className="space-y-2">
-            {editing ? (
-              <>
+        <Section title={editing ? "Edit foods" : `Foods (${entry.items.length})`}>
+          {editing ? (
+            <div className="space-y-4">
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
                 {draft.map((it, idx) => (
-                  <ItemEditor key={it.id} item={it} profile={profile} hideNutrition={isChild} onChange={(n) => setDraft(draft.map((x, j) => (j === idx ? n : x)))} onRemove={() => setDraft(draft.filter((_, j) => j !== idx))} />
+                  <ItemEditor key={it.id} variant="row" item={it} profile={profile} hideNutrition={isChild} onChange={(n) => setDraft(draft.map((x, j) => (j === idx ? n : x)))} onRemove={() => setDraft(draft.filter((_, j) => j !== idx))} />
                 ))}
                 <FoodPickerSheet
                   profile={profile}
                   onPick={(fid) => setDraft([...draft, { ...itemFromFood(fid), confirmedByUser: true }])}
                   trigger={
-                    <Button variant="outline" className="w-full border-dashed">
+                    <button type="button" className="text-callout flex min-h-[56px] w-full items-center gap-3 px-4 font-semibold text-forest transition-colors hover:bg-muted/50">
+                      <span className="grid size-8 place-items-center rounded-full border border-dashed border-forest/40">
+                        <Plus className="size-4" />
+                      </span>
                       Add a food
-                    </Button>
+                    </button>
                   }
                 />
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setEditing(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={save} disabled={!draft.length}>
-                    Save changes
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <ul className="divide-y rounded-xl border bg-card">
-                {entry.items.map((i) => (
-                  <li key={i.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{i.displayName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {i.unitLabel ? `${i.unitLabel} · ` : ""}
-                        {i.grams} g {FOOD_MAP[i.foodId]?.state === "cooked" ? "cooked" : ""}
-                      </p>
-                    </div>
-                    {i.confirmedByUser && <span className="shrink-0 text-xs text-muted-foreground">Confirmed</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={save} disabled={!draft.length}>
+                  Save changes
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+              {entry.items.map((i) => (
+                <li key={i.id} className="flex min-h-[60px] items-center gap-3 px-4 py-3">
+                  <FoodTile foodId={i.foodId} name={i.displayName} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-body font-medium">{i.displayName}</p>
+                    <p className="tabular text-caption mt-0.5 text-muted-foreground">
+                      {i.unitLabel ? `${i.unitLabel} · ` : ""}
+                      {i.grams} g{FOOD_MAP[i.foodId]?.state === "cooked" ? " cooked" : ""}
+                    </p>
+                  </div>
+                  {i.confirmedByUser && (
+                    <Pill tone="sage" className="h-[22px] px-2 text-[11px]">
+                      Confirmed
+                    </Pill>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </Section>
 
         {changed.length > 0 && !isChild && (
           <Section title="Your corrections">
-            <ul className="space-y-1.5 rounded-xl border bg-card p-3 text-sm">
+            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
               {changed.map((i) => (
-                <li key={i.id}>
-                  <span className="text-muted-foreground">
-                    AI suggested {FOOD_MAP[i.aiOriginal!.foodId]?.name ?? i.aiOriginal!.foodId}, {i.aiOriginal!.grams} g →
-                  </span>{" "}
-                  you confirmed {i.displayName}, {i.grams} g
+                <li key={i.id} className="grid grid-cols-2 gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-overline text-muted-foreground">AI suggested</p>
+                    <p className="text-callout mt-1 text-muted-foreground line-through decoration-muted-grey/60">
+                      {FOOD_MAP[i.aiOriginal!.foodId]?.name ?? i.aiOriginal!.foodId}, {i.aiOriginal!.grams} g
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-overline text-forest">You confirmed</p>
+                    <p className="text-callout mt-1 font-medium">
+                      {i.displayName}, {i.grams} g
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground">The original suggestion is kept separately. Your confirmed foods are what we use.</p>
+            <p className="text-caption text-muted-foreground">The original suggestion is kept separately. Your confirmed foods are what we use.</p>
           </Section>
         )}
 
         <Section title="Record details">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border bg-card p-3 text-sm">
-            <dt className="text-muted-foreground">Status</dt>
-            <dd>{entry.analysisStatus === "confirmed" ? "Confirmed by you" : "Awaiting confirmation"}</dd>
-            {entry.source === "photo" && (
-              <>
-                <dt className="text-muted-foreground">Image model</dt>
-                <dd>{VERSIONS.model}</dd>
-              </>
-            )}
-            <dt className="text-muted-foreground">Food database</dt>
-            <dd>{VERSIONS.foodDb}</dd>
-            <dt className="text-muted-foreground">Calculation</dt>
-            <dd>{VERSIONS.calculation}</dd>
+          <Surface tone="muted" padding="none" className="divide-y divide-border/70 px-4 py-1">
+            <KeyValue label="Status" value={entry.analysisStatus === "confirmed" ? "Confirmed by you" : "Awaiting confirmation"} />
+            {entry.source === "photo" && <KeyValue label="Image model" value={VERSIONS.model} />}
+            <KeyValue label="Food database" value={VERSIONS.foodDb} />
+            <KeyValue label="Calculation" value={VERSIONS.calculation} />
             {entry.linkedPlannedMealId && (
-              <>
-                <dt className="text-muted-foreground">Plan link</dt>
-                <dd>
-                  <Link href={`/plan/meal/${entry.linkedPlannedMealId}`} className="text-forest underline underline-offset-2">
+              <KeyValue
+                label="Plan link"
+                value={
+                  <Link href={`/plan/meal/${entry.linkedPlannedMealId}`} className="font-semibold text-forest underline-offset-4 hover:underline">
                     Planned meal
                   </Link>
-                </dd>
-              </>
+                }
+              />
             )}
-          </dl>
+          </Surface>
         </Section>
 
-        <div className="space-y-2">
+        <div className="space-y-3 pt-2">
           {entry.hasPhoto && (
             <ConfirmDialog
               trigger={
@@ -213,7 +230,7 @@ export default function EntryPage() {
           )}
           <ConfirmDialog
             trigger={
-              <Button variant="ghost" className="w-full text-muted-foreground">
+              <Button variant="outline" className="w-full text-safety hover:text-safety">
                 <Trash2 /> Delete entry
               </Button>
             }
@@ -236,17 +253,19 @@ function ConfirmDialog({ trigger, title, description, confirm, onConfirm }: { tr
   return (
     <Dialog>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-sm">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-2">
+        <DialogFooter className="grid grid-cols-2 gap-3">
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
           <DialogClose asChild>
-            <Button onClick={onConfirm}>{confirm}</Button>
+            <Button variant="destructive" onClick={onConfirm}>
+              {confirm}
+            </Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>
