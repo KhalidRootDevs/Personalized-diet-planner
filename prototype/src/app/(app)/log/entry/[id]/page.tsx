@@ -7,7 +7,9 @@ import { toast } from "sonner"
 import { History, ImageOff, Pencil, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { EmptyState, HeaderIconButton, KeyValue, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
+import { EmptyState, HeaderIconButton, KeyValue, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
+import { MacroTiles } from "@/components/log/macro-tiles"
+import { recipePhoto } from "@/lib/data/photos"
 import { EstimateNote } from "@/components/app/nutrition"
 import { InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { ItemEditor } from "@/components/log/item-editor"
@@ -15,7 +17,7 @@ import { FoodPickerSheet } from "@/components/log/food-picker"
 import { PhotoPlaceholder } from "@/components/log/entry-card"
 import { FoodTile } from "@/components/log/food-tile"
 import { FOOD_MAP, ALLERGEN_LABELS } from "@/lib/data/foods"
-import { useApp } from "@/lib/store"
+import { useActivePlan, useApp } from "@/lib/store"
 import { MEAL_LABEL } from "@/lib/planning"
 import { formatDay } from "@/lib/date"
 import { allergenHits, entryRange, itemFromFood, SOURCE_LABEL, VERSIONS } from "@/lib/area-b-log"
@@ -32,6 +34,7 @@ export default function EntryPage() {
   const profile = useApp((s) => s.profiles.find((p) => p.id === entry?.profileId))
   const updateEntry = useApp((s) => s.updateEntry)
   const deleteEntry = useApp((s) => s.deleteEntry)
+  const plan = useActivePlan()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<JournalItem[]>([])
 
@@ -51,6 +54,7 @@ export default function EntryPage() {
   const changed = entry.items.filter((i) => i.aiOriginal && (i.aiOriginal.foodId !== i.foodId || i.aiOriginal.grams !== i.grams))
   const hits = allergenHits(entry.items, profile)
   const when = new Date(entry.consumedAt)
+  const entryPhoto = recipePhoto(plan?.meals.find((m) => m.id === entry.linkedPlannedMealId || m.linkedJournalEntryId === entry.id)?.recipeId)
 
   const save = () => {
     updateEntry({ ...entry, items: draft.map((i) => ({ ...i, confirmedByUser: true })) })
@@ -79,7 +83,7 @@ export default function EntryPage() {
         }
       />
       <PageBody>
-        {entry.hasPhoto && <PhotoPlaceholder className="aspect-[4/3] w-full rounded-2xl [&_svg]:size-8" />}
+        {entry.hasPhoto && <PhotoPlaceholder src={entryPhoto} className="aspect-[4/3] w-full rounded-2xl [&_svg]:size-8" />}
 
         {hits.length > 0 && (
           <SafetyAlert title={`Contains ${Array.from(new Set(hits.map((h) => ALLERGEN_LABELS[h.allergen] ?? h.allergen))).join(", ")}`} emergency>
@@ -97,12 +101,7 @@ export default function EntryPage() {
             <p className="tabular text-caption mt-0.5 text-muted-foreground">
               Likely {Math.round(r.low)}–{Math.round(r.high)} kcal
             </p>
-            <div className="mt-4 grid grid-cols-4 gap-2">
-              <StatTile label="Protein" value={`~${Math.round(r.mid.proteinG)}`} unit="g" className="px-2.5" />
-              <StatTile label="Carbs" value={`~${Math.round(r.mid.carbsG)}`} unit="g" className="px-2.5" />
-              <StatTile label="Fat" value={`~${Math.round(r.mid.fatG)}`} unit="g" className="px-2.5" />
-              <StatTile label="Fiber" value={`~${Math.round(r.mid.fiberG)}`} unit="g" className="px-2.5" />
-            </div>
+            <MacroTiles className="mt-4" values={r.mid} />
             {(entry.hiddenIngredients.oil && entry.hiddenIngredients.oil !== "none") || entry.hiddenIngredients.sugar ? (
               <div className="text-caption mt-3 space-y-0.5 text-muted-foreground">
                 {entry.hiddenIngredients.oil && entry.hiddenIngredients.oil !== "none" && <p>Includes {entry.hiddenIngredients.oil} cooking oil, as you told us.</p>}
@@ -119,7 +118,7 @@ export default function EntryPage() {
         <Section title={editing ? "Edit foods" : `Foods (${entry.items.length})`}>
           {editing ? (
             <div className="space-y-4">
-              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
                 {draft.map((it, idx) => (
                   <ItemEditor key={it.id} variant="row" item={it} profile={profile} hideNutrition={isChild} onChange={(n) => setDraft(draft.map((x, j) => (j === idx ? n : x)))} onRemove={() => setDraft(draft.filter((_, j) => j !== idx))} />
                 ))}
@@ -146,7 +145,7 @@ export default function EntryPage() {
               </div>
             </div>
           ) : (
-            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
               {entry.items.map((i) => (
                 <li key={i.id} className="flex min-h-[60px] items-center gap-3 px-4 py-3">
                   <FoodTile foodId={i.foodId} name={i.displayName} />
@@ -170,7 +169,7 @@ export default function EntryPage() {
 
         {changed.length > 0 && !isChild && (
           <Section title="Your corrections">
-            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
               {changed.map((i) => (
                 <li key={i.id} className="grid grid-cols-2 gap-3 px-4 py-3">
                   <div className="min-w-0">

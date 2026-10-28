@@ -55,7 +55,7 @@ function Assistant() {
   return (
     <div className="space-y-7">
       <Section title="What are you ordering?" description="Restaurant portions and oil vary a lot, so estimates are ranges.">
-        <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card" role="radiogroup">
+        <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card" role="radiogroup">
           {DISHES.map((d) => (
             <li key={d.id}>
               <button
@@ -68,7 +68,7 @@ function Assistant() {
                   <Store />
                 </IconTile>
                 <span className="text-body flex-1 font-medium">{d.name}</span>
-                <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px]", pick === d.id ? "border-forest bg-forest text-ivory" : "border-input")}>
+                <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px]", pick === d.id ? "border-lime bg-lime text-charcoal" : "border-input")}>
                   {pick === d.id && <Check className="size-3.5" />}
                 </span>
               </button>
@@ -97,7 +97,7 @@ function Assistant() {
             </div>
           </Surface>
           <Section title="Ideas when ordering">
-            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
               {dish.tips.map((t) => (
                 <li key={t} className="text-callout flex gap-3 px-4 py-3">
                   <Check className="mt-0.5 size-4 shrink-0 text-forest" aria-hidden /> {t}

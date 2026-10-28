@@ -46,7 +46,7 @@ function EditForm({ initial }: { initial: Profile }) {
         </Section>
 
         <Section title="Your details">
-        <Accordion type="multiple" defaultValue={["body"]} className="divide-y divide-border/70 rounded-2xl border border-border/80 bg-card px-4 [&>[data-slot=accordion-item]]:border-b-0">
+        <Accordion type="multiple" defaultValue={["body"]} className="divide-y divide-border/70 rounded-2xl bg-card shadow-card px-4 [&>[data-slot=accordion-item]]:border-b-0">
           <AccordionItem value="body">
             <AccordionTrigger className="text-body py-4 font-semibold hover:no-underline">Body and basics</AccordionTrigger>
             <AccordionContent className="space-y-5 pt-1 pb-5">

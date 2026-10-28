@@ -60,7 +60,7 @@ function Simulator() {
         <Section title="Common choices">
           <div className="flex flex-wrap gap-2">
             {QUICK.map((id) => (
-              <button key={id} onClick={() => setItem(itemFromFood(id))} className="text-callout h-9 rounded-full border border-border/80 bg-card px-4 font-medium transition-colors hover:bg-muted">
+              <button key={id} onClick={() => setItem(itemFromFood(id))} className="text-callout h-9 rounded-full bg-card shadow-card px-4 font-medium transition-colors hover:bg-muted">
                 {itemFromFood(id).displayName}
               </button>
             ))}

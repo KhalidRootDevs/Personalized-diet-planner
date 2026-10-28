@@ -4,7 +4,9 @@ import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 import { BadgeCheck, CalendarPlus, ChefHat, Clock, Flame, Hourglass, NotebookPen, Refrigerator, Trash2, Wand2 } from "lucide-react"
-import { ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
+import { BackButton, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, Surface, type IconTone } from "@/components/app/page"
+import { FoodTile } from "@/components/log/food-tile"
+import { cn } from "@/lib/utils"
 import { ChoiceCard, Stepper } from "@/components/app/controls"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
@@ -55,27 +57,33 @@ export default function RecipePage() {
 
   return (
     <>
-      <PageHeader title="Recipe" back />
-      <PageBody className="pt-1">
+      <div className="relative">
+        <RecipeThumb recipe={recipe} size="hero" className="h-[300px] rounded-none" />
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))]">
+          <BackButton onClick={() => router.back()} />
+          <ReviewBadge status={recipe.reviewStatus} />
+        </div>
+      </div>
+      <PageBody className="relative -mt-8 rounded-t-[28px] bg-background pt-6">
         <div className="space-y-4">
-          <RecipeThumb recipe={recipe} size="hero" />
           <div>
-            <ReviewBadge status={recipe.reviewStatus} />
-            <h2 className="text-display mt-3">{recipe.name}</h2>
+            <h1 className="text-display">{recipe.name}</h1>
             <p className="text-body mt-0.5 text-muted-foreground" lang="bn">
               {recipe.nameBn}
             </p>
             <p className="text-body mt-3">{recipe.description}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <Pill icon={<Clock />}>{recipe.prepMinutes} min prep</Pill>
-              <Pill icon={<Flame />}>{recipe.cookMinutes} min cook</Pill>
-              <Pill icon={<ChefHat />} className="capitalize">
-                {recipe.difficulty}
-              </Pill>
+          </div>
+          <div className="grid grid-cols-3 gap-2.5">
+            <InfoTile icon={<Clock />} tone="sky" label="Prep" value={`${recipe.prepMinutes} min`} />
+            <InfoTile icon={<Flame />} tone="terracotta" label="Cook" value={`${recipe.cookMinutes} min`} />
+            <InfoTile icon={<ChefHat />} tone="amber" label="Level" value={<span className="capitalize">{recipe.difficulty}</span>} />
+          </div>
+          {(recipe.texture || recipe.minAgeMonths) && (
+            <div className="flex flex-wrap gap-1.5">
               {recipe.texture && <Pill>{recipe.texture}</Pill>}
               {recipe.minAgeMonths && <Pill tone="sage">From {recipe.minAgeMonths} months</Pill>}
             </div>
-          </div>
+          )}
         </div>
 
         {conflict && (
@@ -105,12 +113,15 @@ export default function RecipePage() {
         )}
 
         <Section title="Nutrition per serving">
-          <div className="grid grid-cols-2 gap-2">
-            <StatTile label="Energy" value={`~${Math.round(perServing.energyKcal)}`} unit="kcal" />
-            <StatTile label="Protein" value={`~${Math.round(perServing.proteinG)}`} unit="g" />
-            <StatTile label="Carbohydrate" value={`~${Math.round(perServing.carbsG)}`} unit="g" />
-            <StatTile label="Fat" value={`~${Math.round(perServing.fatG)}`} unit="g" />
-          </div>
+          <Surface padding="lg">
+            <p className="text-caption text-muted-foreground">Energy · estimate</p>
+            <p className="tabular mt-1 text-[30px] leading-none font-bold tracking-tight">
+              ~{Math.round(perServing.energyKcal)}
+              <span className="text-callout ml-1 font-medium tracking-normal text-muted-foreground">kcal</span>
+            </p>
+            <MacroSplit protein={perServing.proteinG} carbs={perServing.carbsG} fat={perServing.fatG} />
+            <p className="text-caption mt-3 text-muted-foreground">Bars show each nutrient&apos;s share of the energy.</p>
+          </Surface>
           <EstimateNote>Calculated from each ingredient&apos;s cooked or raw weight in our food database. Changing ingredients recalculates these values.</EstimateNote>
         </Section>
 
@@ -126,8 +137,9 @@ export default function RecipePage() {
               const grams = i.grams * factor
               const unit = f?.units.find((u) => Math.abs(grams / u.grams - Math.round(grams / u.grams)) < 0.15 && grams / u.grams >= 1)
               return (
-                <div key={i.foodId} className="flex items-start justify-between gap-4 px-4 py-3">
-                  <div className="min-w-0">
+                <div key={i.foodId} className="flex items-center gap-3 px-4 py-3">
+                  <FoodTile foodId={i.foodId} size="sm" />
+                  <div className="min-w-0 flex-1">
                     <p className="text-body">{f?.name ?? i.foodId}</p>
                     <p className="text-caption text-muted-foreground">
                       {f && <span className="capitalize">{f.state}</span>}
@@ -152,8 +164,8 @@ export default function RecipePage() {
         <Section title="Steps">
           <ol className="space-y-4">
             {recipe.steps.map((step, i) => (
-              <li key={i} className="flex gap-3.5">
-                <span className="tabular text-callout grid size-7 shrink-0 place-items-center rounded-full bg-forest font-semibold text-ivory">{i + 1}</span>
+              <li key={i} className="flex gap-3.5 rounded-2xl bg-card p-3.5 shadow-card">
+                <span className="tabular text-callout grid size-8 shrink-0 place-items-center rounded-full bg-lime font-bold text-charcoal">{i + 1}</span>
                 <p className="text-body pt-0.5">{step}</p>
               </li>
             ))}
@@ -172,8 +184,8 @@ export default function RecipePage() {
               </CautionNote>
             )}
             {recipe.storage && (
-              <Surface tone="muted" className="text-callout flex gap-3">
-                <Refrigerator className="mt-0.5 size-5 shrink-0 text-forest" />
+              <Surface className="text-callout flex gap-3 bg-sky-tint shadow-none">
+                <Refrigerator className="mt-0.5 size-5 shrink-0 text-sky-text" />
                 <span>{recipe.storage}</span>
               </Surface>
             )}
@@ -269,5 +281,42 @@ function AddToPlan({ recipe }: { recipe: Recipe }) {
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+function InfoTile({ icon, tone, label, value }: { icon: React.ReactNode; tone: IconTone; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center rounded-2xl bg-card px-2 py-3 text-center shadow-card">
+      <IconTile tone={tone} size="sm">
+        {icon}
+      </IconTile>
+      <p className="text-caption mt-1.5 text-muted-foreground">{label}</p>
+      <p className="text-callout font-semibold">{value}</p>
+    </div>
+  )
+}
+
+/** Share of energy from each macronutrient (protein and carbs 4 kcal/g, fat 9 kcal/g). */
+function MacroSplit({ protein, carbs, fat }: { protein: number; carbs: number; fat: number }) {
+  const kcal = protein * 4 + carbs * 4 + fat * 9 || 1
+  const rows = [
+    { label: "Protein", g: protein, share: (protein * 4) / kcal, fill: "bg-protein" },
+    { label: "Carbs", g: carbs, share: (carbs * 4) / kcal, fill: "bg-carbs" },
+    { label: "Fat", g: fat, share: (fat * 9) / kcal, fill: "bg-fat" },
+  ]
+  return (
+    <div className="mt-4 grid grid-cols-3 gap-3">
+      {rows.map((r) => (
+        <div key={r.label} role="img" aria-label={`${r.label}: about ${Math.round(r.g)} grams, ${Math.round(r.share * 100)}% of energy`}>
+          <p className="text-caption font-medium">{r.label}</p>
+          <div className="mt-1.5 h-2 rounded-full bg-muted">
+            <div className={cn("h-full rounded-full", r.fill)} style={{ width: `${Math.max(4, r.share * 100)}%` }} />
+          </div>
+          <p className="tabular text-callout mt-1.5 font-semibold">
+            ~{Math.round(r.g)} g <span className="text-caption font-normal text-muted-foreground">· {Math.round(r.share * 100)}%</span>
+          </p>
+        </div>
+      ))}
+    </div>
   )
 }

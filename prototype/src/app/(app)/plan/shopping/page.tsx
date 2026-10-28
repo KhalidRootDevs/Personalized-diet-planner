@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { EstimateNote } from "@/components/app/nutrition"
 import { InfoNote } from "@/components/app/alerts"
+import { FoodTile } from "@/components/log/food-tile"
 import { useApp, useSelfProfile } from "@/lib/store"
 import { useFeature } from "@/components/app/badges"
 import { fmt } from "@/lib/nutrition"
@@ -65,31 +66,33 @@ export default function ShoppingPage() {
         }
       />
       <PageBody>
-        <Surface padding="lg">
+        <Surface tone="lime" padding="lg">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-caption text-muted-foreground">Estimated cost</p>
-              <p className="text-metric mt-1 text-[30px] leading-9">{fmt.bdt(total)}</p>
-              <p className="tabular text-caption text-muted-foreground">{fmt.bdt(left)} still to buy</p>
+              <p className="text-caption inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 font-medium">
+                <ShoppingBasket className="size-3.5" aria-hidden /> Estimated cost
+              </p>
+              <p className="text-metric mt-2 text-[32px] leading-9 font-bold">{fmt.bdt(total)}</p>
+              <p className="tabular text-caption text-charcoal/75">{fmt.bdt(left)} still to buy</p>
             </div>
             {budget && (
-              <Pill tone={overBudget ? "caution" : "sage"}>
+              <Pill tone={overBudget ? "caution" : "neutral"} className={overBudget ? undefined : "bg-white/70"}>
                 {overBudget ? "Above budget" : "Within budget"}
               </Pill>
             )}
           </div>
           <div className="mt-4">
-            <div className="text-caption mb-1.5 flex justify-between text-muted-foreground">
+            <div className="text-caption mb-1.5 flex justify-between text-charcoal/75">
               <span>
                 {bought} of {items.length} items bought
               </span>
               {budget && <span className="tabular">Budget {fmt.bdt(budget * people)} / week</span>}
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-forest" style={{ width: `${items.length ? (bought / items.length) * 100 : 0}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-white/60">
+              <div className="h-full rounded-full bg-charcoal" style={{ width: `${items.length ? (bought / items.length) * 100 : 0}%` }} />
             </div>
           </div>
-          {overBudget && <p className="text-caption mt-3 text-caution">This list is above your weekly budget. The lowest-cost plan style can help.</p>}
+          {overBudget && <p className="text-caption mt-3 font-medium text-amber-text">This list is above your weekly budget. The lowest-cost plan style can help.</p>}
         </Surface>
 
         <ListGroup>
@@ -137,6 +140,7 @@ export default function ShoppingPage() {
                           }
                         }}
                       />
+                      <FoodTile foodId={i.foodId ?? ""} name={i.name} size="sm" className="size-10" />
                       <label htmlFor={i.id} className="min-w-0 flex-1 cursor-pointer">
                         <span className={cn("text-body block font-medium", i.purchased && "text-muted-foreground line-through")}>{i.name}</span>
                         {i.grams > 0 && <span className="tabular text-caption block text-muted-foreground">~{fmt.bdt(i.costBdt)} estimate</span>}

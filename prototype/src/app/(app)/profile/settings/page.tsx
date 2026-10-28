@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Check, Database, Flag, Info, RotateCcw } from "lucide-react"
+import { Check, Database, Flag, Images, Info, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/lib/store"
 import { Button } from "@/components/ui/button"
@@ -54,6 +54,7 @@ export default function SettingsPage() {
           <ListGroup>
             <ListRow
               icon={<Flag />}
+              iconTone="amber"
               title="Release-phase badges"
               description="P1 · P2 · P3 markers from docs/prd §43"
               trailing={<Switch checked={settings.showPhaseBadges} onCheckedChange={(v) => updateSettings({ showPhaseBadges: v })} aria-label="Show release-phase badges" />}
@@ -61,14 +62,14 @@ export default function SettingsPage() {
             <div className="px-4 py-3.5">
               <p className="text-body font-medium">Simulate subscription tier</p>
               <p className="text-caption mt-0.5 text-muted-foreground">Preview gated screens without checkout</p>
-              <div className="mt-3 grid h-11 grid-cols-4 gap-1 rounded-xl bg-muted p-1" role="radiogroup" aria-label="Subscription tier">
+              <div className="mt-3 grid h-11 grid-cols-4 gap-1 rounded-full bg-muted p-1" role="radiogroup" aria-label="Subscription tier">
                 {(Object.keys(TIER_LABEL) as Tier[]).map((t) => (
                   <button
                     key={t}
                     role="radio"
                     aria-checked={tier === t}
                     onClick={() => setTier(t)}
-                    className={cn("rounded-[10px] text-xs font-medium transition-colors", tier === t ? "bg-card text-charcoal shadow-[0_1px_3px_rgba(41,47,43,0.12)]" : "text-muted-foreground hover:text-charcoal")}
+                    className={cn("rounded-full text-xs font-medium transition-colors", tier === t ? "bg-lime text-charcoal" : "text-muted-foreground hover:text-charcoal")}
                   >
                     {TIER_LABEL[t]}
                   </button>
@@ -77,6 +78,7 @@ export default function SettingsPage() {
             </div>
             <ListRow
               icon={<Database />}
+              iconTone="lime"
               title="Reload demo data"
               description="Nadia, a 7-month-old baby and a week of meals"
               trailing={
@@ -90,6 +92,9 @@ export default function SettingsPage() {
         </Section>
 
         <Section title="About">
+          <ListGroup>
+            <ListRow href="/profile/settings/credits" icon={<Images />} iconTone="sky" title="Photo credits" description="Authors and licenses of the food photos" />
+          </ListGroup>
           <Surface className="text-callout space-y-2">
             <p className="text-body flex items-center gap-2 font-semibold">
               <Info className="size-4 text-forest" aria-hidden /> NutriPlan prototype v0.1

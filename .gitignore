@@ -4,3 +4,6 @@ node_modules/
 *.tsbuildinfo
 .env*
 .vercel
+
+# Third-party design reference shots (not ours to redistribute)
+design-ref/

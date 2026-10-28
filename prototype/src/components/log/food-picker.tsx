@@ -26,7 +26,7 @@ export function FoodSearchList({ onPick, selectedIds = [], profile, autoFocus }:
         <Search className="pointer-events-none absolute top-1/2 left-4 size-[18px] -translate-y-1/2 text-muted-grey" aria-hidden />
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search foods — rice, dal, ডিম…" className="pl-11" aria-label="Search foods" autoFocus={autoFocus} />
       </div>
-      <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+      <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
         {list.length === 0 && <li className="text-callout p-4 text-muted-foreground">No match in our verified food list. Try another name.</li>}
         {list.map((f) => {
           const flag = infantFlags(f.id, profile)

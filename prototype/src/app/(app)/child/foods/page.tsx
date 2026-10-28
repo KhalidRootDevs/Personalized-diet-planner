@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { FeatureBadge } from "@/components/app/badges"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
+import { RECIPE_PHOTO } from "@/lib/data/photos"
 import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, type PillTone } from "@/components/app/page"
 import { ALLERGENS_TO_INTRODUCE, feedingStage } from "@/components/child/feeding"
 import { useChildProfile } from "@/components/child/use-child"
@@ -64,8 +65,8 @@ export default function ChildFoodsPage() {
       />
       <PageBody>
         <div className="grid grid-cols-2 gap-2">
-          <StatTile label={<span className="flex items-center gap-1.5">Foods introduced <FeatureBadge feature="baby_module" /></span>} value={foods.length} />
-          <StatTile label="Reactions noted" value={foods.filter((f) => f.reaction && f.reaction !== "None observed").length} />
+          <StatTile className="bg-sage" label={<span className="flex items-center gap-1.5">Foods introduced <FeatureBadge feature="baby_module" /></span>} value={foods.length} />
+          <StatTile className="bg-amber-tint" label="Reactions noted" value={foods.filter((f) => f.reaction && f.reaction !== "None observed").length} />
         </div>
 
         {foods.some((f) => f.reaction && f.reaction !== "None observed") && (
@@ -78,15 +79,20 @@ export default function ChildFoodsPage() {
           {foods.length === 0 ? (
             <EmptyState icon={<Utensils />} title="No foods recorded yet" description="Add each new food the first time you offer it." />
           ) : (
-            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+            <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
               {foods.map((f) => {
                 const reacted = f.reaction && f.reaction !== "None observed"
                 return (
                   <li key={f.id} className="px-4 py-3.5">
                     <div className="flex items-start gap-3">
-                      <IconTile tone={reacted ? "caution" : "sage"}>
-                        <Utensils />
-                      </IconTile>
+                      {!reacted && babyFoodPhoto(f.foodName) ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- static prototype asset
+                        <img src={babyFoodPhoto(f.foodName)} alt="" className="size-12 shrink-0 rounded-full object-cover" />
+                      ) : (
+                        <IconTile tone={reacted ? "caution" : "sage"} className="size-12">
+                          <Utensils />
+                        </IconTile>
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-body font-medium">{f.foodName}</p>
@@ -303,4 +309,15 @@ function AddFoodSheet({
       </SheetContent>
     </Sheet>
   )
+}
+
+/** Photo for common first foods (illustrative; matched by name). */
+function babyFoodPhoto(name: string): string | undefined {
+  const n = name.toLowerCase()
+  if (n.includes("egg")) return RECIPE_PHOTO.r_inf_egg
+  if (n.includes("banana")) return RECIPE_PHOTO.r_inf_banana
+  if (n.includes("pumpkin")) return RECIPE_PHOTO.r_inf_pumpkin
+  if (n.includes("khichuri")) return RECIPE_PHOTO.r_inf_khichuri
+  if (n.includes("dal") || n.includes("lentil")) return RECIPE_PHOTO.r_inf_dal_puree
+  return undefined
 }

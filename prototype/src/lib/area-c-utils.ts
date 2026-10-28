@@ -33,7 +33,7 @@ export function mealStatus(meal: PlannedMeal): { label: string; tone: "planned" 
 export const STATUS_STYLE: Record<string, string> = {
   planned: "border border-dashed border-input text-muted-foreground",
   eaten: "bg-sage text-forest",
-  changed: "bg-[#efe9da] text-charcoal",
+  changed: "bg-amber-tint text-amber-text",
   skipped: "bg-muted text-muted-foreground",
   unknown: "bg-muted text-muted-foreground",
 }

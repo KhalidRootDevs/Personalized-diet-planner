@@ -1,6 +1,7 @@
 "use client"
 
 /** Meal row — same anatomy as Home's timeline (UI-SPEC §4.4). */
+import { Flame } from "lucide-react"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { MealActionsSheet } from "@/components/plan/meal-actions"
 import { MEAL_LABEL } from "@/lib/planning"
@@ -25,7 +26,10 @@ export function TimeCol({ time }: { time: string }) {
   )
 }
 
-/** Meal row — same anatomy as Home's timeline (spec §4.4). Opens the meal actions sheet. */
+/**
+ * Meal card (UI-SPEC §4.4): round dish photo, meal and time, name, estimated energy and
+ * status. One card per meal; opens the meal actions sheet.
+ */
 export function MealListRow({ meal, highlight, highlightLabel }: { meal: PlannedMeal; highlight?: boolean; highlightLabel?: string }) {
   const lookup = useRecipeLookup()
   const r = lookup(meal.recipeId)
@@ -34,20 +38,25 @@ export function MealListRow({ meal, highlight, highlightLabel }: { meal: Planned
   const extras = [`${r.prepMinutes + r.cookMinutes} min`, meal.servings !== 1 && `${meal.servings} servings`, meal.prepLater && "Prep ahead"].filter(Boolean).join(" · ")
   return (
     <MealActionsSheet meal={meal}>
-      <button className={cn("flex w-full items-center gap-3 py-3 pr-4 pl-2 text-left transition-colors hover:bg-muted/50 active:bg-muted", highlight && "bg-sage/35 hover:bg-sage/50")}>
-        <TimeCol time={meal.time} />
-        <RecipeThumb recipe={r} size="sm" />
+      <button
+        className={cn(
+          "flex w-full items-center gap-3.5 rounded-2xl bg-card p-3 pr-4 text-left shadow-card transition-colors hover:bg-muted/40 active:bg-muted",
+          highlight && "ring-2 ring-lime",
+        )}
+      >
+        <RecipeThumb recipe={r} size="lg" className="size-[68px]" />
         <div className="min-w-0 flex-1">
-          <p className="text-caption text-muted-foreground">
-            {MEAL_LABEL[meal.mealType]}
-            {highlight && highlightLabel ? <span className="font-semibold text-forest"> · {highlightLabel}</span> : extras && ` · ${extras}`}
+          <p className="text-caption flex items-center gap-1.5 text-muted-foreground">
+            <span className="font-semibold text-charcoal">{MEAL_LABEL[meal.mealType]}</span> · {formatTime(meal.time)}
+            {highlight && highlightLabel && <span className="rounded-full bg-lime px-2 py-px text-[11px] font-semibold text-charcoal">{highlightLabel}</span>}
           </p>
-          <p className="text-body line-clamp-2 font-medium">{r.name}</p>
-          <div className="mt-1 flex items-center gap-2">
-            <StatusPill meal={meal} />
-            <span className="tabular text-caption text-muted-foreground">
-              ~{kcal} kcal
+          <p className="text-body mt-0.5 line-clamp-2 leading-snug font-semibold">{r.name}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className="tabular text-caption inline-flex items-center gap-1 font-medium text-charcoal">
+              <Flame className="size-3.5 text-terracotta" aria-hidden />~{kcal} kcal
             </span>
+            {!highlight && extras && <span className="text-caption text-muted-foreground">· {extras}</span>}
+            <StatusPill meal={meal} />
           </div>
         </div>
       </button>
@@ -55,10 +64,10 @@ export function MealListRow({ meal, highlight, highlightLabel }: { meal: Planned
   )
 }
 
-/** Grouped list of meal rows (one card, hairline dividers). */
+/** List of meal cards. */
 export function MealList({ meals, highlightId, highlightLabel }: { meals: PlannedMeal[]; highlightId?: string; highlightLabel?: string }) {
   return (
-    <ol className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+    <ol className="space-y-3">
       {meals.map((m) => (
         <li key={m.id}>
           <MealListRow meal={m} highlight={m.id === highlightId} highlightLabel={highlightLabel} />
@@ -67,4 +76,3 @@ export function MealList({ meals, highlightId, highlightLabel }: { meals: Planne
     </ol>
   )
 }
-

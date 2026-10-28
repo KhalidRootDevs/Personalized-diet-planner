@@ -34,8 +34,8 @@ const INSIGHTS = [
 ]
 
 const CONF_STYLE: Record<string, string> = {
-  Complete: "bg-forest text-ivory",
-  "Mostly complete": "bg-sage text-forest",
+  Complete: "bg-lime text-charcoal",
+  "Mostly complete": "bg-lime-card text-charcoal",
   "Partially complete": "bg-muted text-charcoal",
   "Not enough data": "border border-dashed border-input text-muted-foreground",
 }
@@ -75,12 +75,12 @@ export default function InsightsPage() {
         <Section title="Patterns in your week" badge={<FeatureBadge feature="insights" />}>
           <PremiumGate feature="insights" compact>
             <div className="space-y-3">
-              {INSIGHTS.map((i) => {
+              {INSIGHTS.map((i, idx) => {
                 const Icon = i.icon
                 return (
                   <Surface key={i.title}>
                     <div className="flex gap-3">
-                      <IconTile>
+                      <IconTile tone={(["amber", "sky", "terracotta"] as const)[idx % 3]}>
                         <Icon />
                       </IconTile>
                       <div className="min-w-0 flex-1">
@@ -113,7 +113,7 @@ export default function InsightsPage() {
                   {gaps.map((g) => (
                     <Surface key={g.name}>
                       <div className="flex gap-3">
-                        <IconTile>
+                        <IconTile tone="sky">
                           <Sprout />
                         </IconTile>
                         <div className="min-w-0 flex-1">

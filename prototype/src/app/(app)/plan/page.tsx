@@ -2,8 +2,10 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { CalendarDays, Check, ChefHat, ChevronLeft, ChevronRight, Layers, Package, Plus, ShieldCheck, ShoppingBasket, Sparkles, TriangleAlert } from "lucide-react"
-import { EmptyState, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
+import { Beef, CalendarDays, Check, ChefHat, ChevronLeft, ChevronRight, Flame, Layers, Package, Plus, ShieldCheck, ShoppingBasket, Sparkles, TriangleAlert, Wallet } from "lucide-react"
+import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, Surface, type IconTone } from "@/components/app/page"
+import { WeekStrip } from "@/components/app/week-strip"
+import { Ring } from "@/components/app/nutrition"
 import { MealList } from "@/components/plan/meal-row"
 import { Segmented } from "@/components/app/controls"
 import { FeatureBadge } from "@/components/app/badges"
@@ -79,7 +81,7 @@ export default function PlanPage() {
       : view === "week"
         ? `Week of ${formatDay(startOfWeek(date), { day: "numeric", month: "short" })}`
         : fromISO(date).toLocaleDateString("en-GB", { month: "long", year: "numeric" })
-  const navBtn = "grid size-10 place-items-center rounded-full border border-border/80 bg-card text-charcoal transition-colors hover:bg-muted"
+  const navBtn = "grid size-10 place-items-center rounded-full bg-card text-charcoal shadow-card transition-colors hover:bg-muted"
 
   return (
     <>
@@ -98,17 +100,19 @@ export default function PlanPage() {
               { value: "month", label: "Month" },
             ]}
           />
-          <div className="flex items-center justify-between gap-2">
-            <button className={navBtn} aria-label="Previous" onClick={() => setDate(addDays(date, -step))}>
-              <ChevronLeft className="size-5" />
-            </button>
-            <button className="text-headline min-w-0 truncate rounded-lg px-2 py-1 hover:bg-muted" onClick={() => setDate(todayISO())} title="Go to today">
-              {label}
-            </button>
-            <button className={navBtn} aria-label="Next" onClick={() => setDate(addDays(date, step))}>
-              <ChevronRight className="size-5" />
-            </button>
-          </div>
+          {view !== "day" && (
+            <div className="flex items-center justify-between gap-2">
+              <button className={navBtn} aria-label="Previous" onClick={() => setDate(addDays(date, -step))}>
+                <ChevronLeft className="size-5" />
+              </button>
+              <button className="text-headline min-w-0 truncate rounded-full px-3 py-1 hover:bg-muted" onClick={() => setDate(todayISO())} title="Go to today">
+                {label}
+              </button>
+              <button className={navBtn} aria-label="Next" onClick={() => setDate(addDays(date, step))}>
+                <ChevronRight className="size-5" />
+              </button>
+            </div>
+          )}
           {view === "day" && <DayView date={date} onPick={setDate} meals={plan.meals} />}
           {view === "week" && <WeekView date={date} meals={plan.meals} />}
           {view === "month" && <MonthView date={date} meals={plan.meals} onPick={setDate} />}
@@ -133,60 +137,36 @@ export default function PlanPage() {
 function PlanSummary({ plan }: { plan: MealPlan }) {
   const end = addDays(plan.startDate, plan.durationDays - 1)
   const v = plan.validation
+  const today = todayISO()
+  const dayNo = Math.min(plan.durationDays, Math.max(0, Math.round((fromISO(today).getTime() - fromISO(plan.startDate).getTime()) / 86400000) + 1))
   return (
-    <Link href="/plan/plans" className="block rounded-2xl border border-border/80 bg-card p-4 transition-colors hover:bg-muted/40">
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sage text-forest">
-          <CalendarDays className="size-5" />
-        </span>
+    <Link href="/plan/plans" className="relative block overflow-hidden rounded-2xl bg-lime-card p-5 transition-opacity hover:opacity-95">
+      <span className="absolute -top-12 -right-12 size-40 rounded-full bg-white/25" aria-hidden />
+      <div className="relative flex items-center gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-body font-semibold">{plan.title}</p>
-          <p className="text-caption text-muted-foreground">
-            {plan.durationDays} days · {formatDay(plan.startDate, { day: "numeric", month: "short" })} – {formatDay(end, { day: "numeric", month: "short" })} · {plan.status === "active" ? "Active" : plan.status}
+          <p className="text-caption inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 font-medium">
+            <CalendarDays className="size-3.5" aria-hidden /> {plan.status === "active" ? "Active plan" : plan.status}
+          </p>
+          <p className="text-title mt-2.5 leading-tight">{plan.title}</p>
+          <p className="text-caption mt-1 text-charcoal/75">
+            {plan.durationDays} days · {formatDay(plan.startDate, { day: "numeric", month: "short" })} – {formatDay(end, { day: "numeric", month: "short" })}
           </p>
         </div>
-        <ChevronRight className="mt-2.5 size-[18px] shrink-0 text-muted-grey" aria-hidden />
+        <Ring value={dayNo} max={plan.durationDays} size={84} stroke={9} color="var(--charcoal)" label={`Day ${dayNo} of ${plan.durationDays}`}>
+          <p className="text-[18px] leading-none font-bold tabular">{dayNo}</p>
+          <p className="text-[10px] font-medium text-charcoal/75">of {plan.durationDays} days</p>
+        </Ring>
       </div>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        <Pill tone={v.nutrition ? "sage" : "caution"} icon={v.nutrition ? <Check /> : <TriangleAlert />}>
+      <div className="relative mt-4 flex flex-wrap gap-1.5">
+        <Pill tone={v.nutrition ? "neutral" : "caution"} icon={v.nutrition ? <Check /> : <TriangleAlert />} className={v.nutrition ? "bg-white/70" : undefined}>
           {v.nutrition ? "Nutrition checked" : "Nutrition needs attention"}
         </Pill>
-        <Pill tone={v.safety ? "sage" : "safety"} icon={<ShieldCheck />}>
+        <Pill tone={v.safety ? "neutral" : "safety"} icon={<ShieldCheck />} className={v.safety ? "bg-white/70" : undefined}>
           {v.safety ? "Safety checked" : "Safety check failed"}
         </Pill>
         {v.requiresReview && <Pill tone="caution">Review needed</Pill>}
       </div>
     </Link>
-  )
-}
-
-function DayStrip({ date, onPick, meals }: { date: string; onPick: (d: string) => void; meals: PlannedMeal[] }) {
-  const start = startOfWeek(date)
-  const today = todayISO()
-  return (
-    <div className="grid grid-cols-7 gap-1.5">
-      {Array.from({ length: 7 }, (_, i) => addDays(start, i)).map((d) => {
-        const has = meals.some((m) => m.date === d)
-        const selected = d === date
-        const isToday = d === today
-        return (
-          <button
-            key={d}
-            onClick={() => onPick(d)}
-            aria-pressed={selected}
-            aria-label={`${formatDay(d, { weekday: "long", day: "numeric", month: "long" })}${isToday ? ", today" : ""}${has ? ", meals planned" : ""}`}
-            className={cn(
-              "flex h-[68px] flex-col items-center justify-center gap-0.5 rounded-2xl border transition-colors",
-              selected ? "border-forest bg-forest text-ivory" : isToday ? "border-forest/60 bg-card text-forest" : "border-border/80 bg-card hover:bg-muted/60",
-            )}
-          >
-            <span className={cn("text-[11px] font-medium", selected ? "text-ivory/80" : "text-muted-foreground")}>{formatDay(d, { weekday: "short" }).slice(0, 2)}</span>
-            <span className="tabular text-headline leading-none">{fromISO(d).getDate()}</span>
-            <span className={cn("mt-1 size-1.5 rounded-full", has ? (selected ? "bg-ivory" : "bg-forest") : "bg-transparent")} aria-hidden />
-          </button>
-        )
-      })}
-    </div>
   )
 }
 
@@ -202,10 +182,25 @@ function DaySummary({ meals }: { meals: PlannedMeal[] }) {
     { kcal: 0, protein: 0, cost: 0 },
   )
   return (
-    <div className="grid grid-cols-3 gap-2">
-      <StatTile label="Energy" value={`~${Math.round(totals.kcal).toLocaleString("en-US")}`} unit="kcal" />
-      <StatTile label="Protein" value={`~${Math.round(totals.protein)}`} unit="g" />
-      <StatTile label="Cost (est.)" value={fmt.bdt(totals.cost)} />
+    <div className="grid grid-cols-3 gap-2.5">
+      <SumTile icon={<Flame />} tone="terracotta" label="Energy" value={`~${Math.round(totals.kcal).toLocaleString("en-US")}`} unit="kcal" />
+      <SumTile icon={<Beef />} tone="sky" label="Protein" value={`~${Math.round(totals.protein)}`} unit="g" />
+      <SumTile icon={<Wallet />} tone="amber" label="Cost (est.)" value={fmt.bdt(totals.cost)} />
+    </div>
+  )
+}
+
+function SumTile({ icon, tone, label, value, unit }: { icon: React.ReactNode; tone: IconTone; label: string; value: string; unit?: string }) {
+  return (
+    <div className="rounded-2xl bg-card p-3 shadow-card">
+      <IconTile tone={tone} size="sm">
+        {icon}
+      </IconTile>
+      <p className="text-caption mt-2 text-muted-foreground">{label}</p>
+      <p className="tabular text-headline leading-tight">
+        {value}
+        {unit && <span className="text-caption font-normal text-muted-foreground"> {unit}</span>}
+      </p>
     </div>
   )
 }
@@ -215,7 +210,7 @@ function DayView({ date, onPick, meals }: { date: string; onPick: (d: string) =>
   const nextId = date === todayISO() ? day.find((m) => !m.outcome && m.time >= nowHHMM())?.id : undefined
   return (
     <div className="space-y-4">
-      <DayStrip date={date} onPick={onPick} meals={meals} />
+      <WeekStrip value={date} onChange={onPick} marked={(d) => meals.some((m) => m.date === d)} />
       {day.length === 0 ? (
         <EmptyState icon={<CalendarDays />} title="Nothing planned" description="This day is outside your current plan." />
       ) : (
@@ -241,7 +236,7 @@ function WeekView({ date, meals }: { date: string; meals: PlannedMeal[] }) {
               {formatDay(d, { weekday: "long", day: "numeric", month: "short" })}
               {d === today && <span className="text-forest">· Today</span>}
             </p>
-            {day.length === 0 ? <p className="text-callout rounded-2xl border border-dashed border-input bg-card px-4 py-3 text-muted-foreground">Nothing planned</p> : <MealList meals={day} />}
+            {day.length === 0 ? <p className="text-callout rounded-2xl bg-card px-4 py-3 text-muted-foreground shadow-card">Nothing planned</p> : <MealList meals={day} />}
           </div>
         )
       })}
@@ -283,7 +278,7 @@ function MonthView({ date, meals, onPick }: { date: string; meals: PlannedMeal[]
                 <span
                   className={cn(
                     "tabular text-callout grid size-10 place-items-center rounded-full",
-                    selected ? "bg-forest font-semibold text-ivory" : d === today ? "font-semibold text-forest ring-1 ring-forest" : inMonth ? "text-charcoal hover:bg-muted" : "text-muted-foreground/50",
+                    selected ? "bg-lime font-semibold text-charcoal" : d === today ? "font-semibold text-forest ring-1 ring-forest" : inMonth ? "text-charcoal hover:bg-muted" : "text-muted-foreground/50",
                   )}
                 >
                   {fromISO(d).getDate()}
@@ -303,7 +298,7 @@ function MonthView({ date, meals, onPick }: { date: string; meals: PlannedMeal[]
         </div>
       </Surface>
       <Section title={formatDay(date, { weekday: "long", day: "numeric", month: "long" })}>
-        {selectedMeals.length === 0 ? <p className="text-callout rounded-2xl border border-dashed border-input bg-card px-4 py-3 text-muted-foreground">Nothing planned</p> : <MealList meals={selectedMeals} />}
+        {selectedMeals.length === 0 ? <p className="text-callout rounded-2xl bg-card px-4 py-3 text-muted-foreground shadow-card">Nothing planned</p> : <MealList meals={selectedMeals} />}
       </Section>
     </div>
   )
@@ -315,11 +310,12 @@ function PlanTools() {
   return (
     <Section title="Plan tools">
       <ListGroup>
-        <ListRow href="/plan/shopping" icon={<ShoppingBasket />} title="Shopping list" description={shopping ? `${shopping} items to buy` : "Up to date"} />
-        <ListRow href="/plan/prep" icon={<ChefHat />} title="Meal prep" description={prep ? `${prep} meals to prepare ahead` : "Batch cooking and storage"} />
+        <ListRow href="/plan/shopping" icon={<ShoppingBasket />} iconTone="lime" title="Shopping list" description={shopping ? `${shopping} items to buy` : "Up to date"} />
+        <ListRow href="/plan/prep" icon={<ChefHat />} iconTone="terracotta" title="Meal prep" description={prep ? `${prep} meals to prepare ahead` : "Batch cooking and storage"} />
         <ListRow
           href="/plan/pantry"
           icon={<Package />}
+          iconTone="amber"
           title={
             <>
               Pantry <FeatureBadge feature="pantry" />
@@ -330,6 +326,7 @@ function PlanTools() {
         <ListRow
           href="/plan/autopilot"
           icon={<Sparkles />}
+          iconTone="sky"
           title={
             <>
               Weekly Autopilot <FeatureBadge feature="autopilot" />
@@ -337,7 +334,7 @@ function PlanTools() {
           }
           description="A draft of next week for you to approve"
         />
-        <ListRow href="/plan/plans" icon={<Layers />} title="My plans" description="Active, drafts, history and suggestions" />
+        <ListRow href="/plan/plans" icon={<Layers />} iconTone="sage" title="My plans" description="Active, drafts, history and suggestions" />
       </ListGroup>
     </Section>
   )

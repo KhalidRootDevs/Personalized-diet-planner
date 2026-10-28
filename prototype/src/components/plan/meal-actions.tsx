@@ -70,7 +70,7 @@ export function MealActions({ mealId, onDone, page }: { mealId: string; onDone?:
   return (
     <div className={cn("space-y-5", !page && "px-5 pt-2")}>
       <div className={cn("flex items-center gap-3.5", !page && "pr-10")}>
-        <RecipeThumb recipe={recipe} size="md" />
+        <RecipeThumb recipe={recipe} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="text-caption text-muted-foreground">
             {MEAL_LABEL[meal.mealType]} · {formatDay(meal.date)} · {formatTime(meal.time)}
@@ -186,9 +186,9 @@ function SwapView({ meal, onBack, onDone, page }: { meal: PlannedMeal; onBack: (
 
   const list =
     options.length === 0 ? (
-      <p className="text-callout rounded-2xl border border-dashed border-input bg-card p-4 text-center text-muted-foreground">No alternative meets all of your restrictions for this meal.</p>
+      <p className="text-callout rounded-2xl bg-card shadow-card p-4 text-center text-muted-foreground">No alternative meets all of your restrictions for this meal.</p>
     ) : (
-      <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+      <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
         {options.map((o) => {
           const n = recipeNutrition(o.recipe)
           const selected = chosen === o.recipe.id
@@ -212,7 +212,7 @@ function SwapView({ meal, onBack, onDone, page }: { meal: PlannedMeal; onBack: (
                     <DeltaPill value={o.deltaCost} prefix="৳" unit="" />
                   </div>
                 </div>
-                <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px]", selected ? "border-forest bg-forest text-ivory" : "border-input")} aria-hidden>
+                <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px]", selected ? "border-forest bg-forest text-white" : "border-input")} aria-hidden>
                   {selected && <Check className="size-3.5" strokeWidth={3} />}
                 </span>
               </button>

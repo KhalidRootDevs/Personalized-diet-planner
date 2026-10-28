@@ -42,20 +42,18 @@ export function NextStepCard({ meals }: { meals: PlannedMeal[] }) {
   const recipe = content.recipeId ? lookup(content.recipeId) : undefined
 
   return (
-    <section aria-labelledby="next-step" className="rounded-2xl bg-sage/70 p-4">
-      <p id="next-step" className="text-overline text-forest">
-        {t("nextStep")}
-      </p>
-      <div className="mt-3 flex items-center gap-3">
-        {recipe && <RecipeThumb recipe={recipe} size="md" className="bg-card" />}
-        <div className="min-w-0 flex-1">
-          <p className="text-headline text-charcoal">{content.title}</p>
-          <p className="text-callout text-charcoal/80">{content.body}</p>
-        </div>
+    <section aria-labelledby="next-step" className="overflow-hidden rounded-2xl bg-card shadow-card">
+      {recipe && <RecipeThumb recipe={recipe} size="hero" className="h-36 rounded-none" />}
+      <div className="p-4">
+        <p id="next-step" className="text-overline text-lime-text">
+          {t("nextStep")}
+        </p>
+        <p className="text-headline mt-1 text-charcoal">{content.title}</p>
+        <p className="text-callout mt-0.5 text-muted-foreground">{content.body}</p>
+        <Link href={content.href} className="text-callout mt-4 inline-flex h-10 items-center gap-1.5 rounded-full bg-sage px-4 font-semibold text-lime-text transition-colors hover:bg-sage-strong">
+          {content.cta} <ArrowRight className="size-4" />
+        </Link>
       </div>
-      <Link href={content.href} className="text-callout mt-4 inline-flex h-10 items-center gap-1.5 rounded-xl bg-card px-4 font-semibold text-forest transition-colors hover:bg-ivory">
-        {content.cta} <ArrowRight className="size-4" />
-      </Link>
     </section>
   )
 }

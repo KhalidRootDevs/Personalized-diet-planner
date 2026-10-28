@@ -44,7 +44,7 @@ export default function PrivacyPage() {
       <PageHeader back="/profile" title="Privacy and data" />
       <PageBody>
         <Section title="Permissions">
-          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
             {CONSENTS.map(({ type, icon: Icon, title, text, off }) => {
               const c = get(type)
               const granted = c?.granted ?? false

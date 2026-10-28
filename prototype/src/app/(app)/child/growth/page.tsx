@@ -58,8 +58,8 @@ export default function ChildGrowthPage() {
       <PageBody>
         {latest && (
           <div className="grid grid-cols-2 gap-2">
-            <StatTile label="Latest weight" value={latestW?.weightKg ?? "–"} unit="kg" hint={latestW ? formatDay(latestW.date, { day: "numeric", month: "short" }) : undefined} />
-            <StatTile label="Latest length" value={latestL?.lengthCm ?? "–"} unit="cm" hint={latestL ? formatDay(latestL.date, { day: "numeric", month: "short" }) : undefined} />
+            <StatTile className="bg-sky-tint" label="Latest weight" value={latestW?.weightKg ?? "–"} unit="kg" hint={latestW ? formatDay(latestW.date, { day: "numeric", month: "short" }) : undefined} />
+            <StatTile className="bg-amber-tint" label="Latest length" value={latestL?.lengthCm ?? "–"} unit="cm" hint={latestL ? formatDay(latestL.date, { day: "numeric", month: "short" }) : undefined} />
           </div>
         )}
 

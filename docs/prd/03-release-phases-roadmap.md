@@ -167,7 +167,7 @@ These need a product-owner decision. Until one is made, do not implement a choic
 1. **Monetization tiers:** which tier includes the AI Food Journal, the AI Coach and dependent child profiles (§30). Safety guidance stays free whatever is decided.
 2. **Phase 1 reminder delivery:** which channel the web app uses before native apps (for example web push or email) (§26, §22.1).
 3. **Baby module at launch:** whether Release Phase 1 launches with the baby-feeding module (1.20) or adds it once clinical validation is complete.
-4. **Design tokens:** approve the proposed accessible text variants `#616762` (small muted text) and `#A26249` (Terracotta text) (§44.2.2); define the semantic state colors (success, info, caution, safety alert) (§44.13); choose the Bengali font (§44.3).
+4. **Design tokens:** the **Lime Fresh** palette, photo-led style and all-Inter typography are approved (§44.2–§44.4, §44.11). Still open: confirm the proposed semantic state colors (safety, caution, success, §44.2) and the Bengali font (§44.3).
 
 ---
 

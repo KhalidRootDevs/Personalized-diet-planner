@@ -52,26 +52,26 @@ export default function SignupPage() {
         }}
       />
       <OrDivider />
-      <form onSubmit={submit} className="space-y-5" noValidate>
+      <form onSubmit={submit} className="space-y-3.5" noValidate>
         <Field label="Your name" htmlFor="name" error={errors.name}>
           <Input id="name" autoComplete="given-name" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label="Email" htmlFor="email" error={errors.email}>
           <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
         </Field>
-        <Field label="Password" htmlFor="password" error={errors.password} hint="At least 8 characters.">
-          <Input id="password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Field label="Password" htmlFor="password" error={errors.password}>
+          <Input id="password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
         </Field>
         <div className="space-y-1">
           <label className="text-callout flex items-start gap-3">
             <Checkbox checked={terms} onCheckedChange={(v) => setTerms(v === true)} className="mt-0.5" />
-            <span className="text-muted-foreground">
-              I agree to the Terms and Privacy Policy. NutriPlan offers nutrition guidance and does not replace medical advice.
+            <span className="text-caption text-muted-foreground">
+              I agree to the Terms and Privacy Policy. NutriPlan doesn&apos;t replace medical advice.
             </span>
           </label>
           {errors.terms && <p className="text-caption pl-8 font-medium text-safety">{errors.terms}</p>}
         </div>
-        <Button type="submit" size="lg" className="mt-2 w-full">
+        <Button type="submit" size="lg" className="w-full">
           Continue
         </Button>
       </form>

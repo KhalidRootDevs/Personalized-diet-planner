@@ -106,7 +106,7 @@ export default function GeneratePlanPage() {
             <ol className="space-y-4" aria-live="polite">
               {STAGES.map((s, i) => (
                 <li key={s} className="text-callout flex items-center gap-3">
-                  <span className={cn("grid size-7 shrink-0 place-items-center rounded-full transition-colors", i < stage ? "bg-forest text-ivory" : i === stage ? "bg-sage text-forest" : "bg-muted text-muted-foreground")}>
+                  <span className={cn("grid size-7 shrink-0 place-items-center rounded-full transition-colors", i < stage ? "bg-lime text-charcoal" : i === stage ? "bg-sage text-forest" : "bg-muted text-muted-foreground")}>
                     {i < stage ? <Check className="size-4" /> : i === stage ? <Loader2 className="size-4 animate-spin motion-reduce:animate-none" /> : <span className="size-1.5 rounded-full bg-muted-grey" />}
                   </span>
                   <span className={i <= stage ? "font-medium text-charcoal" : "text-muted-foreground"}>{s}</span>
@@ -264,7 +264,7 @@ function DraftReview({ draft, targets, onBack, onActivate, onSaveDraft }: { draf
         </div>
 
         <Section title="Validation">
-          <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+          <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
             {checks.map((c) => (
               <li key={c.label} className="text-callout flex items-center gap-3 px-4 py-3">
                 <span className={cn("grid size-7 shrink-0 place-items-center rounded-full", c.ok ? "bg-sage text-forest" : "bg-safety-surface text-safety")}>

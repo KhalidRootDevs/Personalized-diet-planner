@@ -63,7 +63,7 @@ export function InstallPrompt() {
 
   return (
     <div className="text-callout mx-[var(--gutter)] mb-2 flex items-start gap-3 rounded-2xl border border-border/80 bg-card p-4">
-      <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-forest text-ivory">
+      <div className="grid size-10 shrink-0 place-items-center rounded-full bg-lime text-charcoal">
         <Download className="size-5" />
       </div>
       <div className="min-w-0 flex-1">

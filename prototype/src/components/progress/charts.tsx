@@ -1,7 +1,7 @@
 import { formatDay } from "@/lib/date"
 
-const GRID = "#E8E5DC"
-const AXIS = "#616762"
+const GRID = "#E8EAE4"
+const AXIS = "#5b6559"
 
 /** Legend item for charts (UI-SPEC §4.10): swatch + caption label. */
 export function LegendItem({ swatch, children }: { swatch: React.ReactNode; children: React.ReactNode }) {
@@ -14,64 +14,70 @@ export function LegendItem({ swatch, children }: { swatch: React.ReactNode; chil
 }
 
 /**
- * Daily bar chart (§44.10, UI-SPEC §4.10): logged bars (forest) beside planned bars (sage),
- * hairline gridlines, caption axis labels and a text equivalent for screen readers.
+ * Daily bar chart (§44.10, UI-SPEC §4.10), "statistic" style: tall rounded lime bars for logged
+ * values with the value above, a hatched bar behind for the planned value, day labels below,
+ * the selected day emphasized, and a text equivalent for screen readers.
  */
 export function DailyBars({
   data,
   unit,
   label,
+  highlight,
 }: {
   data: { date: string; value: number; planned?: number }[]
   unit: string
   label: string
+  /** ISO date drawn in the stronger lime (defaults to the last day). */
+  highlight?: string
 }) {
   const peak = Math.max(1, ...data.map((d) => Math.max(d.value, d.planned ?? 0)))
-  const step = peak > 1000 ? 1000 : peak > 200 ? 100 : 50
-  const top = Math.ceil(peak / step) * step
-  const ticks = [0, top / 2, top]
   const W = 340
-  const H = 150
-  const left = 34
-  const plotW = W - left
-  const bw = plotW / data.length
-  const bar = 8
-  const T = 10 // headroom so the top axis label isn't clipped
-  const y = (v: number) => T + H - (v / top) * H
+  const H = 170
+  const T = 26 // room for value labels
+  const bw = W / data.length
+  const bar = Math.min(18, bw * 0.42)
+  const hi = highlight ?? data[data.length - 1]?.date
+  const y = (v: number) => T + H - (v / peak) * H
+  const short = (v: number) => (v >= 1000 ? `${(v / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k` : `${Math.round(v)}`)
   const summary = data.map((d) => `${formatDay(d.date, { weekday: "short" })}: ${d.value ? `about ${Math.round(d.value)} ${unit}` : "not logged"}${d.planned ? `, planned ${Math.round(d.planned)}` : ""}`).join("; ")
   return (
     <figure>
-      <svg viewBox={`0 0 ${W} ${T + H + 24}`} className="w-full" role="img" aria-label={`${label}. ${summary}`}>
-        {ticks.map((t) => (
-          <g key={t}>
-            <line x1={left} x2={W} y1={y(t)} y2={y(t)} stroke={GRID} strokeWidth={1} />
-            <text x={left - 6} y={y(t) + 4} textAnchor="end" fontSize={10.5} fill={AXIS} className="tabular">
-              {t >= 1000 ? `${(t / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k` : t}
-            </text>
-          </g>
-        ))}
-        {data.map((d, i) => {
-          const cx = left + i * bw + bw / 2
+      <svg viewBox={`0 0 ${W} ${T + H + 26}`} className="w-full" role="img" aria-label={`${label}. ${summary}`}>
+        <defs>
+          <pattern id="planned-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="6" height="6" fill="#eff1eb" />
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#d9ddd4" strokeWidth="2.5" />
+          </pattern>
+        </defs>
+        <line x1={0} x2={W} y1={T + H} y2={T + H} stroke={GRID} strokeWidth={1} />
+        {data.map((d) => {
+          const i = data.indexOf(d)
+          const cx = i * bw + bw / 2
+          const strong = d.date === hi
           const hasPlan = (d.planned ?? 0) > 0
-          const xLogged = hasPlan ? cx - bar - 1 : cx - bar / 2
           return (
             <g key={d.date}>
-              {hasPlan && <rect x={cx + 1} y={y(d.planned!)} width={bar} height={T + H - y(d.planned!)} rx={bar / 2} fill="var(--sage)" />}
+              {hasPlan && <rect x={cx - bar / 2 - 5} y={y(d.planned!)} width={bar} height={T + H - y(d.planned!)} rx={bar / 2} fill="url(#planned-hatch)" />}
               {d.value > 0 ? (
-                <rect x={xLogged} y={y(d.value)} width={bar} height={Math.max(bar, T + H - y(d.value))} rx={bar / 2} fill="var(--forest-green)" />
+                <>
+                  <rect x={cx - bar / 2 + (hasPlan ? 3 : 0)} y={y(d.value)} width={bar} height={Math.max(bar, T + H - y(d.value))} rx={bar / 2} fill={strong ? "var(--lime)" : "var(--lime-card)"} />
+                  <text x={cx} y={y(d.value) - 7} textAnchor="middle" fontSize={11} fontWeight={strong ? 700 : 500} fill={strong ? "var(--charcoal)" : AXIS} className="tabular">
+                    ~{short(d.value)}
+                  </text>
+                </>
               ) : (
-                <rect x={xLogged} y={T + H - 3} width={bar} height={3} rx={1.5} fill={GRID} />
+                <rect x={cx - bar / 2} y={T + H - 4} width={bar} height={4} rx={2} fill={GRID} />
               )}
-              <text x={cx} y={T + H + 18} textAnchor="middle" fontSize={11} fill={AXIS}>
-                {formatDay(d.date, { weekday: "narrow" })}
+              <text x={cx} y={T + H + 19} textAnchor="middle" fontSize={12} fontWeight={strong ? 700 : 400} fill={strong ? "var(--charcoal)" : AXIS}>
+                {formatDay(d.date, { weekday: "short" })}
               </text>
             </g>
           )
         })}
       </svg>
       <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-        <LegendItem swatch={<span className="inline-block h-2.5 w-2 rounded-full bg-forest" />}>Logged ({unit})</LegendItem>
-        <LegendItem swatch={<span className="inline-block h-2.5 w-2 rounded-full bg-sage" />}>Planned</LegendItem>
+        <LegendItem swatch={<span className="inline-block h-3 w-2 rounded-full bg-lime" />}>Logged ({unit}, estimate)</LegendItem>
+        <LegendItem swatch={<span className="inline-block h-3 w-2 rounded-full bg-[repeating-linear-gradient(45deg,#eff1eb_0_2px,#d9ddd4_2px_4px)]" />}>Planned</LegendItem>
       </figcaption>
     </figure>
   )

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 
 /**
  * Sticky screen header.
- * - `large`: tab-root screens. Serif display title, optional subtitle, trailing actions.
+ * - `large`: tab-root screens. Bold display title, optional subtitle, trailing actions.
  * - default: nested screens. Back button + 17 px title, trailing actions.
  */
 export function PageHeader({
@@ -105,12 +105,12 @@ export function FlowHeader({
           {total! <= 5 ? (
             <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}>
               {Array.from({ length: total! }, (_, i) => (
-                <span key={i} className={cn("h-1 rounded-full transition-colors duration-200", i < step! ? "bg-forest" : "bg-border")} />
+                <span key={i} className={cn("h-1 rounded-full transition-colors duration-200", i < step! ? "bg-lime" : "bg-border")} />
               ))}
             </div>
           ) : (
             <div className="h-1 overflow-hidden rounded-full bg-border">
-              <div className="h-full rounded-full bg-forest transition-[width] duration-300" style={{ width: `${(step! / total!) * 100}%` }} />
+              <div className="h-full rounded-full bg-lime transition-[width] duration-300" style={{ width: `${(step! / total!) * 100}%` }} />
             </div>
           )}
         </div>
@@ -120,7 +120,7 @@ export function FlowHeader({
 }
 
 export function BackButton({ href, onClick, label = "Back" }: { href?: string; onClick?: () => void; label?: string }) {
-  const cls = "grid size-10 shrink-0 place-items-center rounded-full text-charcoal transition-colors hover:bg-muted active:bg-border/60"
+  const cls = "grid size-11 shrink-0 place-items-center rounded-full bg-card text-charcoal shadow-card transition-colors hover:bg-muted active:bg-border/60"
   return href ? (
     <Link href={href} className={cls} aria-label={label}>
       <ChevronLeft className="size-[22px]" />
@@ -134,7 +134,7 @@ export function BackButton({ href, onClick, label = "Back" }: { href?: string; o
 
 /** Round icon button used in header action slots (40 px visual, 44 px with spacing). */
 export function HeaderIconButton({ href, onClick, label, children, className }: { href?: string; onClick?: () => void; label: string; children: React.ReactNode; className?: string }) {
-  const cls = cn("relative grid size-10 shrink-0 place-items-center rounded-full border border-border/80 bg-card text-charcoal transition-colors hover:bg-muted", className)
+  const cls = cn("relative grid size-11 shrink-0 place-items-center rounded-full bg-card text-charcoal shadow-card transition-colors hover:bg-muted", className)
   return href ? (
     <Link href={href} className={cls} aria-label={label}>
       {children}
@@ -191,16 +191,17 @@ export function SectionLink({ href, children, onClick }: { href?: string; childr
 
 /* ───────────── Surfaces ───────────── */
 
-type Tone = "default" | "sage" | "muted" | "forest" | "outline"
+type Tone = "default" | "sage" | "muted" | "forest" | "outline" | "lime"
 const SURFACE: Record<Tone, string> = {
-  default: "border border-border/80 bg-card",
-  sage: "bg-sage/70 text-charcoal",
+  default: "bg-card shadow-card",
+  sage: "bg-sage text-charcoal",
   muted: "bg-muted",
-  forest: "bg-forest text-ivory",
+  forest: "bg-forest text-white",
   outline: "border border-dashed border-input bg-card",
+  lime: "bg-lime-card text-charcoal",
 }
 
-/** The one card style (radius 16). `tone` changes the surface, `padding` the inset. */
+/** The one card style (radius 24, white, soft shadow). `tone` changes the surface, `padding` the inset. */
 export function Surface({ tone = "default", padding = "md", className, children, ...props }: { tone?: Tone; padding?: "none" | "sm" | "md" | "lg"; className?: string; children: React.ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
   const pad = { none: "", sm: "p-3", md: "p-4", lg: "p-5" }[padding]
   return (
@@ -217,7 +218,7 @@ export function ListGroup({ children, className, label }: { children: React.Reac
   return (
     <div className={className}>
       {label && <p className="text-overline mb-2 px-1 text-muted-foreground">{label}</p>}
-      <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">{children}</div>
+      <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">{children}</div>
     </div>
   )
 }
@@ -274,42 +275,46 @@ export function ListRow({
 }
 
 /** Standalone navigation row (its own card). Prefer ListGroup + ListRow for 2+ rows. */
-export function ListLink({ href, icon, title, description, trailing, className }: { href: string; icon?: React.ReactNode; title: React.ReactNode; description?: React.ReactNode; trailing?: React.ReactNode; className?: string }) {
+export function ListLink({ href, icon, iconTone, title, description, trailing, className }: { href: string; icon?: React.ReactNode; iconTone?: IconTone; title: React.ReactNode; description?: React.ReactNode; trailing?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-hidden rounded-2xl border border-border/80 bg-card", className)}>
-      <ListRow href={href} icon={icon} title={title} description={description} trailing={trailing} />
+    <div className={cn("overflow-hidden rounded-2xl bg-card shadow-card", className)}>
+      <ListRow href={href} icon={icon} iconTone={iconTone} title={title} description={description} trailing={trailing} />
     </div>
   )
 }
 
 /* ───────────── Small pieces ───────────── */
 
-export type IconTone = "sage" | "forest" | "terracotta" | "muted" | "caution" | "safety" | "white"
+export type IconTone = "sage" | "forest" | "terracotta" | "amber" | "sky" | "lime" | "muted" | "caution" | "safety" | "white"
 const ICON_TONE: Record<IconTone, string> = {
   sage: "bg-sage text-forest",
-  forest: "bg-forest text-ivory",
-  terracotta: "bg-[#f3e2d9] text-terracotta-text",
+  forest: "bg-forest text-white",
+  terracotta: "bg-coral-tint text-terracotta-text",
+  amber: "bg-amber-tint text-amber-text",
+  sky: "bg-sky-tint text-sky-text",
+  lime: "bg-lime text-charcoal",
   muted: "bg-muted text-charcoal",
   caution: "bg-caution-surface text-caution",
   safety: "bg-safety-surface text-safety",
   white: "bg-card text-forest",
 }
 
-/** Rounded-square icon container. sm 32 · md 40 · lg 48. */
+/** Round icon container. sm 32 · md 40 · lg 48. */
 export function IconTile({ children, tone = "sage", size = "md", className }: { children: React.ReactNode; tone?: IconTone; size?: "sm" | "md" | "lg"; className?: string }) {
-  const dims = { sm: "size-8 rounded-[10px] [&_svg]:size-4", md: "size-10 rounded-xl [&_svg]:size-5", lg: "size-12 rounded-[14px] [&_svg]:size-6" }[size]
+  const dims = { sm: "size-8 rounded-full [&_svg]:size-4", md: "size-10 rounded-full [&_svg]:size-5", lg: "size-12 rounded-full [&_svg]:size-6" }[size]
   return <span className={cn("grid shrink-0 place-items-center", ICON_TONE[tone], dims, className)}>{children}</span>
 }
 
-export type PillTone = "neutral" | "sage" | "forest" | "outline" | "caution" | "safety" | "terracotta"
+export type PillTone = "neutral" | "sage" | "forest" | "lime" | "outline" | "caution" | "safety" | "terracotta"
 const PILL_TONE: Record<PillTone, string> = {
   neutral: "bg-muted text-charcoal",
   sage: "bg-sage text-forest",
-  forest: "bg-forest text-ivory",
+  forest: "bg-forest text-white",
+  lime: "bg-lime text-charcoal",
   outline: "border border-dashed border-input text-muted-foreground",
   caution: "bg-caution-surface text-caution",
   safety: "bg-safety-surface text-safety",
-  terracotta: "bg-[#f3e2d9] text-terracotta-text",
+  terracotta: "bg-coral-tint text-terracotta-text",
 }
 
 /** Status / meta chip (24 px tall). Never the only carrier of meaning — always has text. */
@@ -322,10 +327,15 @@ export function Pill({ children, tone = "neutral", icon, className }: { children
   )
 }
 
-/** Compact metric (label, value, unit). */
-export function StatTile({ label, value, unit, hint, className }: { label: React.ReactNode; value: React.ReactNode; unit?: string; hint?: React.ReactNode; className?: string }) {
+/** Compact metric (label, value, unit), with an optional round tinted icon. */
+export function StatTile({ label, value, unit, hint, icon, iconTone = "sage", className }: { label: React.ReactNode; value: React.ReactNode; unit?: string; hint?: React.ReactNode; icon?: React.ReactNode; iconTone?: IconTone; className?: string }) {
   return (
-    <div className={cn("rounded-xl bg-muted/70 px-3 py-2.5", className)}>
+    <div className={cn("rounded-xl bg-muted px-3 py-2.5", className)}>
+      {icon && (
+        <IconTile tone={iconTone} size="sm" className="mb-2">
+          {icon}
+        </IconTile>
+      )}
       <p className="text-caption text-muted-foreground">{label}</p>
       <p className="tabular text-headline mt-0.5">
         {value}
@@ -357,7 +367,7 @@ export function StickyFooter({ children, className }: { children: React.ReactNod
 
 export function EmptyState({ icon, title, description, action }: { icon: React.ReactNode; title: string; description?: string; action?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-input bg-card px-6 py-10 text-center">
+    <div className="rounded-2xl bg-card px-6 py-10 text-center shadow-card">
       <IconTile size="lg" className="mx-auto mb-4">
         {icon}
       </IconTile>

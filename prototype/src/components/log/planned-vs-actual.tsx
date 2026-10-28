@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Section, StatTile } from "@/components/app/page"
+import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { FeatureBadge } from "@/components/app/badges"
 import { EstimateNote } from "@/components/app/nutrition"
 import { MEAL_LABEL } from "@/lib/planning"
@@ -39,11 +40,11 @@ export function PlannedVsActual({ meals, entries }: { meals: PlannedMeal[]; entr
 
   return (
     <Section title="Planned vs actual" badge={<FeatureBadge feature="planned_vs_actual" />}>
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card">
+      <div className="overflow-hidden rounded-2xl bg-card shadow-card">
         <div className="p-4">
           <div className="grid grid-cols-2 gap-2">
-            <StatTile label="Planned" value={`~${Math.round(plannedSum).toLocaleString("en-US")}`} unit="kcal" />
-            <StatTile label="Eaten · estimate" value={`~${Math.round(actualSum).toLocaleString("en-US")}`} unit="kcal" />
+            <StatTile label="Planned" value={`~${Math.round(plannedSum).toLocaleString("en-US")}`} unit="kcal" className="bg-muted" />
+            <StatTile label="Eaten · estimate" value={`~${Math.round(actualSum).toLocaleString("en-US")}`} unit="kcal" className="bg-sage" />
           </div>
           <p className="text-callout mt-3">{message}</p>
         </div>
@@ -52,6 +53,7 @@ export function PlannedVsActual({ meals, entries }: { meals: PlannedMeal[]; entr
             const st = mealStatus(m)
             return (
               <li key={m.id} className="flex items-center gap-3 px-4 py-3">
+                {recipe && <RecipeThumb recipe={recipe} size="sm" />}
                 <div className="min-w-0 flex-1">
                   <p className="text-caption text-muted-foreground">{MEAL_LABEL[m.mealType]}</p>
                   <p className="text-callout truncate font-medium">{recipe?.name}</p>
@@ -60,7 +62,7 @@ export function PlannedVsActual({ meals, entries }: { meals: PlannedMeal[]; entr
                 {actual === null ? (
                   <div className="shrink-0 text-right">
                     <p className="tabular text-caption text-muted-foreground">Planned ~{Math.round(planned)}</p>
-                    <Link href={`/log/new?meal=${m.id}`} className="text-callout mt-1 inline-flex h-8 items-center rounded-lg border border-input bg-card px-3 font-semibold text-forest transition-colors hover:bg-muted">
+                    <Link href={`/log/new?meal=${m.id}`} className="text-callout mt-1 inline-flex h-8 items-center rounded-full bg-lime px-3.5 font-semibold text-charcoal transition-colors hover:bg-lime/85">
                       Record
                     </Link>
                   </div>

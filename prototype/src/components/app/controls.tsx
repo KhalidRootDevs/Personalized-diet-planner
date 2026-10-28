@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 /** Segmented control (spec §4.6): 44 px track, white active segment. */
 export function Segmented<T extends string>({ options, value, onChange, label, className }: { options: { value: T; label: React.ReactNode }[]; value: T; onChange: (v: T) => void; label: string; className?: string }) {
   return (
-    <div role="tablist" aria-label={label} className={cn("grid h-11 gap-1 rounded-xl bg-muted p-1", className)} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    <div role="tablist" aria-label={label} className={cn("grid h-11 gap-1 rounded-full bg-muted p-1", className)} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -20,8 +20,8 @@ export function Segmented<T extends string>({ options, value, onChange, label, c
           aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "text-callout flex items-center justify-center gap-1 truncate rounded-[10px] px-1.5 font-medium transition-colors",
-            value === o.value ? "bg-card text-charcoal shadow-[0_1px_3px_rgba(41,47,43,0.12)]" : "text-muted-foreground hover:text-charcoal",
+            "text-callout flex items-center justify-center gap-1 truncate rounded-full px-1.5 font-medium transition-colors",
+            value === o.value ? "bg-card font-semibold text-charcoal shadow-card" : "text-muted-foreground hover:text-charcoal",
           )}
         >
           {o.label}
@@ -50,7 +50,7 @@ export function Stepper({ value, onDec, onInc, decDisabled, incDisabled, label, 
   )
 }
 
-/** Selectable option card (UI-SPEC §4.6): Forest border, sage tint and check when selected. */
+/** Selectable option card (UI-SPEC §4.6): lime border, tint and check when selected. */
 export function ChoiceCard({
   selected,
   onSelect,
@@ -82,13 +82,13 @@ export function ChoiceCard({
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "flex min-h-16 w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3.5 text-left transition-colors",
-        selected ? "border-forest bg-sage/40" : "border-border/80 hover:bg-muted/50",
+        "flex min-h-16 w-full items-center gap-3 rounded-2xl border-2 bg-card px-4 py-3.5 text-left shadow-card transition-colors",
+        selected ? "border-lime bg-sage" : "border-transparent hover:bg-muted/50",
         disabled && "cursor-not-allowed opacity-60 hover:bg-card",
         className,
       )}
     >
-      {icon && <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl [&_svg]:size-5", selected ? "bg-forest text-ivory" : "bg-sage text-forest")}>{icon}</span>}
+      {icon && <span className={cn("grid size-10 shrink-0 place-items-center rounded-full [&_svg]:size-5", selected ? "bg-lime text-charcoal" : "bg-sage text-lime-text")}>{icon}</span>}
       <span className="min-w-0 flex-1">
         <span className="text-body flex flex-wrap items-center gap-2 font-medium">
           {title}
@@ -96,7 +96,7 @@ export function ChoiceCard({
         </span>
         {description && <span className="text-caption mt-0.5 block text-muted-foreground">{description}</span>}
       </span>
-      <span className={cn("grid size-[22px] shrink-0 place-items-center rounded-full border-[1.5px]", selected ? "border-forest bg-forest text-ivory" : "border-input")}>
+      <span className={cn("grid size-[22px] shrink-0 place-items-center rounded-full border-[1.5px]", selected ? "border-forest bg-forest text-white" : "border-input")}>
         {selected && <Check className="size-3.5" strokeWidth={3} />}
       </span>
     </button>
@@ -118,8 +118,8 @@ export function Chip({ selected, onClick, children, className }: { selected: boo
 }
 
 const CHIP = "text-callout inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 font-medium transition-colors"
-const CHIP_ON = "border-forest bg-forest text-ivory"
-const CHIP_OFF = "border-input bg-card text-charcoal hover:bg-muted"
+const CHIP_ON = "border-lime bg-lime text-charcoal"
+const CHIP_OFF = "border-transparent bg-card text-charcoal shadow-card hover:bg-muted"
 
 /** Multi-select chip list. */
 export function ChipGroup<T extends string>({
@@ -202,7 +202,7 @@ export function FieldGroup({ title, description, children }: { title: string; de
 
 export function WhyWeAsk({ children }: { children: React.ReactNode }) {
   return (
-    <details className="group text-callout rounded-xl bg-muted px-4 py-3">
+    <details className="group text-callout rounded-2xl bg-muted px-4 py-3">
       <summary className="flex cursor-pointer list-none items-center justify-between font-semibold text-forest [&::-webkit-details-marker]:hidden">
         Why we ask
         <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />

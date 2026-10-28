@@ -44,7 +44,7 @@ export default function NotificationsSettingsPage() {
         </Section>
 
         <Section title="Reminders" badge={<PhaseBadge phase={1} />}>
-          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
             {REMINDERS.filter((r) => r.key !== "baby_feeding" || hasChild).map(({ key, icon: Icon, title, text, time }) => {
               const r = settings.reminders[key] ?? { enabled: false, time: "" }
               return (

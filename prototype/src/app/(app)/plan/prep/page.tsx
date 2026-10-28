@@ -63,7 +63,7 @@ export default function PrepPage() {
 
         <Section title="Batch-cook this week" description="Meals that repeat — cook once, eat twice.">
           {batch.length === 0 ? (
-            <p className="text-callout rounded-2xl border border-dashed border-input bg-card px-4 py-3 text-muted-foreground">No repeated meals in the next 7 days.</p>
+            <p className="text-callout rounded-2xl bg-card shadow-card px-4 py-3 text-muted-foreground">No repeated meals in the next 7 days.</p>
           ) : (
             <ListGroup>
               {batch.map(({ recipe, meals }) => (

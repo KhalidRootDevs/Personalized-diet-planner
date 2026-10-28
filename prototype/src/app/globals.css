@@ -4,32 +4,44 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens — docs/prd/17-visual-design-system.md (§44).
- * Brand palette (§44.2), accessible text variants (§44.2.2, proposed),
- * spacing on a 4 px base and radii (§44.4).
+ * Design tokens — "Lime Fresh" palette (docs/prd §44.2, UI-SPEC §7).
+ * Utility names forest / sage / ivory / terracotta / charcoal are kept from the first
+ * palette and now map to Primary / Tint / Canvas / Accent / Text.
  */
 :root {
-  /* Brand palette */
-  --forest-green: #244c3a;
-  --sage: #dce7d8;
-  --warm-ivory: #faf8f2;
+  /* Palette */
+  --forest-green: #15803d; /* Primary green — 5.0:1 with white */
+  --primary-hover: #166534;
+  --lime: #9bd14a; /* Highlight — center tab button, selected day, rings (non-text; dark text on it) */
+  --lime-card: #c5e98a; /* Hero highlight card — Text 13:1 */
+  --lime-text: #3f6212; /* Lime-family text on tints */
+  --sage: #eef8df; /* Tint — selected and positive surfaces */
+  --sage-strong: #d6efb0; /* Tint strong — chart bands, hover */
+  --warm-ivory: #f4f5f0; /* Canvas */
   --white: #ffffff;
-  --terracotta: #c8795b;
-  --charcoal: #292f2b;
-  --muted-grey: #7c837d;
-  /* Accessible variants (proposed, §44.2.2 — pending §43.7 approval) */
-  --muted-grey-text: #616762;
-  --terracotta-text: #a26249;
-  /*
-   * Semantic states are NOT defined by the design guide (§44.13, §43.7).
-   * PROVISIONAL prototype values only — replace once the design owner decides.
-   */
-  --safety: #8f2d24;
-  --safety-surface: #f8e7e3;
-  --caution: #7a5a12;
-  --caution-surface: #f6eed8;
-  --success: #244c3a;
-  --success-surface: #dce7d8;
+  --terracotta: #f97316; /* Accent orange — decorative only */
+  --terracotta-text: #c2410c; /* Accent as text — AA */
+  --coral-tint: #ffedd5;
+  --amber-tint: #fef3c7;
+  --amber-text: #92400e;
+  --sky-tint: #e0f2fe;
+  --sky-text: #075985;
+  --charcoal: #141814; /* Text */
+  --muted-grey: #8f978c; /* Icons, chevrons only — not text */
+  --muted-grey-text: #5b6559; /* Secondary text — AA on white, canvas, tints */
+  /* Data colors (charts, macro bars, rings — never text) */
+  --macro-protein: #22c55e;
+  --macro-carbs: #f59e0b;
+  --macro-fat: #3b82f6;
+  --macro-fiber: #84cc16;
+  --water: #0ea5e9;
+  /* Semantic states (UI-SPEC §7). Intake feedback never uses safety colors. */
+  --safety: #b42318;
+  --safety-surface: #fef3f2;
+  --caution: #b54708;
+  --caution-surface: #fffaeb;
+  --success: #15803d;
+  --success-surface: #eef8df;
 
   /* shadcn mapping (§44.13 token table) */
   --background: var(--warm-ivory);
@@ -42,19 +54,19 @@
   --primary-foreground: var(--white);
   --secondary: var(--sage);
   --secondary-foreground: var(--forest-green);
-  --muted: #f2f0e9;
+  --muted: #eff1eb;
   --muted-foreground: var(--muted-grey-text);
   --accent: var(--sage);
   --accent-foreground: var(--forest-green);
   --destructive: var(--safety);
-  --border: #e8e5dc;
-  --input: #dcd8cd;
+  --border: #e8eae4;
+  --input: #d9ddd4;
   --ring: var(--forest-green);
-  --radius: 0.875rem;
+  --radius: 1rem;
 
   /* Elevation — flat by default; shadows only for real elevation (§44.4) */
-  --elev-card: 0 1px 2px rgb(41 47 43 / 0.04);
-  --elev-float: 0 10px 30px -10px rgb(41 47 43 / 0.22), 0 2px 8px -2px rgb(41 47 43 / 0.08);
+  --elev-card: 0 1px 2px rgb(20 24 20 / 0.03), 0 4px 16px -6px rgb(20 24 20 / 0.06);
+  --elev-float: 0 10px 30px -10px rgb(20 24 20 / 0.22), 0 2px 8px -2px rgb(20 24 20 / 0.08);
 
   /* Layout (UI-SPEC §2): screen gutter 20 px */
   --gutter: 1.25rem;
@@ -62,7 +74,6 @@
 
 @theme inline {
   --font-sans: var(--font-inter), var(--font-bengali), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), var(--font-bengali), ui-serif, Georgia, serif;
   --font-bengali: var(--font-bengali);
 
   --color-background: var(--background);
@@ -89,6 +100,21 @@
   --color-ivory: var(--warm-ivory);
   --color-terracotta: var(--terracotta);
   --color-terracotta-text: var(--terracotta-text);
+  --color-coral-tint: var(--coral-tint);
+  --color-amber-tint: var(--amber-tint);
+  --color-amber-text: var(--amber-text);
+  --color-sage-strong: var(--sage-strong);
+  --color-lime: var(--lime);
+  --color-lime-card: var(--lime-card);
+  --color-lime-text: var(--lime-text);
+  --color-sky-tint: var(--sky-tint);
+  --color-sky-text: var(--sky-text);
+  --color-protein: var(--macro-protein);
+  --color-carbs: var(--macro-carbs);
+  --color-fat: var(--macro-fat);
+  --color-fiber: var(--macro-fiber);
+  --color-water: var(--water);
+  --color-primary-hover: var(--primary-hover);
   --color-charcoal: var(--charcoal);
   --color-muted-grey: var(--muted-grey);
   --color-safety: var(--safety);
@@ -98,13 +124,13 @@
   --color-success: var(--success);
   --color-success-surface: var(--success-surface);
 
-  /* Radii (§44.4): inputs 10–12, buttons 12–14, cards 12–16 */
+  /* Radii (§44.4): soft and round — inputs 16, tiles 16, cards 24, buttons pill */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 0.875rem;
-  --radius-xl: 0.875rem;
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
 
   --shadow-card: var(--elev-card);
   --shadow-float: var(--elev-float);
@@ -131,15 +157,14 @@
 }
 
 /*
- * Type scale (UI-SPEC §3). Inter for UI, Newsreader for display titles only.
+ * Type scale (UI-SPEC §3). Inter throughout; Noto Sans Bengali for Bangla.
  * size / line-height / weight / tracking
  */
 @utility text-display {
-  font-family: var(--font-serif);
-  font-size: 1.875rem; /* 30 */
-  line-height: 2.25rem;
-  font-weight: 500;
-  letter-spacing: -0.015em;
+  font-size: 1.75rem; /* 28 */
+  line-height: 2.125rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 @utility text-title {
   font-size: 1.25rem; /* 20 */

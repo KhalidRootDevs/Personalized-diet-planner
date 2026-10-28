@@ -45,7 +45,7 @@ function Checkout() {
     return (
       <div className="px-gutter flex flex-1 flex-col pt-safe">
         <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
-          <span className="grid size-16 place-items-center rounded-[20px] bg-sage text-forest">
+          <span className="grid size-20 place-items-center rounded-full bg-lime text-charcoal ring-8 ring-sage">
             <CircleCheck className="size-8" aria-hidden />
           </span>
           <h1 className="text-display mt-6">You&apos;re on {plan.name}</h1>
@@ -80,17 +80,17 @@ function Checkout() {
     <>
       <PageHeader back="/subscription" title="Checkout" />
       <PageBody className="flex-1">
-        <Surface padding="lg">
-          <p className="text-overline text-muted-foreground">Order summary</p>
+        <Surface tone="lime" padding="lg">
+          <p className="text-overline text-lime-text">Order summary</p>
           <div className="mt-2 flex items-baseline justify-between gap-3">
             <p className="text-title">{plan.name}</p>
             <p className="tabular text-headline">
               {fmt.bdt(price)}
-              <span className="text-caption font-normal text-muted-foreground">/{cycle === "monthly" ? "month" : "year"}</span>
+              <span className="text-caption font-normal text-charcoal/70">/{cycle === "monthly" ? "month" : "year"}</span>
             </p>
           </div>
-          <p className="text-callout text-muted-foreground">{plan.tagline}</p>
-          <dl className="mt-4 divide-y divide-border/70 border-t border-border/70">
+          <p className="text-callout text-charcoal/75">{plan.tagline}</p>
+          <dl className="mt-4 divide-y divide-charcoal/10 rounded-xl bg-white/80 px-3">
             <KeyValue label="Due today" value={trial ? "৳0" : fmt.bdt(price)} />
             {trial && <KeyValue label="First charge" value={formatDay(chargeDate)} />}
             <KeyValue label="Renews" value={`${cycle === "monthly" ? "Monthly" : "Yearly"}, cancel any time`} />

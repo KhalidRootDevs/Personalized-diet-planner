@@ -91,12 +91,12 @@ function Chat() {
   return (
     <div className="flex flex-1 flex-col">
       <div className="px-gutter flex-1 space-y-4 pt-2 pb-4" aria-live="polite">
-        <div className="flex gap-3 rounded-2xl bg-sage/70 p-4">
+        <div className="flex gap-3 rounded-2xl bg-lime-card p-4">
           <IconTile tone="white" size="sm">
             <Leaf />
           </IconTile>
           <div className="min-w-0">
-            <p className="text-callout font-semibold text-forest">Hi {self.name.split(" ")[0]}</p>
+            <p className="text-callout font-semibold text-charcoal">Hi {self.name.split(" ")[0]}</p>
             <p className="text-callout mt-0.5 text-charcoal/80">
               I answer from your plan, your food log and our verified food data. I can&apos;t diagnose conditions or advise on medicines. In an emergency, call 999.
             </p>
@@ -107,7 +107,7 @@ function Chat() {
           if (m.role === "user")
             return (
               <div key={m.id} className="flex justify-end">
-                <p className="text-body max-w-[82%] rounded-[18px] rounded-br-md bg-forest px-4 py-2.5 whitespace-pre-line text-primary-foreground">{m.text}</p>
+                <p className="text-body max-w-[82%] rounded-[20px] rounded-br-md bg-charcoal px-4 py-2.5 whitespace-pre-line text-white">{m.text}</p>
               </div>
             )
           if (m.sources?.includes(EMERGENCY_SOURCE))
@@ -118,7 +118,7 @@ function Chat() {
             )
           return (
             <div key={m.id} className="max-w-[88%] space-y-2">
-              <p className={cn("text-body rounded-[18px] rounded-bl-md border border-border/80 bg-card px-4 py-3 whitespace-pre-line", m.sources?.includes(REFERRAL_SOURCE) && "border-forest/30")}>{m.text}</p>
+              <p className={cn("text-body rounded-[18px] rounded-bl-md bg-card shadow-card px-4 py-3 whitespace-pre-line", m.sources?.includes(REFERRAL_SOURCE) && "border-forest/30")}>{m.text}</p>
               {m.sources && (
                 <div className="flex flex-wrap items-center gap-1.5 pl-1">
                   <span className="text-caption text-muted-foreground">Based on</span>
@@ -133,7 +133,7 @@ function Chat() {
           )
         })}
         {typing && (
-          <div className="inline-flex items-center gap-1.5 rounded-[18px] rounded-bl-md border border-border/80 bg-card px-4 py-3" role="status" aria-label="Checking your plan">
+          <div className="inline-flex items-center gap-1.5 rounded-[18px] rounded-bl-md bg-card shadow-card px-4 py-3" role="status" aria-label="Checking your plan">
             {[0, 1, 2].map((i) => (
               <span key={i} className="size-1.5 animate-pulse rounded-full bg-muted-grey" style={{ animationDelay: `${i * 150}ms` }} />
             ))}
@@ -146,7 +146,7 @@ function Chat() {
         {messages.length === 0 && (
           <div className="no-scrollbar px-gutter flex gap-2 overflow-x-auto pt-3" aria-label="Suggested questions">
             {STARTERS.map((s) => (
-              <button key={s} onClick={() => send(s)} className="text-callout h-9 shrink-0 rounded-full border border-border/80 bg-card px-3.5 whitespace-nowrap transition-colors hover:bg-muted">
+              <button key={s} onClick={() => send(s)} className="text-callout h-9 shrink-0 rounded-full bg-card shadow-card px-3.5 whitespace-nowrap transition-colors hover:bg-muted">
                 {s}
               </button>
             ))}
@@ -164,9 +164,9 @@ function Chat() {
             onChange={(e) => setText(e.target.value)}
             placeholder="Ask about your meals…"
             aria-label="Message"
-            className="h-12 min-w-0 flex-1 rounded-full border border-input bg-card px-5 text-[15px] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="h-12 min-w-0 flex-1 rounded-full bg-card px-5 shadow-card text-[15px] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
-          <Button type="submit" size="icon" className="size-12 rounded-full" aria-label="Send" disabled={!text.trim() || typing}>
+          <Button type="submit" size="icon" className="size-12 rounded-full bg-lime text-charcoal hover:bg-lime/85" aria-label="Send" disabled={!text.trim() || typing}>
             <ArrowUp className="size-5" />
           </Button>
         </form>

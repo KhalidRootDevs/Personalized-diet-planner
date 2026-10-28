@@ -62,7 +62,7 @@ export function ItemEditor({
   }
 
   return (
-    <div className={cn(variant === "card" ? "rounded-2xl border border-border/80 bg-card p-4" : "px-4 py-4", lowId && (variant === "card" ? "border-caution/40 bg-caution-surface/30" : "bg-caution-surface/30"))}>
+    <div className={cn(variant === "card" ? "rounded-2xl bg-card shadow-card p-4" : "px-4 py-4", lowId && (variant === "card" ? "border-caution/40 bg-caution-surface/30" : "bg-caution-surface/30"))}>
       <div className="flex items-start gap-3">
         <FoodTile foodId={item.foodId} name={item.displayName} />
         <div className="min-w-0 flex-1 pt-0.5">

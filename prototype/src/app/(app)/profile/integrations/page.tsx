@@ -49,7 +49,7 @@ export default function IntegrationsPage() {
         {groups.map((g) => (
           <Section key={g.phase} title={g.title} badge={<PhaseBadge phase={g.phase} />}>
             <PremiumGate feature={g.phase === 2 ? "google_calendar" : "wearables"} compact>
-              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
                 {INTEGRATIONS.filter((i) => i.phase === g.phase).map((i) => {
                   const on = integrations[i.id]
                   return (

@@ -45,19 +45,19 @@ export default function LoginPage() {
         }}
       />
       <OrDivider />
-      <form onSubmit={submit} className="space-y-5" noValidate>
+      <form onSubmit={submit} className="space-y-4" noValidate>
         <Field label="Email" htmlFor="email">
           <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
         </Field>
         <Field label="Password" htmlFor="password" error={error}>
           <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
-        <div className="flex justify-end">
+        <div className="-mt-1 flex justify-end">
           <Link href="/forgot-password" className="text-callout font-semibold text-forest hover:underline underline-offset-4">
             Forgot password?
           </Link>
         </div>
-        <Button type="submit" size="lg" className="mt-2 w-full">
+        <Button type="submit" size="lg" className="w-full">
           Sign in
         </Button>
         <p className="text-caption text-center text-muted-foreground">Prototype: any email and password sign you in to the demo account.</p>

@@ -1,6 +1,7 @@
 "use client"
 
-import { Baby, Hand, HeartHandshake, Milk, Ruler, ShieldAlert, Siren, Utensils } from "lucide-react"
+import Link from "next/link"
+import { Baby, ChevronRight, Clock, Hand, HeartHandshake, Milk, Ruler, ShieldAlert, Siren, Soup, Utensils } from "lucide-react"
 import { RECIPES } from "@/lib/data/recipes"
 import { ageInMonths } from "@/lib/nutrition"
 import { useApp } from "@/lib/store"
@@ -9,7 +10,7 @@ import type { Profile } from "@/lib/types"
 import { FeatureBadge } from "@/components/app/badges"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
 import { IconTile, ListGroup, ListRow, Section, Surface } from "@/components/app/page"
-import { DataIcon } from "@/components/app/icon"
+import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { ProfileAvatar } from "@/components/app/profile-switcher"
 import { RESPONSIVE_FEEDING, SAFETY_ESSENTIALS, feedingStage } from "./feeding"
 
@@ -33,24 +34,41 @@ export function ChildHome({ profile }: { profile: Profile }) {
 
   return (
     <div className="px-gutter space-y-7 pt-1 pb-8">
-      <Surface tone="sage" padding="lg">
-        <div className="flex items-center gap-3">
-          <ProfileAvatar profile={{ ...profile, avatarColor: "forest" }} size="lg" />
+      <Surface tone="sage" padding="lg" className="relative overflow-hidden">
+        <span className="absolute -top-14 -right-12 size-44 rounded-full bg-lime-card/60" aria-hidden />
+        <div className="relative flex items-center gap-3">
+          <span className="rounded-full bg-white p-1 shadow-card">
+            <ProfileAvatar profile={{ ...profile, avatarColor: "sage" }} size="lg" />
+          </span>
           <div className="min-w-0 flex-1">
-            <p className="text-caption flex items-center gap-1.5 text-forest">
+            <p className="text-caption flex flex-wrap items-center gap-1.5 font-medium text-lime-text">
               <Baby className="size-4" /> {profile.name} · {months} months <FeatureBadge feature="baby_module" />
             </p>
-            <p className="mt-0.5 font-serif text-[24px] leading-7 font-medium">{stage.title}</p>
+            <p className="text-title mt-0.5">{stage.title}</p>
           </div>
         </div>
-        <p className="text-callout mt-4 text-charcoal/90">{stage.focus}</p>
-        <dl className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-card/85 px-3 py-2.5">
-            <dt className="text-caption text-muted-foreground">Feeding opportunities</dt>
+        {stage.solidsPlanned && recipes.length > 0 && (
+          <div className="relative mt-4 flex items-center">
+            <div className="flex -space-x-3">
+              {recipes.slice(0, 4).map((r) => (
+                <RecipeThumb key={r.id} recipe={r} size="sm" className="ring-[3px] ring-sage" />
+              ))}
+            </div>
+            <p className="text-caption ml-3 text-charcoal/80">First foods for this stage</p>
+          </div>
+        )}
+        <p className="text-callout relative mt-4 text-charcoal/90">{stage.focus}</p>
+        <dl className="relative mt-4 grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-white/85 px-3 py-2.5">
+            <dt className="text-caption flex items-center gap-1 text-muted-foreground">
+              <Clock className="size-3.5 text-water" aria-hidden /> Feeding opportunities
+            </dt>
             <dd className="text-callout mt-0.5 font-medium">{stage.opportunities}</dd>
           </div>
-          <div className="rounded-xl bg-card/85 px-3 py-2.5">
-            <dt className="text-caption text-muted-foreground">Textures</dt>
+          <div className="rounded-xl bg-white/85 px-3 py-2.5">
+            <dt className="text-caption flex items-center gap-1 text-muted-foreground">
+              <Soup className="size-3.5 text-terracotta" aria-hidden /> Textures
+            </dt>
             <dd className="text-callout mt-0.5 font-medium">{stage.textures}</dd>
           </div>
         </dl>
@@ -61,19 +79,35 @@ export function ChildHome({ profile }: { profile: Profile }) {
       </CautionNote>
 
       <Section title="Today's feeding plan" description="Offer small amounts and follow your baby's cues. There is no amount your baby has to finish.">
-        <ListGroup>
-          <ListRow icon={<Milk />} title={milk} description="Continue your baby's usual milk feeds, on demand" />
+        <ol className="space-y-3">
+          <li className="flex items-center gap-3.5 rounded-2xl bg-card p-3 pr-4 shadow-card">
+            <IconTile tone="sky" className="size-14 [&_svg]:size-6">
+              <Milk />
+            </IconTile>
+            <div className="min-w-0 flex-1">
+              <p className="text-body font-semibold">{milk}</p>
+              <p className="text-caption mt-0.5 text-muted-foreground">Continue your baby&apos;s usual milk feeds, on demand</p>
+            </div>
+          </li>
           {stage.solidsPlanned &&
             recipes.slice(0, months < 7 ? 2 : 3).map((r, i) => (
-              <ListRow
-                key={r.id}
-                href={`/recipes/${r.id}`}
-                icon={<DataIcon name={r.icon} />}
-                title={r.name}
-                description={`Feeding opportunity ${i + 1} · ${r.texture}`}
-              />
+              <li key={r.id}>
+                <Link href={`/recipes/${r.id}`} className="flex items-center gap-3.5 rounded-2xl bg-card p-3 pr-4 shadow-card transition-colors hover:bg-muted/40">
+                  <RecipeThumb recipe={r} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-caption text-muted-foreground">Feeding opportunity {i + 1}</p>
+                    <p className="text-body font-semibold">{r.name}</p>
+                    {r.texture && (
+                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-sage px-2 py-0.5 text-[11px] font-medium text-lime-text">
+                        <Soup className="size-3" aria-hidden /> {r.texture}
+                      </span>
+                    )}
+                  </div>
+                  <ChevronRight className="size-[18px] shrink-0 text-muted-grey" aria-hidden />
+                </Link>
+              </li>
             ))}
-        </ListGroup>
+        </ol>
         {!stage.solidsPlanned && (
           <InfoNote title="No solid foods yet">Most babies are ready for first foods around 6 months, when they can sit with support and show interest in food. Every baby is different.</InfoNote>
         )}
@@ -83,7 +117,7 @@ export function ChildHome({ profile }: { profile: Profile }) {
         <div className="grid grid-cols-2 gap-3">
           {RESPONSIVE_FEEDING.map((c, i) => (
             <Surface key={c.cue}>
-              <IconTile size="sm" tone={i === 0 ? "sage" : "muted"}>
+              <IconTile size="sm" tone={i === 0 ? "amber" : "sky"}>
                 {i === 0 ? <Hand /> : <HeartHandshake />}
               </IconTile>
               <p className="text-body mt-3 font-medium">{c.cue}</p>
@@ -95,10 +129,11 @@ export function ChildHome({ profile }: { profile: Profile }) {
 
       <Section title="Tracking">
         <ListGroup>
-          <ListRow href="/child/foods" icon={<Utensils />} title="Food introduction" description={`${introduced.length} foods so far${lastIntro ? ` · latest: ${lastIntro.foodName}` : ""}`} />
+          <ListRow href="/child/foods" icon={<Utensils />} iconTone="lime" title="Food introduction" description={`${introduced.length} foods so far${lastIntro ? ` · latest: ${lastIntro.foodName}` : ""}`} />
           <ListRow
             href="/child/growth"
             icon={<Ruler />}
+            iconTone="sky"
             title="Growth measurements"
             description={latestGrowth ? `${latestGrowth.weightKg ?? "–"} kg · ${latestGrowth.lengthCm ?? "–"} cm on ${formatDay(latestGrowth.date, { day: "numeric", month: "short" })}` : "No measurements yet"}
           />

@@ -18,7 +18,7 @@ const BY_CATEGORY: Record<Food["category"], Pick<Recipe, "swatch" | "icon">> = {
   sweet: { swatch: "terracotta", icon: "Utensils" },
 }
 
-export function FoodTile({ foodId, name, size = "sm", className }: { foodId: string; name?: string; size?: "sm" | "md" | "lg"; className?: string }) {
+export function FoodTile({ foodId, name, size = "sm", className }: { foodId: string; name?: string; size?: "xs" | "sm" | "md" | "lg"; className?: string }) {
   const food = FOOD_MAP[foodId]
   const look = food ? BY_CATEGORY[food.category] : { swatch: "ivory" as const, icon: "Utensils" }
   return <RecipeThumb recipe={{ ...look, name: name ?? food?.name ?? "Food" }} size={size} className={className} />

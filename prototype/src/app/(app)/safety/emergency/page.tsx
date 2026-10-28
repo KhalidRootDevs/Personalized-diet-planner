@@ -38,7 +38,7 @@ export default function EmergencyPage() {
           </IconTile>
           <p className="text-title mt-4 text-safety">If this is an emergency, get help now</p>
           <p className="text-callout mt-1.5 text-charcoal">NutriPlan cannot assess or manage medical emergencies. Call emergency services or go to the nearest hospital.</p>
-          <a href="tel:999" className="mt-5 flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-safety text-base font-semibold text-white transition-colors hover:bg-[#7a261f]">
+          <a href="tel:999" className="mt-5 flex h-[54px] items-center justify-center gap-2 rounded-full bg-safety text-base font-semibold text-white transition-colors hover:bg-[#912018]">
             <Phone className="size-5" /> Call 999
           </a>
           <p className="text-caption mt-2 text-center text-charcoal/75">National emergency number in Bangladesh</p>
@@ -63,7 +63,7 @@ export default function EmergencyPage() {
             <ol className="mt-4 space-y-3">
               {CHOKING_STEPS.map((step, i) => (
                 <li key={step} className="text-callout flex gap-3">
-                  <span className="tabular grid size-6 shrink-0 place-items-center rounded-full bg-forest text-xs font-semibold text-ivory">{i + 1}</span>
+                  <span className="tabular grid size-6 shrink-0 place-items-center rounded-full bg-lime text-xs font-semibold text-charcoal">{i + 1}</span>
                   <span className="pt-0.5">{step}</span>
                 </li>
               ))}

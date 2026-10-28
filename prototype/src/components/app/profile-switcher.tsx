@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import type { Profile } from "@/lib/types"
 
-export function ProfileAvatar({ profile, size = "md" }: { profile: Pick<Profile, "name" | "avatarColor">; size?: "sm" | "md" | "lg" }) {
-  const color = { sage: "bg-sage text-forest", terracotta: "bg-[#f3e2d9] text-terracotta-text", forest: "bg-forest text-ivory" }[profile.avatarColor]
-  const dims = { sm: "size-7 text-xs", md: "size-9 text-sm", lg: "size-14 text-lg" }[size]
-  return <span className={cn("grid shrink-0 place-items-center rounded-full font-semibold", color, dims)}>{profile.name.slice(0, 1).toUpperCase()}</span>
+export function ProfileAvatar({ profile, size = "md", ring }: { profile: Pick<Profile, "name" | "avatarColor">; size?: "sm" | "md" | "lg" | "xl"; ring?: boolean }) {
+  const color = { sage: "bg-lime text-charcoal", terracotta: "bg-coral-tint text-terracotta-text", forest: "bg-forest text-white" }[profile.avatarColor]
+  const dims = { sm: "size-7 text-xs", md: "size-11 text-base", lg: "size-16 text-xl", xl: "size-20 text-2xl" }[size]
+  return <span className={cn("grid shrink-0 place-items-center rounded-full font-semibold", color, dims, ring && "ring-4 ring-card")}>{profile.name.slice(0, 1).toUpperCase()}</span>
 }
 
 export function profileAgeLabel(p: Profile): string {
@@ -34,10 +34,11 @@ export function ProfileSwitcher() {
     )
   return (
     <Sheet>
-      <SheetTrigger className="flex h-10 items-center gap-1.5 rounded-full border border-border/80 bg-card pr-2.5 pl-1.5" aria-label={`Viewing ${active.name}. Switch profile`}>
-        <ProfileAvatar profile={active} size="sm" />
-        <span className="max-w-20 truncate text-sm font-medium">{active.name}</span>
-        <ChevronDown className="size-4 text-muted-foreground" />
+      <SheetTrigger className="relative shrink-0 rounded-full" aria-label={`Viewing ${active.name}. Switch profile`}>
+        <ProfileAvatar profile={active} />
+        <span className="absolute -right-0.5 -bottom-0.5 grid size-[18px] place-items-center rounded-full bg-card text-charcoal shadow-card" aria-hidden>
+          <ChevronDown className="size-3" strokeWidth={2.5} />
+        </span>
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-w-[440px] rounded-t-3xl pb-safe">
         <SheetHeader>
@@ -46,7 +47,7 @@ export function ProfileSwitcher() {
         <ul className="space-y-2 px-4 pb-6">
           {profiles.map((p) => (
             <li key={p.id}>
-              <button onClick={() => setActive(p.id)} className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left", p.id === active.id && "border-forest bg-sage/40")}>
+              <button onClick={() => setActive(p.id)} className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left", p.id === active.id && "border-forest bg-sage")}>
                 <ProfileAvatar profile={p} />
                 <div className="flex-1">
                   <p className="font-medium">{p.name}</p>

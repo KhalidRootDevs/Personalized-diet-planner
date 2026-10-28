@@ -79,14 +79,14 @@ When uncertainty is too high: ask, offer a safer alternative, or decline.
 
 ## Visual design (PRD §44 — read before building any UI)
 
-- **Feel:** calm, credible, food-first, personal; an editorial wellness look, **not** an AI demo or futuristic dashboard.
-- **Palette tokens:** primary Forest Green `#244C3A` · surface Sage `#DCE7D8` · canvas Warm Ivory `#FAF8F2` · card White `#FFFFFF` · accent Terracotta `#C8795B` (sparingly, decorative only) · text Charcoal `#292F2B` · Muted Grey `#7C837D` (large text, icons and borders only). Small muted text uses the proposed `#616762`, because Muted Grey and Terracotta fail AA for small text (§44.2.2). Semantic state colors are not yet defined; don't invent them (§43.7).
-- **Type:** Inter or Geist. Newsreader only for occasional large titles. Tabular numerals for nutrition numbers. A Bengali-capable font is required for Bangla (§44.3).
-- **Shape:** 4 px spacing base (8/16/24). Radii: cards 12–16, buttons 12–14, inputs 10–12. Flat surfaces with subtle borders; shadows only for real elevation.
-- **Mobile navigation:** five tabs (Home, Plan, Food Log, Recipes, Profile). Shopping List sits in Plan, Progress in Home/Food Log, Family in Profile, and the AI Coach is a contextual entry point, not a chat-first tab (§44.17). Lucide icons, always with labels.
+- **Feel:** credible, food-first, personal; a bright, photo-led, colorful wellness look (real food photos, soft round cards, bold numbers), **not** an AI demo or futuristic dashboard.
+- **Palette (Lime Fresh, §44.2):** primary green `#15803D` (hover `#166534`) · lime highlight `#9BD14A` (card `#C5E98A`; never text) · tint `#EEF8DF` · canvas `#F4F5F0` · card White · accent orange `#F97316` (decorative; text `#C2410C`) · text `#141814` · secondary text `#5B6559` · icon grey `#8F978C`. Data colors for nutrient bars/charts only: protein `#22C55E`, carbs `#F59E0B`, fat `#3B82F6`, fiber `#84CC16`, water `#0EA5E9`. Semantic safety/caution/success colors are proposed in §44.2 and await confirmation (§43.7); don't invent others. Visual references: `design-ref/`.
+- **Type:** Inter throughout (bold, tight-tracked page titles; no serif). Tabular numerals for nutrition numbers. A Bengali-capable font is required for Bangla (§44.3).
+- **Shape:** 4 px spacing base (8/16/24). Radii: cards 24, inputs and tiles 16, buttons pill; icon tiles and dish photos are round. White cards with a very soft shadow instead of borders.
+- **Mobile navigation:** five tabs (Home, Plan, Food Log, Recipes, Profile); Food Log is the raised round lime button in the middle. Shopping List sits in Plan, Progress in Home/Food Log, Family in Profile, and the AI Coach is a contextual entry point, not a chat-first tab (§44.17). Lucide icons, always with labels.
 - **Home:** greeting → daily summary → meal timeline → one next step → secondary details. One primary action, "+ Log a meal".
 - **Never:** purple/blue AI gradients, glassmorphism, competing primary actions, overloaded dashboards, streaks, food scores, confetti, moralizing red warnings, or animated numbers that suggest precision. Safety alerts (allergens, infant safety, emergencies) still get a clear, prominent alert state.
-- **Child profiles:** softer Sage presentation, caregiver language, milestones and textures instead of calories, no gamification.
+- **Child profiles:** softer light-tint presentation, caregiver language, milestones and textures instead of calories, no gamification.
 - Respect reduced motion. Never rely on color alone. Charts carry labels, units and text equivalents.
 
 ## Proposed tech stack (PRD §22 — suggested, not mandatory)
@@ -112,7 +112,7 @@ REST API is versioned under `/api/v1/...` and grouped by module (§24). All endp
 - §33's development phases 1–6 describe how **Release Phase 1** is built and launched.
 - Clinically gated features ship only for scenarios that have passed clinical validation, which is never skipped to meet a date. Safety features are never deferred later than the feature they protect, and never paywalled.
 - "Done" means the §37 and §41.11 acceptance criteria pass, not that a plausible diet chart is produced.
-- **Open decisions (§43.7). Ask the user; don't pick one yourself:** which monetization tier includes the food journal, AI coach and child profiles; the Phase 1 reminder delivery channel on web; whether the baby module is part of the Phase 1 launch; design token approvals (accessible grey/terracotta variants, semantic colors, Bengali font).
+- **Open decisions (§43.7). Ask the user; don't pick one yourself:** which monetization tier includes the food journal, AI coach and child profiles; the Phase 1 reminder delivery channel on web; whether the baby module is part of the Phase 1 launch; design tokens still open (semantic state colors, Bengali font).
 
 **Cross-cutting models (use these, don't reinvent them):** profile ownership and consent (§5.10: primary profile plus dependent child profiles in Phase 1, other adults in Phase 2); unified meal status, meaning schedule status plus outcome (§14.6); one Weekly Review screen that grows by phase (§17.6); infant food journaling feeds the introduction tracker (§12.8).
 

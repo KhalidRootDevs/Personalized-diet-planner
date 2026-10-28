@@ -79,7 +79,7 @@ export default function HabitsPage() {
                   return (
                     <Surface key={h.id}>
                       <div className="flex items-start gap-3">
-                        <IconTile>
+                        <IconTile tone="lime">
                           <DataIcon name={h.icon} />
                         </IconTile>
                         <div className="min-w-0 flex-1">
@@ -115,7 +115,7 @@ export default function HabitsPage() {
                               <span
                                 className={cn(
                                   "grid size-8 place-items-center rounded-full border-[1.5px] transition-colors",
-                                  on ? "border-forest bg-forest text-ivory" : "border-input bg-card",
+                                  on ? "border-lime bg-lime text-charcoal" : "border-input bg-card",
                                   isToday && "ring-2 ring-forest/25 ring-offset-2 ring-offset-card",
                                 )}
                               >
@@ -136,7 +136,7 @@ export default function HabitsPage() {
           )}
 
           <Section title="This week">
-            <Surface tone="muted">
+            <Surface tone="sage">
               <p className="text-callout">
                 {habits.length ? (
                   <>
@@ -161,8 +161,8 @@ export default function HabitsPage() {
             <p className="text-overline text-muted-foreground">Suggestions</p>
             <div className="-mt-3 space-y-2">
               {SUGGESTIONS.filter((s) => !habits.some((h) => h.title === s.title)).map((s) => (
-                <button key={s.title} onClick={() => create(s)} className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl border border-border/80 bg-card px-4 py-3 text-left transition-colors hover:bg-muted/50">
-                  <IconTile size="sm">
+                <button key={s.title} onClick={() => create(s)} className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-card shadow-card px-4 py-3 text-left transition-colors hover:bg-muted/50">
+                  <IconTile size="sm" tone="amber">
                     <DataIcon name={s.icon} />
                   </IconTile>
                   <span className="min-w-0 flex-1">

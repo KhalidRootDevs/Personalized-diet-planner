@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
+import { MacroTiles } from "@/components/log/macro-tiles"
 import { EstimateNote } from "@/components/app/nutrition"
 import { ItemEditor } from "@/components/log/item-editor"
 import { FoodPickerSheet } from "@/components/log/food-picker"
 import { PhotoPlaceholder } from "@/components/log/entry-card"
 import { StickyAction } from "@/components/log/input-steps"
-import { Section, StatTile, Surface } from "@/components/app/page"
+import { Section, Surface } from "@/components/app/page"
 import { ALLERGEN_LABELS } from "@/lib/data/foods"
 import { MEAL_LABEL } from "@/lib/planning"
 import { formatTime } from "@/lib/date"
@@ -114,9 +115,14 @@ export function ReviewStep({
     <div className="flex flex-1 flex-col">
       <div className="px-gutter flex-1 space-y-7 pt-3 pb-8">
         {hasPhoto && (
-          <Surface padding="sm" className="flex items-center gap-4">
-            <PhotoPlaceholder src={photoUrl} className="size-[72px] shrink-0 rounded-xl" />
-            <div className="min-w-0">
+          <Surface padding="none" className="overflow-hidden">
+            <div className="relative">
+              <PhotoPlaceholder src={photoUrl} className="h-48 w-full rounded-none" />
+              <span className="text-caption absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-card/95 px-2.5 py-1 font-semibold">
+                {items.length} food{items.length === 1 ? "" : "s"} suggested · estimate
+              </span>
+            </div>
+            <div className="p-4">
               <p className="text-headline">Check what we found</p>
               <p className="text-caption mt-0.5 text-muted-foreground">Suggestions from your photo. Fix anything that&apos;s wrong.</p>
             </div>
@@ -146,7 +152,7 @@ export function ReviewStep({
         )}
 
         <Section title={`Foods (${items.length})`} description={aiProposed ? "Food and portion confidence are shown separately." : undefined}>
-          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
             {items.map((it, idx) => (
               <ItemEditor
                 key={it.id}
@@ -246,12 +252,7 @@ export function ReviewStep({
               <p className="tabular text-caption mt-0.5 text-muted-foreground">
                 Likely {Math.round(n.energyKcal * (1 - u))}–{Math.round(n.energyKcal * (1 + u))} kcal
               </p>
-              <div className="mt-4 grid grid-cols-4 gap-2">
-                <StatTile label="Protein" value={`~${Math.round(n.proteinG)}`} unit="g" className="px-2.5" />
-                <StatTile label="Carbs" value={`~${Math.round(n.carbsG)}`} unit="g" className="px-2.5" />
-                <StatTile label="Fat" value={`~${Math.round(n.fatG)}`} unit="g" className="px-2.5" />
-                <StatTile label="Fiber" value={`~${Math.round(n.fiberG)}`} unit="g" className="px-2.5" />
-              </div>
+              <MacroTiles className="mt-4" values={n} />
               <div className="mt-4 border-t border-border/70 pt-3">
                 <EstimateNote>Calculated from our food database after you confirm. The range reflects portion uncertainty.</EstimateNote>
               </div>
@@ -306,7 +307,7 @@ function Chips<T extends string>({ options, value, onChange }: { options: { id: 
           role="radio"
           aria-checked={value === o.id}
           onClick={() => onChange(o.id)}
-          className={cn("text-callout h-9 rounded-full border px-4 font-medium transition-colors", value === o.id ? "border-forest bg-forest text-primary-foreground" : "border-border/80 bg-card text-charcoal hover:bg-muted")}
+          className={cn("text-callout h-9 rounded-full border px-4 font-medium transition-colors", value === o.id ? "border-lime bg-lime text-charcoal" : "border-border/80 bg-card text-charcoal hover:bg-muted")}
         >
           {o.label}
         </button>

@@ -1,7 +1,7 @@
 // NutriPlan prototype service worker.
 // Network-first for pages (fresh content, offline fallback to cache),
 // cache-first for static build assets and icons.
-const VERSION = "nutriplan-v1"
+const VERSION = "nutriplan-v3"
 const PRECACHE = ["/", "/home", "/plan", "/log", "/recipes", "/profile", "/welcome", "/offline.html", "/icons/icon-192.png", "/icons/icon-512.png"]
 
 self.addEventListener("install", (event) => {

@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { PhaseBadge } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
-import { FlowHeader, IconTile, ListGroup, ListRow, StickyFooter, Surface } from "@/components/app/page"
+import { FlowHeader, IconTile, ListGroup, ListRow, StickyFooter, Surface, type IconTone } from "@/components/app/page"
+import { SCENE_PHOTO } from "@/lib/data/photos"
 import { BarcodeStep, SavedStep, SearchStep, TextStep, VoiceStep } from "@/components/log/input-steps"
 import { ReviewStep, TEXTURES, type ChildInfo, type Oil } from "@/components/log/review-step"
 import { ResultStep } from "@/components/log/result-step"
@@ -122,7 +123,7 @@ export function LogFlow() {
   const choosePhoto = (sample?: boolean) => {
     afterConsent.current = sample ? "sample" : "file"
     if (!photoConsent) return go("consent")
-    if (sample) startPhoto()
+    if (sample) startPhoto(samplePhoto(mealType))
     else fileRef.current?.click()
   }
 
@@ -231,7 +232,7 @@ export function LogFlow() {
                     onClick={() => setMealType(t)}
                     className={cn(
                       "text-callout h-9 shrink-0 rounded-full border px-4 font-medium transition-colors",
-                      mealType === t ? "border-forest bg-forest text-primary-foreground" : "border-border/80 bg-card text-charcoal hover:bg-muted",
+                      mealType === t ? "border-lime bg-lime text-charcoal" : "border-transparent bg-card text-charcoal shadow-card hover:bg-muted",
                     )}
                   >
                     {MEAL_LABEL[t]}
@@ -263,16 +264,19 @@ export function LogFlow() {
           )}
 
           {!isChild && (
-            <button onClick={() => choosePhoto()} className="flex w-full items-center gap-4 rounded-2xl bg-forest p-5 text-left text-primary-foreground transition-colors hover:bg-[#1d3f30]">
-              <span className="grid size-14 shrink-0 place-items-center rounded-[16px] bg-white/12">
-                <Camera className="size-7" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="text-headline flex items-center gap-2">
-                  Take or upload a photo <PhaseBadge phase={1} className="bg-white/20 text-primary-foreground" />
+            <button onClick={() => choosePhoto()} className="relative flex w-full items-center gap-3 overflow-hidden rounded-2xl bg-lime-card p-5 pr-2 text-left text-charcoal transition-colors hover:bg-lime">
+              <span className="relative z-10 min-w-0 flex-1">
+                <span className="text-caption inline-flex items-center gap-1.5 rounded-full bg-white/65 px-2.5 py-1 font-medium">
+                  <Camera className="size-3.5" aria-hidden /> Photo logging <PhaseBadge phase={1} className="bg-white/70" />
                 </span>
-                <span className="text-callout mt-0.5 block text-primary-foreground/80">We suggest the foods and portions — you confirm.</span>
+                <span className="text-title mt-3 block leading-tight">Take or upload a photo</span>
+                <span className="text-callout mt-1 block text-charcoal/75">We suggest the foods and portions — you confirm.</span>
+                <span className="text-callout mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-charcoal px-4 font-semibold text-white">
+                  <Camera className="size-4" aria-hidden /> Open camera
+                </span>
               </span>
+              {/* eslint-disable-next-line @next/next/no-img-element -- static prototype asset */}
+              <img src={SCENE_PHOTO.salad} alt="" className="size-32 shrink-0 rounded-full object-cover ring-[6px] ring-white/50" />
             </button>
           )}
 
@@ -281,7 +285,7 @@ export function LogFlow() {
             <div className="grid grid-cols-2 gap-3">
               <MethodTile
                 icon={<Search />}
-                label="Search foods"
+                label="Search foods" tone="sky"
                 hint="Pick from the list"
                 onClick={() => {
                   setSource("manual")
@@ -292,7 +296,7 @@ export function LogFlow() {
               />
               <MethodTile
                 icon={<Keyboard />}
-                label="Type it"
+                label="Type it" tone="amber"
                 hint="“2 roti and dal”"
                 onClick={() => {
                   setHasPhoto(false)
@@ -301,10 +305,10 @@ export function LogFlow() {
               />
               {!isChild && (
                 <>
-                  <MethodTile icon={<Bookmark />} label="Saved meals" hint="Your usual meals" onClick={() => go("saved")} phase={2} />
+                  <MethodTile icon={<Bookmark />} label="Saved meals" tone="lime" hint="Your usual meals" onClick={() => go("saved")} phase={2} />
                   <MethodTile
                     icon={<Mic />}
-                    label="Voice"
+                    label="Voice" tone="terracotta"
                     hint="Say what you ate"
                     onClick={() => {
                       setHasPhoto(false)
@@ -312,8 +316,8 @@ export function LogFlow() {
                     }}
                     phase={2}
                   />
-                  <MethodTile icon={<Barcode />} label="Barcode" hint="Packaged food" onClick={() => go("barcode")} phase={2} />
-                  <MethodTile icon={<ImageUp />} label="Sample photo" hint="Demo without a camera" onClick={() => choosePhoto(true)} />
+                  <MethodTile icon={<Barcode />} label="Barcode" tone="muted" hint="Packaged food" onClick={() => go("barcode")} phase={2} />
+                  <MethodTile icon={<ImageUp />} label="Sample photo" tone="sage" hint="Demo without a camera" onClick={() => choosePhoto(true)} />
                 </>
               )}
             </div>
@@ -354,7 +358,7 @@ export function LogFlow() {
               size="lg"
               onClick={() => {
                 setConsent("food_photos", true)
-                if (afterConsent.current === "sample") return startPhoto(undefined, true)
+                if (afterConsent.current === "sample") return startPhoto(samplePhoto(mealType), true)
                 setHistory((h) => h.slice(0, -1))
                 setStep("method")
                 fileRef.current?.click()
@@ -372,15 +376,15 @@ export function LogFlow() {
       {step === "analyzing" && (
         <div className="px-gutter flex flex-1 flex-col items-center gap-3 pt-12 text-center">
           <div className="relative">
-            <div className="size-44 overflow-hidden rounded-[24px] border border-border/80">
+            <div className="size-48 overflow-hidden rounded-full ring-8 ring-lime/60">
               {photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photoUrl} alt="Your meal" className="size-full object-cover" />
               ) : (
-                <div className="size-full bg-[repeating-linear-gradient(135deg,#dce7d8_0_10px,#e6eee2_10px_20px)]" />
+                <div className="size-full bg-[repeating-linear-gradient(135deg,#eef8df_0_10px,#e2f1cc_10px_20px)]" />
               )}
             </div>
-            <Loader2 className="absolute -right-3 -bottom-3 size-9 animate-spin rounded-full bg-card p-1.5 text-forest motion-reduce:animate-none" aria-hidden />
+            <Loader2 className="absolute right-1 bottom-1 size-11 animate-spin rounded-full bg-card p-2 text-lime-text shadow-card motion-reduce:animate-none" aria-hidden />
           </div>
           <p className="text-title mt-4" aria-live="polite">
             Finding foods and portions…
@@ -468,11 +472,19 @@ export function LogFlow() {
   )
 }
 
-function MethodTile({ icon, label, hint, onClick, phase }: { icon: React.ReactNode; label: string; hint: string; onClick: () => void; phase?: 1 | 2 | 3 }) {
+/** Demo photo matching the sample analysis for this meal (vision-mock SAMPLES). */
+function samplePhoto(meal: MealType): string {
+  if (meal === "breakfast") return "/food/omelette-roti.jpg"
+  if (meal === "lunch") return "/food/rice-fish-dal.jpg"
+  if (meal === "dinner") return "/food/rice-chicken-dal.jpg"
+  return "/food/tea-chickpea.jpg"
+}
+
+function MethodTile({ icon, label, hint, onClick, phase, tone = "sage" }: { icon: React.ReactNode; label: string; hint: string; onClick: () => void; phase?: 1 | 2 | 3; tone?: IconTone }) {
   return (
-    <button onClick={onClick} className="flex min-h-[112px] flex-col items-start justify-between gap-3 rounded-2xl border border-border/80 bg-card p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted">
+    <button onClick={onClick} className="flex min-h-[116px] flex-col items-start justify-between gap-3 rounded-2xl bg-card p-4 text-left shadow-card transition-colors hover:bg-muted/50 active:bg-muted">
       <span className="flex w-full items-start justify-between">
-        <IconTile>{icon}</IconTile>
+        <IconTile tone={tone} size="lg">{icon}</IconTile>
         {phase && <PhaseBadge phase={phase} />}
       </span>
       <span>

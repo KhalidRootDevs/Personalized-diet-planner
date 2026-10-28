@@ -45,16 +45,14 @@ export default function WeeklyReviewPage() {
       <PageHeader title="Weekly review" subtitle={`${formatDay(days[0], { day: "numeric", month: "short" })} – ${formatDay(days[6], { day: "numeric", month: "short" })}`} back="/progress" />
       <PageBody>
         <Section title="Your week" badge={<FeatureBadge feature="weekly_review_basic" />} description="Based only on what you recorded. Unrecorded meals aren't counted as missed.">
-          <ListGroup>
-            <ListRow icon={<NotebookPen />} title="Meals logged" description="Days with at least one entry" trailing={<span className="tabular text-headline">{loggedDays}<span className="text-caption font-normal text-muted-foreground"> / 7</span></span>} />
-            <ListRow
-              icon={<CalendarCheck />}
-              title="Planned meals eaten"
-              description={ad.resolved ? "In any form, including changes" : "No meal outcomes recorded yet"}
-              trailing={ad.resolved ? <span className="tabular text-headline">{ad.completed}<span className="text-caption font-normal text-muted-foreground"> / {ad.resolved}</span></span> : undefined}
-            />
-            {ad.replaced + ad.modified > 0 && <ListRow icon={<Shuffle />} title="Meals adapted to your day" description="Changed or replaced to fit real life" trailing={<span className="tabular text-headline">{ad.replaced + ad.modified}</span>} />}
-          </ListGroup>
+          <Surface tone="lime" padding="lg" className="relative overflow-hidden">
+            <span className="absolute -top-12 -right-12 size-40 rounded-full bg-white/25" aria-hidden />
+            <dl className="relative grid grid-cols-3 gap-3">
+              <WeekStat icon={<NotebookPen />} label="Days with meals logged" value={loggedDays} of={7} />
+              <WeekStat icon={<CalendarCheck />} label={ad.resolved ? "Planned meals eaten, any form" : "No meal outcomes yet"} value={ad.resolved ? ad.completed : "–"} of={ad.resolved || undefined} />
+              <WeekStat icon={<Shuffle />} label="Meals adapted to your day" value={ad.replaced + ad.modified} />
+            </dl>
+          </Surface>
         </Section>
 
         <Section title="Choose one focus for next week" description="Small, specific goals are easier to keep.">
@@ -67,9 +65,9 @@ export default function WeeklyReviewPage() {
                   role="radio"
                   aria-checked={on}
                   onClick={() => setPriority(p)}
-                  className={cn("text-body flex min-h-14 w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left transition-colors", on ? "border-forest bg-sage/40 font-medium" : "border-border/80 hover:bg-muted/50")}
+                  className={cn("text-body flex min-h-14 w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left transition-colors", on ? "border-lime bg-sage font-medium" : "border-border/80 hover:bg-muted/50")}
                 >
-                  <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors", on ? "border-forest bg-forest text-ivory" : "border-input bg-card")}>{on && <Check className="size-3.5" strokeWidth={3} />}</span>
+                  <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors", on ? "border-lime bg-lime text-charcoal" : "border-input bg-card")}>{on && <Check className="size-3.5" strokeWidth={3} />}</span>
                   {p}
                 </button>
               )
@@ -179,5 +177,20 @@ export default function WeeklyReviewPage() {
         </Section>
       </PageBody>
     </>
+  )
+}
+
+function WeekStat({ icon, label, value, of }: { icon: React.ReactNode; label: string; value: React.ReactNode; of?: number }) {
+  return (
+    <div>
+      <span className="grid size-9 place-items-center rounded-full bg-white/70 [&_svg]:size-[18px]" aria-hidden>
+        {icon}
+      </span>
+      <dd className="mt-3 text-[26px] leading-none font-bold tabular">
+        {value}
+        {of !== undefined && <span className="text-callout font-medium text-charcoal/70"> / {of}</span>}
+      </dd>
+      <dt className="text-caption mt-1.5 text-charcoal/80">{label}</dt>
+    </div>
   )
 }

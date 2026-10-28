@@ -6,10 +6,10 @@ import { formatDay, formatTime, todayISO } from "@/lib/date"
 import { useApp } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import type { AppNotification } from "@/lib/types"
-import { EmptyState, HeaderIconButton, IconTile, PageBody, PageHeader, Section, SectionLink } from "@/components/app/page"
+import { EmptyState, HeaderIconButton, IconTile, PageBody, PageHeader, Section, SectionLink, type IconTone } from "@/components/app/page"
 
 // Same surface as ListGroup, rendered as a list for semantics.
-const GROUP = "divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card"
+const GROUP = "divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card"
 
 function when(iso: string) {
   const day = iso.slice(0, 10)
@@ -17,25 +17,25 @@ function when(iso: string) {
   return day === todayISO() ? `Today, ${time}` : `${formatDay(day, { weekday: "short", day: "numeric", month: "short" })}, ${time}`
 }
 
-function iconFor(n: AppNotification) {
-  if (n.href?.startsWith("/plan/prep")) return <ChefHat />
-  if (n.href?.startsWith("/progress")) return <ClipboardCheck />
-  if (n.href?.startsWith("/plan")) return <Utensils />
-  if (n.href?.startsWith("/log")) return <CalendarCheck />
-  return <Bell />
+function iconFor(n: AppNotification): { icon: React.ReactNode; tone: IconTone } {
+  if (n.href?.startsWith("/plan/prep")) return { icon: <ChefHat />, tone: "amber" }
+  if (n.href?.startsWith("/progress")) return { icon: <ClipboardCheck />, tone: "sky" }
+  if (n.href?.startsWith("/plan")) return { icon: <Utensils />, tone: "lime" }
+  if (n.href?.startsWith("/log")) return { icon: <CalendarCheck />, tone: "terracotta" }
+  return { icon: <Bell />, tone: "sage" }
 }
 
 function Item({ n }: { n: AppNotification }) {
   const body = (
     <div className={cn("flex gap-3 px-4 py-3.5 transition-colors", n.href && "hover:bg-muted/50 active:bg-muted")}>
-      <IconTile tone={n.read ? "muted" : "sage"}>{iconFor(n)}</IconTile>
+      <IconTile tone={n.read ? "muted" : iconFor(n).tone}>{iconFor(n).icon}</IconTile>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className={cn("text-body min-w-0 flex-1", n.read ? "font-medium" : "font-semibold")}>
             {n.title}
             {!n.read && <span className="sr-only"> (unread)</span>}
           </p>
-          {!n.read && <span className="size-2 shrink-0 rounded-full bg-forest" aria-hidden />}
+          {!n.read && <span className="size-2 shrink-0 rounded-full bg-terracotta" aria-hidden />}
         </div>
         <p className="text-caption mt-0.5 text-muted-foreground">{n.body}</p>
         <p className="text-caption mt-1.5 text-muted-foreground/90">{when(n.createdAt)}</p>

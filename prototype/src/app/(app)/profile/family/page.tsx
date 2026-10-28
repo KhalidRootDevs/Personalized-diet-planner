@@ -85,7 +85,7 @@ export default function FamilyPage() {
           <PremiumGate feature="family">
             <div className="space-y-3">
               {MOCK_MEMBERS.map((m) => (
-                <div key={m.id} className="overflow-hidden rounded-2xl border border-border/80 bg-card">
+                <div key={m.id} className="overflow-hidden rounded-2xl bg-card shadow-card">
                   <div className="flex items-center gap-3 px-4 py-3.5">
                     <ProfileAvatar profile={m} />
                     <div className="flex-1">

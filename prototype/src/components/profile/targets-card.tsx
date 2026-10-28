@@ -18,35 +18,36 @@ export function TargetsCard({ profile }: { profile: Profile }) {
     )
   }
   const rows = [
-    { label: "Protein", value: fmt.range(t.proteinG.low, t.proteinG.high, " g") },
-    { label: "Carbohydrates", value: fmt.range(t.carbsG.low, t.carbsG.high, " g") },
-    { label: "Fat", value: fmt.range(t.fatG.low, t.fatG.high, " g") },
-    { label: "Fiber", value: `at least ${t.fiberMinG} g` },
-    { label: "Iron", value: `about ${t.ironMg.toLocaleString("en-US")} mg` },
-    { label: "Calcium", value: `about ${t.calciumMg.toLocaleString("en-US")} mg` },
+    { label: "Protein", value: fmt.range(t.proteinG.low, t.proteinG.high, " g"), dot: "bg-protein" },
+    { label: "Carbohydrates", value: fmt.range(t.carbsG.low, t.carbsG.high, " g"), dot: "bg-carbs" },
+    { label: "Fat", value: fmt.range(t.fatG.low, t.fatG.high, " g"), dot: "bg-fat" },
+    { label: "Fiber", value: `at least ${t.fiberMinG} g`, dot: "bg-fiber" },
+    { label: "Iron", value: `about ${t.ironMg.toLocaleString("en-US")} mg`, dot: "bg-terracotta" },
+    { label: "Calcium", value: `about ${t.calciumMg.toLocaleString("en-US")} mg`, dot: "bg-water" },
   ]
   return (
-    <Surface padding="lg">
-      <p className="text-caption text-muted-foreground">Daily energy · estimated range</p>
-      <p className="text-metric mt-1 text-[30px] leading-9">
-        {fmt.range(t.energy.low, t.energy.high, "")}
-        <span className="text-callout ml-1.5 font-normal tracking-normal text-muted-foreground">kcal</span>
-      </p>
-      <dl className="mt-4 divide-y divide-border/70 border-t border-border/70">
+    <Surface padding="sm">
+      <div className="rounded-xl bg-lime-card px-3.5 py-3">
+        <p className="text-caption text-charcoal/75">Daily energy · estimated range</p>
+        <p className="mt-0.5 text-[28px] leading-8 font-bold tracking-tight tabular">
+          {fmt.range(t.energy.low, t.energy.high, "")}
+          <span className="text-callout ml-1.5 font-medium tracking-normal text-charcoal/70">kcal/day</span>
+        </p>
+      </div>
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 px-1">
         {rows.map((r) => (
-          <div key={r.label} className="text-callout flex items-baseline justify-between gap-3 py-2.5">
-            <dt className="text-muted-foreground">{r.label}</dt>
-            <dd className="tabular text-right font-semibold">
-              {r.value}
-              <span className="font-normal text-muted-foreground"> /day</span>
-            </dd>
+          <div key={r.label} className="min-w-0">
+            <dt className="text-caption flex items-center gap-1.5 text-muted-foreground">
+              <span className={`size-2 rounded-full ${r.dot}`} aria-hidden />
+              {r.label}
+            </dt>
+            <dd className="tabular text-callout font-semibold">{r.value}</dd>
           </div>
         ))}
       </dl>
-      {b && <p className="text-caption mt-3 text-muted-foreground">BMI {b.toFixed(1)}: a screening measure only, not a full picture of your health.</p>}
-      <div className="mt-3 border-t border-border/70 pt-3">
+      <div className="mx-1 mt-3 border-t border-border/70 pt-3 pb-1">
         <EstimateNote>
-          {t.method}. These are starting estimates, not exact requirements. We&apos;ll refine them as you log meals and update your details.
+          {t.method}. Per day; starting estimates, not exact requirements. We&apos;ll refine them as you log meals.{b && ` BMI ${b.toFixed(1)} is a screening measure only, not a full picture of your health.`}
         </EstimateNote>
       </div>
     </Surface>

@@ -58,7 +58,7 @@ export function TextStep({ onParsed, initial = "", source = "text" }: { onParsed
         <p className="text-overline mb-2 text-muted-foreground">Examples</p>
         <div className="flex flex-wrap gap-2">
         {EXAMPLES.map((ex) => (
-          <button key={ex} onClick={() => setText(ex)} className="text-callout h-9 rounded-full border border-border/80 bg-card px-3.5 transition-colors hover:bg-muted" lang={/[ঀ-৿]/.test(ex) ? "bn" : undefined}>
+          <button key={ex} onClick={() => setText(ex)} className="text-callout h-9 rounded-full bg-card shadow-card px-3.5 transition-colors hover:bg-muted" lang={/[ঀ-৿]/.test(ex) ? "bn" : undefined}>
             {ex}
           </button>
         ))}
@@ -96,7 +96,7 @@ export function VoiceStep({ onParsed }: { onParsed: (items: JournalItem[], sourc
                 }, 1600)
               }}
               disabled={state === "listening"}
-              className="grid size-28 place-items-center rounded-full bg-forest text-primary-foreground shadow-float ring-8 ring-sage/70 transition-transform active:scale-95 disabled:animate-pulse"
+              className="grid size-28 place-items-center rounded-full bg-lime text-charcoal shadow-float ring-8 ring-sage transition-transform active:scale-95 disabled:animate-pulse"
               aria-label={state === "listening" ? "Listening" : "Start speaking"}
             >
               <Mic className="size-9" />

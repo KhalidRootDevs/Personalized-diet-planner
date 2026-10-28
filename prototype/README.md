@@ -38,8 +38,9 @@ After installation it opens full-screen, without browser chrome. Pages you've al
 
 - Food and nutrient values in `src/lib/data/` are **illustrative**, not from a validated food composition database. Infant recipes are marked *pending clinical review*.
 - **Semantic colors** (safety, caution, success in `globals.css`) are provisional. §43.7 leaves them undecided.
+- The visual style follows the references in `../design-ref/` (Lime Fresh palette, §44.2), without the parts that conflict with the PRD's safety rules (streaks, rewards, exact calorie counts).
 - Bangla covers the app shell only.
-- Food imagery uses illustrated fallback tiles (§44.11) instead of photography.
+- Food photos in `public/food/` are Wikimedia Commons placeholders (CC0 / CC BY / CC BY-SA), credited in `public/food/CREDITS.md` and in *Profile → App settings → Photo credits*. They don't show the exact recipes; production needs licensed photography.
 
 ## Project layout
 

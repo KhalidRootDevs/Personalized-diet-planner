@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
     <AuthShell back="/login" title={sent ? "Check your email" : "Reset your password"} subtitle={sent ? undefined : "We'll send a link to reset it."}>
       {sent ? (
         <div className="space-y-6">
-          <div className="flex gap-3 rounded-2xl border border-border/80 bg-card p-4">
+          <div className="flex gap-3 rounded-2xl bg-card p-4 shadow-card">
             <IconTile>
               <MailCheck aria-hidden />
             </IconTile>

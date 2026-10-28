@@ -139,7 +139,7 @@ export default function AdminReviewsPage() {
             {pending.length === 0 ? (
               <p className="text-callout py-10 text-center text-muted-foreground">Nothing waiting for review.</p>
             ) : (
-              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
                 {pending.map((i) => {
                   const K = KIND[i.kind]
                   const failing = i.checks.filter((c) => !c.ok).length
@@ -176,7 +176,7 @@ export default function AdminReviewsPage() {
             {done.length === 0 ? (
               <p className="text-callout py-10 text-center text-muted-foreground">No decisions yet.</p>
             ) : (
-              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80 bg-card">
+              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
                 {done.map((i) => {
                   const d = decisions[i.id]
                   return (
@@ -215,7 +215,7 @@ export default function AdminReviewsPage() {
                   const idx = STAGES.indexOf(open.stage)
                   const me = STAGES.indexOf(s)
                   return (
-                    <li key={s} className={cn("inline-flex h-6 items-center rounded-full px-2.5", me < idx ? "bg-sage text-forest" : me === idx ? "bg-forest text-ivory" : "bg-muted text-muted-foreground")}>
+                    <li key={s} className={cn("inline-flex h-6 items-center rounded-full px-2.5", me < idx ? "bg-sage text-forest" : me === idx ? "bg-forest text-white" : "bg-muted text-muted-foreground")}>
                       {s}
                     </li>
                   )
@@ -229,7 +229,7 @@ export default function AdminReviewsPage() {
               <ul className="text-callout space-y-2 rounded-xl bg-muted p-4">
                 {open.checks.map((c) => (
                   <li key={c.label} className="flex gap-2">
-                    <span className={cn("mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-full text-[10px] font-bold", c.ok ? "bg-forest text-ivory" : "bg-caution text-white")} aria-hidden>
+                    <span className={cn("mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-full text-[10px] font-bold", c.ok ? "bg-forest text-white" : "bg-caution text-white")} aria-hidden>
                       {c.ok ? "✓" : "!"}
                     </span>
                     <span>{c.label}<span className="sr-only">{c.ok ? " — passed" : " — open"}</span></span>

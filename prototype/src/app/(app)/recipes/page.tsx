@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { BookHeart, Clock, Plus, Search, ShieldCheck } from "lucide-react"
-import { EmptyState, ListLink, PageBody, PageHeader, Pill } from "@/components/app/page"
-import { Chip } from "@/components/app/controls"
+import { BookHeart, Clock, Flame, Plus, Search, ShieldCheck } from "lucide-react"
+import { EmptyState, ListLink, PageBody, PageHeader, Pill, Section } from "@/components/app/page"
+import { SCENE_PHOTO } from "@/lib/data/photos"
+import { cn } from "@/lib/utils"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { FeatureBadge } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
@@ -15,15 +16,31 @@ import { RECIPES } from "@/lib/data/recipes"
 import { fmt, recipeCostPerServing, recipeNutrition, violatesHardConstraints } from "@/lib/nutrition"
 import type { Recipe } from "@/lib/types"
 
-const FILTERS: { id: string; label: string; test: (r: Recipe) => boolean }[] = [
-  { id: "breakfast", label: "Breakfast", test: (r) => r.mealTypes.includes("breakfast") },
-  { id: "main", label: "Lunch & dinner", test: (r) => r.mealTypes.includes("lunch") || r.mealTypes.includes("dinner") },
-  { id: "snack", label: "Snacks", test: (r) => r.mealTypes.some((t) => t.includes("snack")) },
-  { id: "quick", label: "Under 20 min", test: (r) => r.prepMinutes + r.cookMinutes <= 20 },
-  { id: "budget", label: "Budget", test: (r) => recipeCostPerServing(r) <= 60 },
-  { id: "protein", label: "High protein", test: (r) => r.tags.includes("high-protein") },
-  { id: "veg", label: "Vegetarian", test: (r) => r.tags.includes("vegetarian") || r.tags.includes("vegan") },
+const FILTERS: { id: string; label: string; photo: string; test: (r: Recipe) => boolean }[] = [
+  { id: "breakfast", label: "Breakfast", photo: SCENE_PHOTO.breakfast, test: (r) => r.mealTypes.includes("breakfast") },
+  { id: "main", label: "Lunch & dinner", photo: SCENE_PHOTO.rice, test: (r) => r.mealTypes.includes("lunch") || r.mealTypes.includes("dinner") },
+  { id: "snack", label: "Snacks", photo: SCENE_PHOTO.snacks, test: (r) => r.mealTypes.some((t) => t.includes("snack")) },
+  { id: "quick", label: "Under 20 min", photo: "/food/banana-peanuts.jpg", test: (r) => r.prepMinutes + r.cookMinutes <= 20 },
+  { id: "budget", label: "Budget", photo: "/food/khichuri.jpg", test: (r) => recipeCostPerServing(r) <= 60 },
+  { id: "protein", label: "High protein", photo: "/food/rice-chicken-dal.jpg", test: (r) => r.tags.includes("high-protein") },
+  { id: "veg", label: "Vegetarian", photo: SCENE_PHOTO.salad, test: (r) => r.tags.includes("vegetarian") || r.tags.includes("vegan") },
 ]
+
+/** Category tile (design ref: round photo above a label). */
+function CategoryTile({ label, photo, selected, onClick }: { label: string; photo: string; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn("flex w-[88px] shrink-0 flex-col items-center gap-1.5 rounded-2xl px-1.5 pt-2.5 pb-2 transition-colors", selected ? "bg-lime" : "bg-card shadow-card hover:bg-muted/50")}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- static prototype assets */}
+      <img src={photo} alt="" className="size-14 rounded-full object-cover ring-2 ring-card" />
+      <span className="line-clamp-2 min-h-7 text-center text-[12px] leading-[14px] font-medium text-charcoal">{label}</span>
+    </button>
+  )
+}
 
 /** Recipes tab (§9, §19): verified library, filtered by the active profile's hard constraints. */
 export default function RecipesPage() {
@@ -63,14 +80,13 @@ export default function RecipesPage() {
         <div className="space-y-3">
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-muted-grey" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search in English or বাংলা" className="pl-10" aria-label="Search recipes" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search in English or বাংলা" className="h-12 rounded-full border-transparent bg-card pl-10 shadow-card" aria-label="Search recipes" />
           </div>
           {!infant && (
-            <div className="no-scrollbar -mx-[var(--gutter)] flex gap-2 overflow-x-auto px-[var(--gutter)]">
+            <div className="no-scrollbar -mx-[var(--gutter)] flex gap-2.5 overflow-x-auto px-[var(--gutter)] py-1">
+              <CategoryTile label="All" photo={SCENE_PHOTO.fruits} selected={filter === null} onClick={() => setFilter(null)} />
               {FILTERS.map((f) => (
-                <Chip key={f.id} selected={filter === f.id} onClick={() => setFilter(filter === f.id ? null : f.id)}>
-                  {f.label}
-                </Chip>
+                <CategoryTile key={f.id} label={f.label} photo={f.photo} selected={filter === f.id} onClick={() => setFilter(filter === f.id ? null : f.id)} />
               ))}
             </div>
           )}
@@ -94,37 +110,53 @@ export default function RecipesPage() {
         {list.length === 0 ? (
           <EmptyState icon={<Search />} title="No recipes match" description="Try another search or filter." />
         ) : (
-          <ul className="grid grid-cols-2 gap-3">
-            {list.map((r) => {
-              const n = recipeNutrition(r)
-              return (
-                <li key={r.id}>
-                  <Link href={`/recipes/${r.id}`} className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card transition-colors hover:bg-muted/40">
-                    <RecipeThumb recipe={r} size="hero" className="h-28 rounded-none" />
-                    <div className="flex flex-1 flex-col p-3">
-                      <p className="text-callout line-clamp-2 font-semibold">{r.name}</p>
-                      <p className="text-caption mt-0.5 line-clamp-1 text-muted-foreground" lang="bn">
-                        {r.nameBn}
-                      </p>
-                      <div className="text-caption tabular mt-auto flex items-center gap-1.5 pt-2.5 text-muted-foreground">
-                        <Clock className="size-3.5 shrink-0" aria-hidden />
-                        <span>{r.prepMinutes + r.cookMinutes} min</span>
-                        <span aria-hidden>·</span>
-                        <span className="truncate">{infant ? (r.texture ?? "") : `~${Math.round(n.energyKcal)} kcal`}</span>
+          <Section
+            title={
+              <>
+                {filter ? FILTERS.find((f) => f.id === filter)!.label : infant ? "First foods" : "All recipes"}
+                <span className="tabular grid h-5 min-w-5 place-items-center rounded-full bg-lime px-1.5 text-[11px] font-semibold text-charcoal">{list.length}</span>
+              </>
+            }
+          >
+            <ul className="grid grid-cols-2 gap-3">
+              {list.map((r) => {
+                const n = recipeNutrition(r)
+                return (
+                  <li key={r.id}>
+                    <Link href={`/recipes/${r.id}`} className="flex h-full flex-col rounded-2xl bg-card p-2 shadow-card transition-colors hover:bg-muted/40">
+                      <RecipeThumb recipe={r} size="hero" className="h-32 rounded-[18px]" />
+                      <div className="flex flex-1 flex-col px-1.5 pt-2.5 pb-1.5">
+                        <p className="text-callout line-clamp-2 leading-snug font-semibold">{r.name}</p>
+                        <p className="text-caption mt-0.5 line-clamp-1 text-muted-foreground" lang="bn">
+                          {r.nameBn}
+                        </p>
+                        <div className="text-caption tabular mt-auto flex items-center gap-2.5 pt-2.5">
+                          {infant ? (
+                            <span className="truncate text-muted-foreground">{r.texture ?? ""}</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 font-semibold text-charcoal">
+                              <Flame className="size-3.5 text-terracotta" aria-hidden />~{Math.round(n.energyKcal)} kcal
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-muted-foreground">
+                            <Clock className="size-3.5 shrink-0" aria-hidden />
+                            {r.prepMinutes + r.cookMinutes}m
+                          </span>
+                        </div>
+                        {infant ? (
+                          <Pill tone="caution" className="mt-2 self-start">
+                            Pending review
+                          </Pill>
+                        ) : (
+                          <p className="tabular text-caption mt-1.5 self-start rounded-full bg-sage px-2 py-0.5 font-semibold text-lime-text">{fmt.bdt(recipeCostPerServing(r))} / serving</p>
+                        )}
                       </div>
-                      {infant ? (
-                        <Pill tone="caution" className="mt-2 self-start">
-                          Pending review
-                        </Pill>
-                      ) : (
-                        <p className="tabular text-caption mt-0.5 font-medium text-charcoal">{fmt.bdt(recipeCostPerServing(r))} / serving</p>
-                      )}
-                    </div>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </Section>
         )}
 
         {hidden > 0 && (

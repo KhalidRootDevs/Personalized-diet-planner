@@ -13,7 +13,7 @@ import type { Phase } from "@/lib/types"
 export function PhaseBadge({ phase, className }: { phase: Phase; className?: string }) {
   const show = useApp((s) => s.settings.showPhaseBadges)
   if (!show) return null
-  const style = { 1: "bg-sage text-forest", 2: "bg-[#efe9da] text-charcoal", 3: "bg-[#f3e2d9] text-terracotta-text" }[phase]
+  const style = { 1: "bg-sage text-forest", 2: "bg-amber-tint text-amber-text", 3: "bg-coral-tint text-terracotta-text" }[phase]
   return (
     <span className={cn("inline-flex h-5 shrink-0 items-center rounded-full px-2 text-[11px] leading-none font-semibold tracking-wide", style, className)} title={`Release Phase ${phase} (§43)`}>
       P{phase}
@@ -43,15 +43,16 @@ export function PremiumGate({ feature, children, compact, variant = "card" }: { 
   if (variant === "row")
     return (
       <ListGroup>
-        <ListRow href={`/subscription?feature=${feature}`} icon={<Crown />} iconTone="muted" title={f.name} description={`Included in ${tierName} · see plans`} />
+        <ListRow href={`/subscription?feature=${feature}`} icon={<Crown />} iconTone="lime" title={f.name} description={`Included in ${tierName} · see plans`} />
       </ListGroup>
     )
   return (
-    <div className={cn("rounded-2xl border border-dashed border-input bg-card text-center", compact ? "px-4 py-5" : "px-6 py-8")}>
-      <span className="mx-auto mb-4 grid size-12 place-items-center rounded-[14px] bg-sage text-forest">
+    <div className={cn("relative overflow-hidden rounded-2xl bg-card text-center shadow-card", compact ? "px-4 py-5" : "px-6 py-8")}>
+      <span className="absolute -top-12 -right-12 size-32 rounded-full bg-sage" aria-hidden />
+      <span className="relative mx-auto mb-4 grid size-14 place-items-center rounded-full bg-lime text-charcoal">
         {f.tier === "free" ? <Lock className="size-6" /> : <Crown className="size-6" />}
       </span>
-      <p className="text-headline">{f.name}</p>
+      <p className="relative text-headline">{f.name}</p>
       <p className="text-callout mx-auto mt-1 max-w-[17rem] text-muted-foreground">Included in {tierName}. Safety features and core planning always stay free.</p>
       <Button asChild className="mt-5" size="sm">
         <Link href={`/subscription?feature=${feature}`}>See plans</Link>

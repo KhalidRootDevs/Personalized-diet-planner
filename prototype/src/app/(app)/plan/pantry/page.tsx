@@ -74,7 +74,7 @@ function PantryContent() {
               <p className="text-overline px-1 pt-2 text-muted-foreground">Recipes that use them</p>
               <div className="no-scrollbar -mx-[var(--gutter)] flex gap-3 overflow-x-auto px-[var(--gutter)] pb-1">
                 {useSoon.map((r) => (
-                  <Link key={r.id} href={`/recipes/${r.id}`} className="w-40 shrink-0 overflow-hidden rounded-2xl border border-border/80 bg-card transition-colors hover:bg-muted/40">
+                  <Link key={r.id} href={`/recipes/${r.id}`} className="w-40 shrink-0 overflow-hidden rounded-2xl bg-card shadow-card transition-colors hover:bg-muted/40">
                     <RecipeThumb recipe={r} size="hero" className="h-24 rounded-none" />
                     <p className="text-callout line-clamp-2 p-3 font-medium">{r.name}</p>
                   </Link>
