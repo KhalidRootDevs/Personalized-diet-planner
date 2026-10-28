@@ -1,0 +1,216 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens — docs/prd/17-visual-design-system.md (§44).
+ * Brand palette (§44.2), accessible text variants (§44.2.2, proposed),
+ * spacing on a 4 px base and radii (§44.4).
+ */
+:root {
+  /* Brand palette */
+  --forest-green: #244c3a;
+  --sage: #dce7d8;
+  --warm-ivory: #faf8f2;
+  --white: #ffffff;
+  --terracotta: #c8795b;
+  --charcoal: #292f2b;
+  --muted-grey: #7c837d;
+  /* Accessible variants (proposed, §44.2.2 — pending §43.7 approval) */
+  --muted-grey-text: #616762;
+  --terracotta-text: #a26249;
+  /*
+   * Semantic states are NOT defined by the design guide (§44.13, §43.7).
+   * PROVISIONAL prototype values only — replace once the design owner decides.
+   */
+  --safety: #8f2d24;
+  --safety-surface: #f8e7e3;
+  --caution: #7a5a12;
+  --caution-surface: #f6eed8;
+  --success: #244c3a;
+  --success-surface: #dce7d8;
+
+  /* shadcn mapping (§44.13 token table) */
+  --background: var(--warm-ivory);
+  --foreground: var(--charcoal);
+  --card: var(--white);
+  --card-foreground: var(--charcoal);
+  --popover: var(--white);
+  --popover-foreground: var(--charcoal);
+  --primary: var(--forest-green);
+  --primary-foreground: var(--white);
+  --secondary: var(--sage);
+  --secondary-foreground: var(--forest-green);
+  --muted: #f2f0e9;
+  --muted-foreground: var(--muted-grey-text);
+  --accent: var(--sage);
+  --accent-foreground: var(--forest-green);
+  --destructive: var(--safety);
+  --border: #e8e5dc;
+  --input: #dcd8cd;
+  --ring: var(--forest-green);
+  --radius: 0.875rem;
+
+  /* Elevation — flat by default; shadows only for real elevation (§44.4) */
+  --elev-card: 0 1px 2px rgb(41 47 43 / 0.04);
+  --elev-float: 0 10px 30px -10px rgb(41 47 43 / 0.22), 0 2px 8px -2px rgb(41 47 43 / 0.08);
+
+  /* Layout (UI-SPEC §2): screen gutter 20 px */
+  --gutter: 1.25rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), var(--font-bengali), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), var(--font-bengali), ui-serif, Georgia, serif;
+  --font-bengali: var(--font-bengali);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-forest: var(--forest-green);
+  --color-sage: var(--sage);
+  --color-ivory: var(--warm-ivory);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-text: var(--terracotta-text);
+  --color-charcoal: var(--charcoal);
+  --color-muted-grey: var(--muted-grey);
+  --color-safety: var(--safety);
+  --color-safety-surface: var(--safety-surface);
+  --color-caution: var(--caution);
+  --color-caution-surface: var(--caution-surface);
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+
+  /* Radii (§44.4): inputs 10–12, buttons 12–14, cards 12–16 */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  --shadow-card: var(--elev-card);
+  --shadow-float: var(--elev-float);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 0.9375rem;
+    line-height: 1.375rem;
+    font-feature-settings: "cv11", "ss01";
+    overscroll-behavior-y: none;
+  }
+  /* Bengali text needs more vertical space (§44.3) */
+  :lang(bn) {
+    line-height: 1.7;
+  }
+}
+
+/*
+ * Type scale (UI-SPEC §3). Inter for UI, Newsreader for display titles only.
+ * size / line-height / weight / tracking
+ */
+@utility text-display {
+  font-family: var(--font-serif);
+  font-size: 1.875rem; /* 30 */
+  line-height: 2.25rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+@utility text-title {
+  font-size: 1.25rem; /* 20 */
+  line-height: 1.625rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+@utility text-headline {
+  font-size: 1.0625rem; /* 17 */
+  line-height: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+}
+@utility text-body {
+  font-size: 0.9375rem; /* 15 */
+  line-height: 1.375rem;
+}
+@utility text-callout {
+  font-size: 0.875rem; /* 14 */
+  line-height: 1.25rem;
+}
+@utility text-caption {
+  font-size: 0.8125rem; /* 13 */
+  line-height: 1.125rem;
+}
+@utility text-overline {
+  font-size: 0.75rem; /* 12 */
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+@utility text-metric {
+  font-size: 2.25rem; /* 36 */
+  line-height: 2.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility px-gutter {
+  padding-inline: var(--gutter);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Respect reduced-motion preferences (§44.11) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
