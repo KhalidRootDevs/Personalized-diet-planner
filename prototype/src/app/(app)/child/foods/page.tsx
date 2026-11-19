@@ -2,12 +2,15 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Baby, Plus, Stethoscope, Utensils } from "lucide-react"
+import { Baby, Check, Plus, Sparkles, Stethoscope, Utensils } from "lucide-react"
 import { toast } from "sonner"
 import { FOODS } from "@/lib/data/foods"
 import { ageInMonths } from "@/lib/nutrition"
 import { formatDay, todayISO, uid } from "@/lib/date"
 import { useApp } from "@/lib/store"
+import { useAreaD, useAreaDSync } from "@/lib/area-d-store"
+import { useConsent } from "@/lib/consent"
+import { track } from "@/lib/analytics"
 import type { IntroducedFood } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,11 +23,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { FeatureBadge } from "@/components/app/badges"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { RECIPE_PHOTO } from "@/lib/data/photos"
-import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, type PillTone } from "@/components/app/page"
+import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface, type PillTone } from "@/components/app/page"
 import { ALLERGENS_TO_INTRODUCE, feedingStage } from "@/components/child/feeding"
 import { useChildProfile } from "@/components/child/use-child"
+import { newFoodCandidates, type NewFoodCandidate } from "@/components/child/child-checks"
 
-const TEXTURES = ["Smooth purée", "Smooth mash", "Mashed with soft lumps", "Finely mashed", "Soft finger food", "Chopped soft"]
+const TEXTURES = ["Smooth purée", "Smooth mash", "Mashed with soft lumps", "Finely mashed", "Soft finger food", "Chopped soft", "Family food, cut small"]
 const ACCEPTED: Record<IntroducedFood["accepted"], string> = { yes: "Accepted", somewhat: "Tried a little", no: "Not yet" }
 const ACCEPTED_TONE: Record<IntroducedFood["accepted"], PillTone> = { yes: "sage", somewhat: "neutral", no: "outline" }
 
@@ -33,7 +37,13 @@ export default function ChildFoodsPage() {
   const child = useChildProfile()
   const all = useApp((s) => s.introduced)
   const addIntroduced = useApp((s) => s.addIntroduced)
+  const journal = useApp((s) => s.journal)
+  const checked = useAreaD((s) => s.childFoodChecks)
+  const markChecked = useAreaD((s) => s.markChildFoodCheck)
+  const canEdit = useConsent("child_data")
   const [open, setOpen] = useState(false)
+  const [prefill, setPrefill] = useState<NewFoodCandidate | null>(null)
+  useAreaDSync()
 
   if (!child)
     return (
@@ -50,15 +60,24 @@ export default function ChildFoodsPage() {
   const foods = all.filter((f) => f.profileId === child.id).sort((a, b) => b.date.localeCompare(a.date))
   const tried = new Set(foods.map((f) => f.foodName.toLowerCase()))
   const next = stage.nextFoods.filter((n) => !tried.has(n.toLowerCase()))
+  const candidates = newFoodCandidates(journal, all, child.id, checked)
+  const title = stage.baby ? "Food introduction" : "Foods tried"
 
   return (
     <>
       <PageHeader
-        title="Food introduction"
-        subtitle={`${child.name} · ${months} months`}
+        title={title}
+        subtitle={`${child.name} · ${months < 24 ? `${months} months` : `${Math.floor(months / 12)} years`}`}
         back="/child"
         action={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button
+            size="sm"
+            disabled={!canEdit}
+            onClick={() => {
+              setPrefill(null)
+              setOpen(true)
+            }}
+          >
             <Plus /> Add
           </Button>
         }
@@ -68,6 +87,52 @@ export default function ChildFoodsPage() {
           <StatTile className="bg-sage" label={<span className="flex items-center gap-1.5">Foods introduced <FeatureBadge feature="baby_module" /></span>} value={foods.length} />
           <StatTile className="bg-amber-tint" label="Reactions noted" value={foods.filter((f) => f.reaction && f.reaction !== "None observed").length} />
         </div>
+
+        {!canEdit && (
+          <InfoNote title="Read-only">
+            You withdrew permission to store child information. You can view these records, but adding foods is paused until you allow it again in{" "}
+            <Link href="/profile/privacy" className="font-semibold text-forest underline underline-offset-2">
+              Privacy and data
+            </Link>
+            .
+          </InfoNote>
+        )}
+
+        {candidates.length > 0 && (
+          <Section title="Is this a new food?" description={`Logged for ${child.name} recently but not in the tracker. Adding it keeps one record of first tries (§12.8).`}>
+            <div id="new-foods" className="scroll-mt-20 space-y-2.5">
+              {candidates.map((c) => (
+                <Surface key={c.key}>
+                  <div className="flex items-center gap-3">
+                    <IconTile tone="amber">
+                      <Sparkles />
+                    </IconTile>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body font-medium">{c.name}</p>
+                      <p className="text-caption text-muted-foreground">Logged {formatDay(c.date, { weekday: "short", day: "numeric", month: "short" })}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Button variant="outline" size="sm" disabled={!canEdit} onClick={() => markChecked(c.key)}>
+                      Not new
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={!canEdit}
+                      onClick={() => {
+                        setPrefill(c)
+                        setOpen(true)
+                      }}
+                    >
+                      <Check /> Yes, add it
+                    </Button>
+                  </div>
+                </Surface>
+              ))}
+            </div>
+          </Section>
+        )}
 
         {foods.some((f) => f.reaction && f.reaction !== "None observed") && (
           <CautionNote title="A reaction was recorded">
@@ -138,6 +203,7 @@ export default function ChildFoodsPage() {
           </Section>
         )}
 
+        {stage.id !== "child" && stage.id !== "milk_only" && (
         <Section title="Common allergens">
           <InfoNote title="Introducing allergenic foods">
             Many guidelines suggest offering common allergenic foods during the first year, prepared safely and one at a time. If your baby has severe eczema or a known allergy, ask your clinician first.
@@ -149,6 +215,7 @@ export default function ChildFoodsPage() {
             })}
           </ListGroup>
         </Section>
+        )}
 
         <SafetyAlert title="Signs of a serious reaction" emergency>
           Swelling of the face or lips, trouble breathing, repeated vomiting or unusual floppiness need urgent medical help.
@@ -156,11 +223,18 @@ export default function ChildFoodsPage() {
       </PageBody>
 
       <AddFoodSheet
+        key={prefill?.key ?? "blank"}
         open={open}
         onOpenChange={setOpen}
         months={months}
+        initialName={prefill?.name}
+        initialDate={prefill?.date}
         onSave={(f) => {
+          if (!canEdit) return
           addIntroduced({ ...f, id: uid("intro"), profileId: child.id })
+          if (prefill) markChecked(prefill.key)
+          track("child_food_added", { fromJournal: !!prefill })
+          setPrefill(null)
           setOpen(false)
           toast.success(`${f.foodName} added to the tracker`)
         }}
@@ -174,14 +248,18 @@ function AddFoodSheet({
   onOpenChange,
   months,
   onSave,
+  initialName,
+  initialDate,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
   months: number
   onSave: (f: Omit<IntroducedFood, "id" | "profileId">) => void
+  initialName?: string
+  initialDate?: string
 }) {
-  const [foodName, setFoodName] = useState("")
-  const [date, setDate] = useState(todayISO())
+  const [foodName, setFoodName] = useState(initialName ?? "")
+  const [date, setDate] = useState(initialDate ?? todayISO())
   const [preparation, setPreparation] = useState("")
   const [texture, setTexture] = useState(TEXTURES[0])
   const [accepted, setAccepted] = useState<IntroducedFood["accepted"]>("yes")
@@ -217,7 +295,7 @@ function AddFoodSheet({
       <SheetContent side="bottom">
         <SheetHeader>
           <SheetTitle>Add a food</SheetTitle>
-          <SheetDescription>Record the first time you offered a new food.</SheetDescription>
+          <SheetDescription>{initialName ? "Add the details of this first try. Reactions are recorded, never labelled as allergies." : "Record the first time you offered a new food."}</SheetDescription>
         </SheetHeader>
         <form
           className="space-y-5 px-5 pt-2"
@@ -284,7 +362,7 @@ function AddFoodSheet({
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
-            <p className="text-caption text-muted-foreground">It can take many tries before a baby accepts a new food. That&apos;s normal.</p>
+            <p className="text-caption text-muted-foreground">It can take many tries before a child accepts a new food. That&apos;s normal.</p>
           </div>
           <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80">
             <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">

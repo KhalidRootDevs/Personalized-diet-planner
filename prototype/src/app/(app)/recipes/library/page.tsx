@@ -8,7 +8,7 @@ import { InfoNote } from "@/components/app/alerts"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/lib/store"
-import { recipeNutrition } from "@/lib/nutrition"
+import { recipeCostPerServing, recipeNutrition } from "@/lib/nutrition"
 
 /** Personal Recipe Library (§42.5): user recipes get calculated nutrition but are never "reviewed". */
 export default function LibraryPage() {
@@ -38,10 +38,15 @@ export default function LibraryPage() {
                       <RecipeThumb recipe={r} size="sm" />
                       <div className="min-w-0 flex-1">
                         <p className="text-body line-clamp-2 font-medium">{r.name}</p>
+                        {(r.tags.length > 0 || r.notes) && (
+                          <p className="text-caption line-clamp-1 text-muted-foreground">
+                            {[...r.tags.filter((t) => t !== "ai-variation"), r.notes ? "has notes" : ""].filter(Boolean).join(" · ")}
+                          </p>
+                        )}
                         <div className="mt-1 flex items-center gap-2">
-                          <Pill className="h-[22px] px-2 text-[11px]">Not reviewed</Pill>
+                          <Pill className="h-[22px] px-2 text-[11px]">{r.aiVariation ? "AI variation · not reviewed" : "Not reviewed"}</Pill>
                           <span className="tabular text-caption text-muted-foreground">
-                            ~{Math.round(recipeNutrition(r).energyKcal)} kcal · serves {r.servings}
+                            ~{Math.round(recipeNutrition(r).energyKcal)} kcal · ৳{recipeCostPerServing(r)} · serves {r.servings}
                           </span>
                         </div>
                       </div>
@@ -56,7 +61,7 @@ export default function LibraryPage() {
                 </Button>
               </>
             )}
-            <InfoNote>Your recipes can be logged as meals. They aren&apos;t professionally reviewed, so meal plans keep using verified recipes.</InfoNote>
+            <InfoNote>Your recipes can be logged as meals and added to your plan after our allergy, diet and age checks. They&apos;re never marked as reviewed, and generated plans start from verified recipes. Save any verified recipe here from its recipe screen.</InfoNote>
           </div>
         </PremiumGate>
       </PageBody>

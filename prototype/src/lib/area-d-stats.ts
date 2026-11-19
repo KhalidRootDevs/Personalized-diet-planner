@@ -58,3 +58,33 @@ export function recordConfidence(journal: JournalEntry[], plan: MealPlan | undef
   else level = "Partially complete"
   return { level, logged: confirmed.length, fromPhoto, uncertain, missing, planned: plannedMeals.length }
 }
+
+/** Summary of a period for reports and the professional view (§42.24). Ranges, never false precision. */
+export function periodSummary(journal: JournalEntry[], plan: MealPlan | undefined, profileId: string, days: string[]) {
+  const stats = dayStats(journal, plan, profileId, days)
+  const logged = stats.filter((s) => s.logged)
+  const ranges = days.map((d) => {
+    const entries = journal.filter((e) => e.profileId === profileId && e.consumedAt.slice(0, 10) === d && e.analysisStatus === "confirmed")
+    return entries.reduce((acc, e) => {
+      const u = entryUncertainty(e)
+      const k = dayTotals([e]).energyKcal
+      return { low: acc.low + k * (1 - u), high: acc.high + k * (1 + u) }
+    }, { low: 0, high: 0 })
+  }).filter((r) => r.high > 0)
+  const avgOf = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)
+  const conf = days.map((d) => recordConfidence(journal, plan, profileId, d).level)
+  const plannedDays = stats.filter((s) => s.planned.energyKcal > 0)
+  return {
+    days: days.length,
+    loggedDays: logged.length,
+    entries: stats.reduce((t, s) => t + s.entries, 0),
+    photoEntries: stats.reduce((t, s) => t + s.photoEntries, 0),
+    energyLow: avgOf(ranges.map((r) => r.low)),
+    energyHigh: avgOf(ranges.map((r) => r.high)),
+    plannedEnergy: avgOf(plannedDays.map((s) => s.planned.energyKcal)),
+    protein: average(stats, "proteinG"),
+    fiber: average(stats, "fiberG"),
+    wellRecorded: conf.filter((c) => c === "Complete" || c === "Mostly complete").length,
+    notEnough: conf.filter((c) => c === "Not enough data").length,
+  }
+}

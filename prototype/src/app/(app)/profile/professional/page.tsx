@@ -2,13 +2,15 @@
 
 // Dietitian access and reports (Phase 3, §42.24). The user controls scope and can revoke any time.
 import { useState } from "react"
-import { FileText, ShieldCheck, Stethoscope, UserCheck } from "lucide-react"
+import Link from "next/link"
+import { Eye, FileText, MessageSquareText, ShieldCheck, Stethoscope, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/lib/store"
+import { useAreaD, useAreaDSync } from "@/lib/area-d-store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { IconTile, KeyValue, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
+import { IconTile, KeyValue, ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
 import { PhaseBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { Field, PillGroup } from "@/components/app/controls"
@@ -21,7 +23,10 @@ const SCOPES = [
 ]
 
 export default function ProfessionalPage() {
+  useAreaDSync()
   const access = useApp((s) => s.settings.professionalAccess)
+  const audit = useAreaD((s) => s.audit)
+  const notes = useAreaD((s) => s.professionalNotes)
   const updateSettings = useApp((s) => s.updateSettings)
   const [code, setCode] = useState("")
   const [scopes, setScopes] = useState<string[]>(["plan", "journal", "progress"])
@@ -53,6 +58,7 @@ export default function ProfessionalPage() {
                     className="mt-3 w-full"
                     onClick={() => {
                       updateSettings({ professionalAccess: null })
+                      audit("Professional access revoked", access.name)
                       toast("Access revoked", { description: `${access.name} can no longer see your data.` })
                     }}
                   >
@@ -81,7 +87,9 @@ export default function ProfessionalPage() {
                     className="w-full"
                     disabled={code.trim().length < 4 || scopes.length === 0}
                     onClick={() => {
-                      updateSettings({ professionalAccess: { name: `Dietitian ${code.trim()} (verified)`, scope: SCOPES.filter((s) => scopes.includes(s.id)).map((s) => s.label).join(", "), grantedAt: new Date().toISOString() } })
+                      const scope = SCOPES.filter((s) => scopes.includes(s.id)).map((s) => s.label).join(", ")
+                      updateSettings({ professionalAccess: { name: `Dietitian ${code.trim()} (verified)`, scope, grantedAt: new Date().toISOString() } })
+                      audit("Professional access granted", `Dietitian ${code.trim()} · ${scope}`)
                       toast.success("Access granted")
                     }}
                   >
@@ -89,8 +97,30 @@ export default function ProfessionalPage() {
                   </Button>
                 </Surface>
               )}
+              {access && (
+                <ListGroup>
+                  <ListRow href="/profile/professional/view" icon={<Eye />} iconTone="sky" title="See what they see" description="The dietitian's view of your shared records (prototype)" />
+                </ListGroup>
+              )}
               <InfoNote>Professionals only see what you allow. A plan is marked “professionally reviewed” only after a verified professional approves it.</InfoNote>
             </Section>
+
+            {notes.length > 0 && (
+              <Section title="Notes from your dietitian">
+                <ListGroup>
+                  {notes.map((n) => (
+                    <ListRow
+                      key={n.id}
+                      icon={<MessageSquareText />}
+                      iconTone="sky"
+                      title={<span className="text-callout font-normal whitespace-pre-line">{n.text}</span>}
+                      description={`${n.author} · ${new Date(n.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+                    />
+                  ))}
+                </ListGroup>
+                <p className="text-caption px-1 text-muted-foreground">Recommendations from a professional don&apos;t change your plan automatically. Ask them to share an updated plan, or create one yourself.</p>
+              </Section>
+            )}
 
             <Section title="Report for your appointment">
               <Surface padding="lg" className="space-y-5">
@@ -102,8 +132,10 @@ export default function ProfessionalPage() {
                   <li className="flex gap-2"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" />Record completeness, so gaps aren&apos;t mistaken for low intake</li>
                   <li className="flex gap-2"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" />Allergies, preferences and notes you add</li>
                 </ul>
-                <Button variant="outline" className="w-full" onClick={() => toast.success("Report ready", { description: `Prototype: a ${range}-day PDF would download now.` })}>
-                  <FileText className="size-[18px]" /> Export PDF
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={`/profile/professional/report?days=${range}`}>
+                    <FileText className="size-[18px]" /> Open printable report
+                  </Link>
                 </Button>
               </Surface>
             </Section>

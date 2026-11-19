@@ -2,8 +2,9 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Beef, CalendarDays, Check, ChefHat, ChevronLeft, ChevronRight, Flame, Layers, Package, Plus, ShieldCheck, ShoppingBasket, Sparkles, TriangleAlert, Wallet } from "lucide-react"
-import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, Surface, type IconTone } from "@/components/app/page"
+import { Beef, CalendarDays, CalendarArrowDown, Check, ChefHat, ChevronLeft, ChevronRight, Flame, Layers, Package, Settings2, Pause, Play, Plus, ShieldCheck, ShoppingBasket, Sparkles, TriangleAlert, Wallet } from "lucide-react"
+import { EmptyState, HeaderIconButton, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, Surface, type IconTone } from "@/components/app/page"
+import { AddMealButton, AddMealSheet, ExportSheet, PauseDialog, PausedBanner, RescheduleBanner } from "@/components/plan/calendar-extras"
 import { WeekStrip } from "@/components/app/week-strip"
 import { Ring } from "@/components/app/nutrition"
 import { MealList } from "@/components/plan/meal-row"
@@ -11,12 +12,12 @@ import { Segmented } from "@/components/app/controls"
 import { FeatureBadge } from "@/components/app/badges"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
 import { Button } from "@/components/ui/button"
-import { useActivePlan, useActiveProfile, useApp } from "@/lib/store"
+import { useActivePlan, useActiveProfile, useApp, usePausedPlan } from "@/lib/store"
 import { addDays, formatDay, fromISO, nowHHMM, startOfWeek, toISODate, todayISO } from "@/lib/date"
 import { fmt, recipeCostPerServing, recipeNutrition } from "@/lib/nutrition"
 import { useRecipeLookup } from "@/lib/area-c-utils"
 import { cn } from "@/lib/utils"
-import type { MealPlan, PlannedMeal } from "@/lib/types"
+import type { MealPlan, PlannedMeal, Profile } from "@/lib/types"
 
 type View = "day" | "week" | "month"
 
@@ -24,10 +25,18 @@ const byTime = (a: PlannedMeal, b: PlannedMeal) => a.time.localeCompare(b.time)
 
 /** Plan tab: meal calendar with day/week/month views (§14, FR-016, UI-SPEC §5). */
 export default function PlanPage() {
-  const plan = useActivePlan()
+  const activePlan = useActivePlan()
+  const pausedPlan = usePausedPlan()
+  const plan = activePlan ?? pausedPlan
   const profile = useActiveProfile()
   const [view, setView] = useState<View>("day")
-  const [date, setDate] = useState(todayISO())
+  // A plan that starts later (e.g. tomorrow) opens on its first day rather than an empty today.
+  const [date, setDate] = useState(() => (plan && plan.startDate > todayISO() ? plan.startDate : todayISO()))
+  const [exportOpen, setExportOpen] = useState(false)
+  const [pauseOpen, setPauseOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const setPlanStatus = useApp((s) => s.setPlanStatus)
+  const syncStatuses = useApp((s) => s.syncMealStatuses)
 
   const newPlan = (
     <Button asChild size="sm" variant="outline">
@@ -85,9 +94,22 @@ export default function PlanPage() {
 
   return (
     <>
-      <PageHeader title="Plan" large action={newPlan} />
+      <PageHeader
+        title="Plan"
+        large
+        action={
+          <>
+            <HeaderIconButton label="Export to calendar" onClick={() => setExportOpen(true)}>
+              <CalendarArrowDown className="size-[19px]" />
+            </HeaderIconButton>
+            {newPlan}
+          </>
+        }
+      />
       <PageBody>
         <PlanSummary plan={plan} />
+        {plan.status === "paused" && <PausedBanner plan={plan} />}
+        {profile && <RescheduleBanner plan={plan} profile={profile} />}
 
         <div className="space-y-4">
           <Segmented
@@ -113,7 +135,7 @@ export default function PlanPage() {
               </button>
             </div>
           )}
-          {view === "day" && <DayView date={date} onPick={setDate} meals={plan.meals} />}
+          {view === "day" && <DayView date={date} onPick={setDate} meals={plan.meals} paused={plan.status === "paused"} onAdd={() => setAddOpen(true)} />}
           {view === "week" && <WeekView date={date} meals={plan.meals} />}
           {view === "month" && <MonthView date={date} meals={plan.meals} onPick={setDate} />}
         </div>
@@ -128,8 +150,20 @@ export default function PlanPage() {
           </CautionNote>
         )}
 
-        <PlanTools />
+        <PlanTools
+          plan={plan}
+          onExport={() => setExportOpen(true)}
+          onPause={() => {
+            if (plan.status === "paused") {
+              setPlanStatus(plan.id, "active")
+              syncStatuses()
+            } else setPauseOpen(true)
+          }}
+        />
       </PageBody>
+      <ExportSheet plan={plan} date={date} open={exportOpen} onOpenChange={setExportOpen} />
+      <PauseDialog plan={plan} open={pauseOpen} onOpenChange={setPauseOpen} />
+      {profile && addOpen && <AddMealSheet key={date} plan={plan} date={date} profile={profile as Profile} open={addOpen} onOpenChange={setAddOpen} />}
     </>
   )
 }
@@ -145,7 +179,7 @@ function PlanSummary({ plan }: { plan: MealPlan }) {
       <div className="relative flex items-center gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-caption inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 font-medium">
-            <CalendarDays className="size-3.5" aria-hidden /> {plan.status === "active" ? "Active plan" : plan.status}
+            {plan.status === "paused" ? <Pause className="size-3.5" aria-hidden /> : <CalendarDays className="size-3.5" aria-hidden />} {plan.status === "active" ? "Active plan" : plan.status === "paused" ? "Paused" : plan.status}
           </p>
           <p className="text-title mt-2.5 leading-tight">{plan.title}</p>
           <p className="text-caption mt-1 text-charcoal/75">
@@ -205,18 +239,31 @@ function SumTile({ icon, tone, label, value, unit }: { icon: React.ReactNode; to
   )
 }
 
-function DayView({ date, onPick, meals }: { date: string; onPick: (d: string) => void; meals: PlannedMeal[] }) {
+function DayView({ date, onPick, meals, paused, onAdd }: { date: string; onPick: (d: string) => void; meals: PlannedMeal[]; paused?: boolean; onAdd: () => void }) {
   const day = meals.filter((m) => m.date === date).sort(byTime)
-  const nextId = date === todayISO() ? day.find((m) => !m.outcome && m.time >= nowHHMM())?.id : undefined
+  const nextId = date === todayISO() && !paused ? day.find((m) => !m.outcome && m.time >= nowHHMM())?.id : undefined
+  const canAdd = date >= todayISO()
   return (
     <div className="space-y-4">
-      <WeekStrip value={date} onChange={onPick} marked={(d) => meals.some((m) => m.date === d)} />
+      <WeekStrip value={date} onChange={onPick} marked={(d) => meals.some((m) => m.date === d)} paused={paused} />
       {day.length === 0 ? (
-        <EmptyState icon={<CalendarDays />} title="Nothing planned" description="This day is outside your current plan." />
+        <EmptyState
+          icon={<CalendarDays />}
+          title="Nothing planned"
+          description={canAdd ? "Add a meal to this day, or create a plan that covers it." : "No meals were planned for this day."}
+          action={
+            canAdd ? (
+              <Button variant="outline" onClick={onAdd}>
+                <Plus className="size-4" /> Add a meal
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <>
           <DaySummary meals={day} />
-          <MealList meals={day} highlightId={nextId} />
+          <MealList meals={day} highlightId={nextId} highlightLabel={nextId ? "Up next" : undefined} />
+          {canAdd && <AddMealButton onClick={onAdd} />}
         </>
       )}
     </div>
@@ -304,7 +351,7 @@ function MonthView({ date, meals, onPick }: { date: string; meals: PlannedMeal[]
   )
 }
 
-function PlanTools() {
+function PlanTools({ plan, onExport, onPause }: { plan?: MealPlan; onExport?: () => void; onPause?: () => void }) {
   const prep = useApp((s) => s.plans.find((p) => p.id === s.activePlanId)?.meals.filter((m) => m.prepLater && !m.outcome).length ?? 0)
   const shopping = useApp((s) => s.shopping.filter((i) => !i.purchased).length)
   return (
@@ -335,6 +382,29 @@ function PlanTools() {
           description="A draft of next week for you to approve"
         />
         <ListRow href="/plan/plans" icon={<Layers />} iconTone="sage" title="My plans" description="Active, drafts, history and suggestions" />
+        <ListRow href="/plan/settings" icon={<Settings2 />} iconTone="sky" title="Plan settings" description="Meals per day and meal times" />
+        {plan && onExport && (
+          <ListRow
+            onClick={onExport}
+            icon={<CalendarArrowDown />}
+            iconTone="sky"
+            title={
+              <>
+                Export to calendar <FeatureBadge feature="calendar" />
+              </>
+            }
+            description="Download a day, week or the whole plan (.ics)"
+          />
+        )}
+        {plan && onPause && (plan.status === "active" || plan.status === "paused") && (
+          <ListRow
+            onClick={onPause}
+            icon={plan.status === "paused" ? <Play /> : <Pause />}
+            iconTone="muted"
+            title={plan.status === "paused" ? "Resume plan" : "Pause plan"}
+            description={plan.status === "paused" ? "Bring back meals and reminders" : "Put meals and reminders on hold"}
+          />
+        )}
       </ListGroup>
     </Section>
   )

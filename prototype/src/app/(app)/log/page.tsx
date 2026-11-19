@@ -2,21 +2,22 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Baby, Plus, Store, UtensilsCrossed, Wand2 } from "lucide-react"
+import { Baby, ChevronDown, Lightbulb, Plus, Store, UtensilsCrossed, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { EmptyState, HeaderIconButton, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
+import { EmptyState, HeaderIconButton, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
 import { WeekStrip } from "@/components/app/week-strip"
 import { FeatureBadge } from "@/components/app/badges"
-import { EstimateNote, Ring } from "@/components/app/nutrition"
+import { EstimateNote, NutrientBar, Ring } from "@/components/app/nutrition"
 import { cn } from "@/lib/utils"
 import { InfoNote } from "@/components/app/alerts"
 import { ProfileSwitcher } from "@/components/app/profile-switcher"
 import { EntryCard } from "@/components/log/entry-card"
 import { PlannedVsActual } from "@/components/log/planned-vs-actual"
 import { useApp, useActivePlan, useActiveProfile } from "@/lib/store"
-import { formatDay, todayISO } from "@/lib/date"
+import { formatDay, nowHHMM, todayISO } from "@/lib/date"
 import { adultTargets } from "@/lib/nutrition"
-import { dayRange, entriesFor } from "@/lib/area-b-log"
+import { dashboardRecommendations, dayRange, entriesFor, recordConfidenceSentence } from "@/lib/area-b-log"
+import { recordConfidence } from "@/lib/area-d-stats"
 
 /** Food Log tab: daily journal, totals and planned vs actual (§41.4, §41.5). */
 export default function FoodLogPage() {
@@ -25,6 +26,7 @@ export default function FoodLogPage() {
   const journal = useApp((s) => s.journal)
   const today = todayISO()
   const [date, setDate] = useState(today)
+  const [moreOpen, setMoreOpen] = useState(false)
   const n = (v: number) => Math.round(v).toLocaleString("en-US")
 
   if (!profile) return null
@@ -34,6 +36,10 @@ export default function FoodLogPage() {
   const targets = child ? null : adultTargets(profile)
   const meals = child ? [] : (plan?.meals ?? []).filter((m) => m.date === date)
   const unrecorded = meals.filter((m) => !m.outcome).length
+  const logHref = date === today ? "/log/new" : `/log/new?date=${date}`
+  const confidence = child ? null : recordConfidence(journal, plan, profile.id, date)
+  const confidenceText = child ? "" : recordConfidenceSentence(entries, meals, date, nowHHMM())
+  const recs = targets ? dashboardRecommendations({ profile, targets, journal, plan, date }) : []
 
   return (
     <>
@@ -44,7 +50,7 @@ export default function FoodLogPage() {
         action={
           <>
             <ProfileSwitcher />
-            <HeaderIconButton href="/log/new" label="Log a meal" className="bg-lime text-charcoal hover:bg-lime/85">
+            <HeaderIconButton href={logHref} label="Log a meal" className="bg-lime text-charcoal hover:bg-lime/85">
               <Plus className="size-5" />
             </HeaderIconButton>
           </>
@@ -106,15 +112,80 @@ export default function FoodLogPage() {
                 <MacroColumn label="Fiber" fill="bg-fiber" value={range.mid.fiberG} top={targets.fiberMinG * 1.25} target={`≥ ${n(targets.fiberMinG)}`} />
               </div>
               <div className="mt-4 border-t border-border/70 pt-3">
+                <button type="button" onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} className="text-callout flex w-full items-center justify-between font-semibold text-forest">
+                  More nutrients
+                  <ChevronDown className={cn("size-4 transition-transform motion-reduce:transition-none", moreOpen && "rotate-180")} aria-hidden />
+                </button>
+                {moreOpen && (
+                  <div className="mt-4 space-y-4">
+                    <NutrientBar label="Carbs" value={range.mid.carbsG} low={targets.carbsG.low} high={targets.carbsG.high} unit="g" estimate color="carbs" />
+                    <NutrientBar label="Fat" value={range.mid.fatG} low={targets.fatG.low} high={targets.fatG.high} unit="g" estimate color="fat" />
+                    <NutrientBar label="Fiber" value={range.mid.fiberG} low={targets.fiberMinG} unit="g" kind="min" estimate color="fiber" />
+                    <NutrientBar label="Iron" value={range.mid.ironMg ?? 0} low={targets.ironMg} unit="mg" kind="min" estimate />
+                    <NutrientBar label="Calcium" value={range.mid.calciumMg ?? 0} low={targets.calciumMg} unit="mg" kind="min" estimate />
+                    <ul className="text-caption space-y-0.5 text-muted-foreground">
+                      <li>
+                        <span className="font-semibold text-charcoal">Range</span> — somewhere in this band suits most days.
+                      </li>
+                      <li>
+                        <span className="font-semibold text-charcoal">Minimum</span> — aim for at least this much over the day.
+                      </li>
+                      <li>
+                        <span className="font-semibold text-charcoal">Limit</span> — an upper amount to stay under. Sodium isn&apos;t shown yet: too few foods in our database have reliable sodium data.
+                      </li>
+                    </ul>
+                    <EstimateNote>Iron and calcium are missing for some foods in our database, so they may be under-counted. Going past a general target isn&apos;t the same as an unsafe amount.</EstimateNote>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 border-t border-border/70 pt-3">
                 <EstimateNote>
-                  Counts logged meals only
+                  Totals cover logged items only
                   {unrecorded > 0 ? ` — ${unrecorded} planned meal${unrecorded === 1 ? " is" : "s are"} not recorded yet, so the day may be incomplete.` : "."}
                 </EstimateNote>
               </div>
+              {confidence && (
+                <div className="mt-3 flex items-start gap-2 border-t border-border/70 pt-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-caption flex flex-wrap items-center gap-1.5 text-muted-foreground">
+                      Record
+                      <Pill tone={confidence.level === "Complete" || confidence.level === "Mostly complete" ? "sage" : "neutral"} className="h-[22px] px-2 text-[11px]">
+                        {confidence.level}
+                      </Pill>
+                      <FeatureBadge feature="confidence" />
+                    </p>
+                    <p className="text-caption mt-1 text-muted-foreground">{confidenceText} This shows how complete the record is — not how healthy the day was.</p>
+                  </div>
+                </div>
+              )}
             </Surface>
           ) : (
             <InfoNote title="Targets set with your care team">{targets.reason}</InfoNote>
           ))
+        )}
+
+        {recs.length > 0 && (
+          <Section title="Suggestions" badge={<FeatureBadge feature="dashboard" />}>
+            <div className="space-y-3">
+              {recs.map((r) => (
+                <div key={r.id} className="flex gap-3 rounded-2xl bg-sage/70 p-4">
+                  <IconTile tone="white" size="sm">
+                    <Lightbulb />
+                  </IconTile>
+                  <div className="min-w-0">
+                    <p className="text-callout font-semibold">{r.title}</p>
+                    <p className="text-callout mt-0.5 text-charcoal/80">{r.body}</p>
+                    {r.kind === "professional" && (
+                      <Link href="/profile/professional" className="text-callout mt-2 inline-block font-semibold text-forest underline-offset-4 hover:underline">
+                        Professional support
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <EstimateNote>Based on your logged meals only. Suggestions never mean skipping meals or eating less to make up for a day.</EstimateNote>
+          </Section>
         )}
 
         <Section title={date === today ? "Recently logged" : "Logged this day"} badge={<FeatureBadge feature="journal_photo" />}>
@@ -131,8 +202,8 @@ export default function FoodLogPage() {
               description={child ? "Record a feed or a new food when you're ready." : "Snap a photo, search a food or just describe what you ate."}
               action={
                 <Button asChild>
-                  <Link href="/log/new">
-                    <Plus /> Log a meal
+                  <Link href={logHref}>
+                    <Plus /> {date === today ? "Log a meal" : `Log for ${formatDay(date)}`}
                   </Link>
                 </Button>
               }

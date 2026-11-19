@@ -5,7 +5,7 @@ import { Camera, ChevronRight, Flame, NotebookPen } from "lucide-react"
 import { Pill } from "@/components/app/page"
 import { FoodTile } from "@/components/log/food-tile"
 import { MEAL_LABEL } from "@/lib/planning"
-import { entryRange, entryTitle, SOURCE_LABEL } from "@/lib/area-b-log"
+import { entryPhoto, entryRange, entryTitle, SOURCE_LABEL } from "@/lib/area-b-log"
 import { cn } from "@/lib/utils"
 import { useActivePlan } from "@/lib/store"
 import { recipePhoto } from "@/lib/data/photos"
@@ -40,12 +40,14 @@ export function EntryCard({ entry, hideNutrition }: { entry: JournalEntry; hideN
   const time = new Date(entry.consumedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
   const pending = entry.analysisStatus === "pending_confirmation"
   const meal = plan?.meals.find((m) => m.id === entry.linkedPlannedMealId || m.linkedJournalEntryId === entry.id)
-  const photo = recipePhoto(meal?.recipeId)
+  // The user's own photo comes first; stock recipe photos only stand in when there is none (§41.2 Step 5).
+  const own = entryPhoto(entry)
+  const photo = own ?? recipePhoto(entry.recipeId ?? meal?.recipeId)
   return (
     <Link href={`/log/entry/${entry.id}`} className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-3 pr-4 shadow-card transition-colors hover:bg-muted/40 active:bg-muted">
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element -- static prototype asset
-        <img src={photo} alt="" className="size-[68px] shrink-0 rounded-full object-cover ring-2 ring-card" />
+        <img src={photo} alt={own ? "Your meal photo" : ""} className="size-[68px] shrink-0 rounded-full object-cover ring-2 ring-card" />
       ) : entry.hasPhoto ? (
         <PhotoPlaceholder className="size-[68px] shrink-0 rounded-full" />
       ) : entry.items[0] ? (

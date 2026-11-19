@@ -1,30 +1,47 @@
 "use client"
 
-import { Plus } from "lucide-react"
+import { useState } from "react"
+import { Camera, ChevronDown, CookingPot, ImagePlus, Plus } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
+import { PillGroup, Stepper } from "@/components/app/controls"
 import { MacroTiles } from "@/components/log/macro-tiles"
 import { EstimateNote } from "@/components/app/nutrition"
 import { ItemEditor } from "@/components/log/item-editor"
 import { FoodPickerSheet } from "@/components/log/food-picker"
 import { PhotoPlaceholder } from "@/components/log/entry-card"
 import { StickyAction } from "@/components/log/input-steps"
-import { Section, Surface } from "@/components/app/page"
-import { ALLERGEN_LABELS } from "@/lib/data/foods"
+import { RecipeThumb } from "@/components/app/recipe-thumb"
+import { ListGroup, ListRow, Section, Surface } from "@/components/app/page"
+import { ALLERGEN_LABELS, FOOD_MAP } from "@/lib/data/foods"
+import { RECIPES } from "@/lib/data/recipes"
 import { MEAL_LABEL } from "@/lib/planning"
-import { formatTime } from "@/lib/date"
-import { entryNutrition, entryUncertainty } from "@/lib/nutrition"
-import { allergenHits, infantFlags, itemFromFood } from "@/lib/area-b-log"
-import { needsHiddenIngredientQuestion, hasSweetDrink } from "@/lib/vision-mock"
+import { formatTime, todayISO } from "@/lib/date"
+import { entryUncertainty, recipeNutrition, violatesHardConstraints } from "@/lib/nutrition"
+import {
+  allergenHits,
+  entryNutritionFull,
+  familyOf,
+  hiddenAllergenHits,
+  hiddenQuestions,
+  infantFlags,
+  itemFromFood,
+  itemsFromRecipe,
+  MAIN_INGREDIENTS,
+  MEAL_ORDER,
+  mixedDishItem,
+  type HiddenKey,
+} from "@/lib/area-b-log"
 import { useRecipeLookup } from "@/lib/area-c-utils"
-import { cn } from "@/lib/utils"
-import type { JournalEntry, JournalItem, PlannedMeal, Profile } from "@/lib/types"
+import { useApp } from "@/lib/store"
+import type { JournalEntry, JournalItem, MealType, PlannedMeal, Profile, Recipe } from "@/lib/types"
 
 export type Oil = NonNullable<JournalEntry["hiddenIngredients"]["oil"]>
+export type Hidden = Omit<JournalEntry["hiddenIngredients"], "oil"> & { oil?: Oil | "unsure" }
 export interface ChildInfo {
   texture: string
   accepted: "yes" | "somewhat" | "no"
@@ -34,82 +51,143 @@ export interface ChildInfo {
 
 export const TEXTURES = ["Smooth purée", "Mashed", "Soft lumps", "Soft finger food", "Chopped family food"]
 
-const OIL: { id: Oil | "unsure"; label: string }[] = [
-  { id: "none", label: "None" },
-  { id: "little", label: "A little" },
-  { id: "moderate", label: "Moderate" },
-  { id: "lots", label: "A lot" },
-  { id: "unsure", label: "Not sure" },
+const OIL: { value: Oil | "unsure"; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "little", label: "A little" },
+  { value: "moderate", label: "Moderate" },
+  { value: "lots", label: "A lot" },
+  { value: "unsure", label: "Not sure" },
+]
+const YES_NO: { value: "yes" | "no"; label: string }[] = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
 ]
 
+export function toStoredHidden(h: Hidden): JournalEntry["hiddenIngredients"] {
+  return { ...h, oil: h.oil === "unsure" ? "moderate" : h.oil }
+}
+
 /**
- * Confirmation step (§41.3.4). Nothing is saved until the user confirms; nutrition is then
- * computed by the engine from the food DB. Hidden-ingredient questions only when they matter (§41.3.3).
+ * Confirmation step (§41.2 Step 3, §41.3.4). Nothing is saved until the user confirms; nutrition is
+ * then computed by the engine from the food DB. Hidden-ingredient questions appear only when they
+ * could materially change the estimate, and at most two up front (§41.3.3).
  */
 export function ReviewStep({
   profile,
   source,
-  photoUrl,
+  photos,
   hasPhoto,
+  onAddPhoto,
   items,
   setItems,
-  oil,
-  setOil,
-  sugar,
-  setSugar,
+  hidden,
+  setHidden,
+  mealType,
+  setMealType,
   linkedMealId,
   setLinkedMealId,
   openMeals,
+  date,
+  setDate,
   time,
   setTime,
   saveAsUsual,
   setSaveAsUsual,
   child,
   setChild,
+  recipeCtx,
+  onUseRecipe,
+  context,
   onConfirm,
 }: {
   profile: Profile
   source: JournalEntry["source"]
-  photoUrl?: string
+  photos: string[]
   hasPhoto: boolean
+  onAddPhoto?: (mode: "camera" | "gallery") => void
   items: JournalItem[]
   setItems: (i: JournalItem[]) => void
-  oil: Oil | "unsure" | undefined
-  setOil: (o: Oil | "unsure") => void
-  sugar: boolean | undefined
-  setSugar: (s: boolean) => void
+  hidden: Hidden
+  setHidden: (h: Hidden) => void
+  mealType: MealType
+  setMealType: (m: MealType) => void
   linkedMealId: string
   setLinkedMealId: (id: string) => void
   openMeals: PlannedMeal[]
+  date: string
+  setDate: (d: string) => void
   time: string
   setTime: (t: string) => void
   saveAsUsual: boolean
   setSaveAsUsual: (v: boolean) => void
   child: ChildInfo
   setChild: (c: ChildInfo) => void
+  recipeCtx?: { recipe: Recipe; servings: number; setServings: (n: number) => void }
+  onUseRecipe: (recipe: Recipe) => void
+  context?: string
   onConfirm: () => void
 }) {
   const lookup = useRecipeLookup()
+  const userRecipes = useApp((s) => s.userRecipes)
+  const [activePhoto, setActivePhoto] = useState(0)
+  const [showMore, setShowMore] = useState(false)
+  const [main, setMain] = useState<string>()
   const isChild = profile.type !== "adult"
-  const aiProposed = source === "photo" || source === "text" || source === "voice"
-  const askOil = !isChild && aiProposed && needsHiddenIngredientQuestion(items)
-  const askSugar = !isChild && aiProposed && hasSweetDrink(items)
+  const aiProposed = source === "photo" || source === "text" || source === "voice" || source === "restaurant"
+  const questions: HiddenKey[] = !isChild && aiProposed ? hiddenQuestions(items) : []
+  const upFront = questions.slice(0, 2)
+  const later = questions.slice(2)
   const hits = allergenHits(items, profile)
+  const hiddenHits = hiddenAllergenHits(toStoredHidden(hidden), profile)
+  const allergenNames = Array.from(new Set([...hits.map((h) => h.allergen), ...hiddenHits].map((a) => ALLERGEN_LABELS[a] ?? a)))
   const infant = isChild ? items.map((i) => ({ i, flag: infantFlags(i.foodId, profile) })).filter((x) => x.flag) : []
+  const mixed = !isChild && aiProposed ? mixedDishItem(items) : undefined
+  const mixedIsCurry = !!mixed && FOOD_MAP[mixed.foodId]?.category !== "mixed_dish"
+  const linked = openMeals.find((m) => m.id === linkedMealId)
+
+  // Recipes that match the mixed dish (§41.3.3: "select a recipe from the database").
+  const family = main ? MAIN_INGREDIENTS.find((m) => m.id === main)?.category : mixed ? familyOf(mixed.foodId) : undefined
+  const matching =
+    mixed && family
+      ? [...RECIPES, ...userRecipes]
+          .filter((r) => r.profile === "adult" && r.ingredients.some((i) => familyOf(i.foodId) === family || FOOD_MAP[i.foodId]?.category === family))
+          .filter((r) => !violatesHardConstraints(r, profile))
+          .slice(0, 3)
+      : []
 
   const draft: JournalEntry = {
     id: "draft",
     profileId: profile.id,
-    mealType: "other",
+    mealType,
     consumedAt: "",
     source,
     hasPhoto,
     items,
-    hiddenIngredients: { oil: oil === "unsure" ? "moderate" : oil, sugar },
+    hiddenIngredients: toStoredHidden(hidden),
     analysisStatus: "pending_confirmation",
   }
-  const n = entryNutrition(draft)
-  const u = entryUncertainty(draft) + (oil === "unsure" ? 0.05 : 0)
+  const n = entryNutritionFull(draft)
+  const unanswered = upFront.filter((q) => hidden[q] === undefined).length
+  const u = entryUncertainty(draft) + (hidden.oil === "unsure" ? 0.05 : 0) + unanswered * 0.03 + (mixed && mixedIsCurry && !main ? 0.05 : 0)
+  const shownPhoto = photos[Math.min(activePhoto, photos.length - 1)]
+
+  const question = (q: HiddenKey) => {
+    if (q === "oil")
+      return (
+        <Section key={q} title="How much oil or ghee was used?" description={source === "restaurant" ? "Restaurant cooking often uses more oil than home cooking. A photo can't show it." : "A photo can't show oil, and it can change the estimate a lot."}>
+          <PillGroup label="Oil or ghee" options={OIL} value={hidden.oil} onChange={(oil) => setHidden({ ...hidden, oil })} />
+        </Section>
+      )
+    const yn = (label: string, description: string, key: Exclude<HiddenKey, "oil">) => (
+      <Section key={q} title={label} description={description}>
+        <PillGroup label={label} options={YES_NO} value={hidden[key] === undefined ? undefined : hidden[key] ? "yes" : "no"} onChange={(v) => setHidden({ ...hidden, [key]: v === "yes" })} />
+      </Section>
+    )
+    if (q === "coconutMilk") return yn("Was coconut milk or cream added?", "It isn't visible in a photo but adds noticeable energy.", "coconutMilk")
+    if (q === "butter") return yn("Butter or ghee on your roti or paratha?", "Spread butter or ghee can't be seen in a photo.", "butter")
+    if (q === "sugar") return yn("Was sugar added?", "For tea, doi, milk or oats. A photo can't show sugar.", "sugar")
+    return yn("Any sauce, ketchup or dressing?", "Only if you had some on the side or on top.", "sauce")
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -117,7 +195,7 @@ export function ReviewStep({
         {hasPhoto && (
           <Surface padding="none" className="overflow-hidden">
             <div className="relative">
-              <PhotoPlaceholder src={photoUrl} className="h-48 w-full rounded-none" />
+              <PhotoPlaceholder src={shownPhoto} className="h-48 w-full rounded-none" />
               <span className="text-caption absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-card/95 px-2.5 py-1 font-semibold">
                 {items.length} food{items.length === 1 ? "" : "s"} suggested · estimate
               </span>
@@ -125,16 +203,58 @@ export function ReviewStep({
             <div className="p-4">
               <p className="text-headline">Check what we found</p>
               <p className="text-caption mt-0.5 text-muted-foreground">Suggestions from your photo. Fix anything that&apos;s wrong.</p>
+              <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                {photos.map((p, i) => (
+                  <button key={i} type="button" onClick={() => setActivePhoto(i)} aria-label={`Show photo ${i + 1}`} aria-pressed={i === activePhoto} className="shrink-0 rounded-xl">
+                    <PhotoPlaceholder src={p} className={`size-14 ${i === activePhoto ? "ring-2 ring-lime" : ""}`} />
+                  </button>
+                ))}
+                {onAddPhoto && photos.length < 4 && (
+                  <>
+                    <button type="button" onClick={() => onAddPhoto("camera")} className="text-caption grid size-14 shrink-0 place-items-center rounded-xl border border-dashed border-input font-medium text-forest" aria-label="Take another angle">
+                      <Camera className="size-5" aria-hidden />
+                    </button>
+                    <button type="button" onClick={() => onAddPhoto("gallery")} className="text-caption grid size-14 shrink-0 place-items-center rounded-xl border border-dashed border-input font-medium text-forest" aria-label="Add a photo from your gallery">
+                      <ImagePlus className="size-5" aria-hidden />
+                    </button>
+                  </>
+                )}
+              </div>
+              {onAddPhoto && <p className="text-caption mt-1.5 text-muted-foreground">Another angle can help you check portions. Photos stay private.</p>}
             </div>
           </Surface>
         )}
-        {!hasPhoto && aiProposed && <InfoNote title="Check what we found">We matched your words to foods in our database. Fix anything that&apos;s wrong.</InfoNote>}
+        {!hasPhoto && (source === "text" || source === "voice") && <InfoNote title="Check what we found">We matched your words to foods in our database. Fix anything that&apos;s wrong.</InfoNote>}
+        {context && <InfoNote>{context}</InfoNote>}
 
-        {(hits.length > 0 || infant.length > 0) && (
+        {recipeCtx && (
+          <Surface>
+            <div className="flex items-center gap-3">
+              <RecipeThumb recipe={recipeCtx.recipe} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="text-caption text-muted-foreground">From a recipe{recipeCtx.recipe.reviewStatus === "personal" ? " · your own, not reviewed" : ""}</p>
+                <p className="text-body font-medium">{recipeCtx.recipe.name}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+              <span className="text-callout">Servings you ate</span>
+              <Stepper
+                label="servings"
+                value={recipeCtx.servings}
+                onDec={() => recipeCtx.setServings(Math.max(0.5, recipeCtx.servings - 0.5))}
+                onInc={() => recipeCtx.setServings(recipeCtx.servings + 0.5)}
+                decDisabled={recipeCtx.servings <= 0.5}
+              />
+            </div>
+            <p className="text-caption mt-2 text-muted-foreground">Ingredients are scaled from the recipe. Adjust any item below if your portion was different.</p>
+          </Surface>
+        )}
+
+        {(allergenNames.length > 0 || infant.length > 0) && (
           <div className="space-y-3">
-            {hits.length > 0 && (
-              <SafetyAlert title={`Contains ${Array.from(new Set(hits.map((h) => ALLERGEN_LABELS[h.allergen] ?? h.allergen))).join(", ")}`} emergency>
-                {hits.map((h) => h.item.displayName).join(", ")} {hits.length > 1 ? "contain" : "contains"} an allergen recorded in {isChild ? `${profile.name}'s` : "your"} profile. You can still record it. If there are signs of a reaction, get help now.
+            {allergenNames.length > 0 && (
+              <SafetyAlert title={`Contains ${allergenNames.join(", ")}`} emergency>
+                {[...hits.map((h) => h.item.displayName), ...(hiddenHits.includes("milk") ? ["Butter or ghee"] : []), ...(hiddenHits.includes("mustard") ? ["Cooking oil (if mustard oil)"] : [])].join(", ")} may contain an allergen recorded in {isChild ? `${profile.name}'s` : "your"} profile. You can still record it. If there are signs of a reaction, get help now.
               </SafetyAlert>
             )}
             {infant.length > 0 && (
@@ -151,7 +271,7 @@ export function ReviewStep({
           </div>
         )}
 
-        <Section title={`Foods (${items.length})`} description={aiProposed ? "Food and portion confidence are shown separately." : undefined}>
+        <Section title={`Foods (${items.length})`} description={aiProposed ? "Food and portion confidence are shown separately and stay visible after you confirm." : undefined}>
           <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
             {items.map((it, idx) => (
               <ItemEditor
@@ -183,22 +303,49 @@ export function ReviewStep({
           )}
         </Section>
 
-        {askOil && (
-          <Section title="How much oil or ghee was used?" description="Photos can't show oil, and it changes the estimate a lot.">
-            <Chips options={OIL} value={oil} onChange={setOil} />
+        {mixed && (
+          <Section
+            title={mixedIsCurry ? `What was the main ingredient in the ${mixed.displayName.replace(/ \(.*\)/, "").toLowerCase()}?` : `Is your ${mixed.displayName.replace(/ \(.*\)/, "").toLowerCase()} like one of these recipes?`}
+            description="Mixed dishes vary a lot. A matching recipe gives a better estimate than a single food."
+          >
+            {mixedIsCurry && (
+              <PillGroup
+                label="Main ingredient"
+                options={MAIN_INGREDIENTS.map((m) => ({ value: m.id, label: m.label }))}
+                value={main}
+                onChange={(id) => {
+                  setMain(id)
+                  const m = MAIN_INGREDIENTS.find((x) => x.id === id)
+                  if (!m) return
+                  setItems(items.map((i) => (i.id === mixed.id ? { ...i, foodId: m.foodId, displayName: FOOD_MAP[m.foodId]?.name ?? m.foodId, cookingMethod: m.cooking ?? i.cookingMethod ?? "Curry", unitLabel: undefined, confirmedByUser: true } : i)))
+                }}
+              />
+            )}
+            {matching.length > 0 && (
+              <ListGroup label="Matching recipes">
+                {matching.map((r) => (
+                  <ListRow
+                    key={r.id}
+                    onClick={() => onUseRecipe(r)}
+                    icon={<CookingPot />}
+                    iconTone="lime"
+                    title={r.name}
+                    description={`Use 1 serving (~${Math.round(recipeNutrition(r, 1).energyKcal)} kcal). Replaces the foods above.`}
+                  />
+                ))}
+              </ListGroup>
+            )}
           </Section>
         )}
-        {askSugar && (
-          <Section title="Was sugar added to your tea?">
-            <Chips
-              options={[
-                { id: "yes", label: "Yes" },
-                { id: "no", label: "No" },
-              ]}
-              value={sugar === undefined ? undefined : sugar ? "yes" : "no"}
-              onChange={(v) => setSugar(v === "yes")}
-            />
-          </Section>
+
+        {upFront.map(question)}
+        {later.length > 0 && (
+          <div>
+            <button type="button" onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} className="text-callout inline-flex items-center gap-1.5 font-semibold text-forest">
+              More details (optional) <ChevronDown className={`size-4 transition-transform ${showMore ? "rotate-180" : ""}`} aria-hidden />
+            </button>
+            {showMore && <div className="mt-4 space-y-7">{later.map(question)}</div>}
+          </div>
         )}
 
         {isChild ? (
@@ -221,11 +368,12 @@ export function ReviewStep({
               </div>
               <fieldset className="space-y-2">
                 <legend className="text-callout mb-2 font-medium">How much was eaten?</legend>
-                <Chips
+                <PillGroup
+                  label="How much was eaten"
                   options={[
-                    { id: "yes", label: "Enjoyed it" },
-                    { id: "somewhat", label: "A little" },
-                    { id: "no", label: "Not today" },
+                    { value: "yes", label: "Enjoyed it" },
+                    { value: "somewhat", label: "A little" },
+                    { value: "no", label: "Not today" },
                   ]}
                   value={child.accepted}
                   onChange={(accepted) => setChild({ ...child, accepted: accepted as ChildInfo["accepted"] })}
@@ -254,7 +402,7 @@ export function ReviewStep({
               </p>
               <MacroTiles className="mt-4" values={n} />
               <div className="mt-4 border-t border-border/70 pt-3">
-                <EstimateNote>Calculated from our food database after you confirm. The range reflects portion uncertainty.</EstimateNote>
+                <EstimateNote>Calculated from our food database after you confirm. The range reflects portion and ingredient uncertainty.</EstimateNote>
               </div>
             </Surface>
           </Section>
@@ -280,6 +428,27 @@ export function ReviewStep({
                 </Select>
               </div>
             )}
+            {!linked && (
+              <div className="flex items-center justify-between gap-3">
+                <Label>Meal</Label>
+                <Select value={mealType} onValueChange={(v) => setMealType(v as MealType)}>
+                  <SelectTrigger className="w-44" aria-label="Meal">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEAL_ORDER.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {MEAL_LABEL[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="when-date">Date</Label>
+              <Input id="when-date" type="date" value={date} max={todayISO()} disabled={!!linked} onChange={(e) => e.target.value && setDate(e.target.value > todayISO() ? todayISO() : e.target.value)} className="tabular w-44" />
+            </div>
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="when">When did {isChild ? `${profile.name} eat` : "you eat"}?</Label>
               <Input id="when" type="time" value={time} onChange={(e) => setTime(e.target.value)} className="tabular w-36" />
@@ -298,20 +467,7 @@ export function ReviewStep({
   )
 }
 
-function Chips<T extends string>({ options, value, onChange }: { options: { id: T; label: string }[]; value: T | undefined; onChange: (v: T) => void }) {
-  return (
-    <div className="flex flex-wrap gap-2" role="radiogroup">
-      {options.map((o) => (
-        <button
-          key={o.id}
-          role="radio"
-          aria-checked={value === o.id}
-          onClick={() => onChange(o.id)}
-          className={cn("text-callout h-9 rounded-full border px-4 font-medium transition-colors", value === o.id ? "border-lime bg-lime text-charcoal" : "border-border/80 bg-card text-charcoal hover:bg-muted")}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
+/** Recipe items for logging, confirmed because they come from known ingredient quantities. */
+export function recipeItems(recipe: Recipe, servings: number): JournalItem[] {
+  return itemsFromRecipe(recipe, servings).map((i) => ({ ...i, confirmedByUser: true }))
 }

@@ -5,7 +5,12 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { addDays, startOfWeek, todayISO, uid } from "@/lib/date"
 import { buildShoppingList, generatePlan } from "@/lib/planning"
+import { registerUserRecipes } from "@/lib/nutrition"
+import { syncedMeals } from "@/lib/calendar"
+import { RECIPE_MAP } from "@/lib/data/recipes"
+import type { MealType as CalMealType, PlannedMeal as CalPlannedMeal } from "@/lib/types"
 import type {
+  AdminState,
   AppNotification,
   CoachMessage,
   ConsentRecord,
@@ -36,6 +41,14 @@ export interface Settings {
   reminderChannel: "push" | "email"
   integrations: Record<string, boolean>
   professionalAccess: { name: string; scope: string; grantedAt: string } | null
+  /** §26 reminder details (optional so older saved state still loads). */
+  mealReminderToggles?: Partial<Record<CalMealType, boolean>>
+  mealLeadMinutes?: number
+  /** Reminder time overrides the user approved from a learning suggestion (§42.17). */
+  mealReminderTimes?: Partial<Record<CalMealType, string>>
+  quietHours?: { enabled: boolean; start: string; end: string }
+  /** Google Calendar sync choices (§14.4). */
+  calendarSync?: { dedupe: "update" | "skip"; connectedAt?: string; lastSyncedAt?: string }
 }
 
 interface State {
@@ -61,7 +74,11 @@ interface State {
   notifications: AppNotification[]
   consents: ConsentRecord[]
   twinPreferences: { id: string; text: string; evidence: string; active: boolean }[]
+  /** Glasses of water recorded, keyed `${profileId}:${yyyy-mm-dd}` (§6.7). */
+  water: Record<string, number>
   settings: Settings
+  /** Admin console drafts (§28); never applied to live data without review. */
+  admin: AdminState
 
   // auth
   setHydrated: () => void
@@ -116,7 +133,30 @@ interface State {
   pushNotification: (n: Omit<AppNotification, "id" | "createdAt" | "read">) => void
   setConsent: (type: ConsentRecord["type"], granted: boolean) => void
   setTwinPreference: (id: string, active: boolean) => void
+  // plan management (Area C: §19.3, §42.14, §42.15, §13.3)
+  updateTwinPreference: (id: string, patch: { text?: string; active?: boolean }) => void
+  updatePlan: (id: string, patch: Partial<MealPlan>) => void
+  /** Activates approved plans whose start date has arrived (Autopilot scheduling). */
+  startScheduledPlans: () => void
   updateSettings: (patch: Partial<Settings>) => void
+  addWater: (profileId: string, date: string, delta: number) => void
+  // calendar, reminders, shopping scope, prep and pantry sync (§14, §16, §26, §42.8)
+  notificationKeys: string[]
+  shoppingHidden: string[]
+  shoppingScope: { from: string; to: string; excluded: string[] } | null
+  prepDone: Record<string, boolean>
+  pantryDeducted: Record<string, { foodId: string; grams: number }[]>
+  addMeal: (planId: string, meal: CalPlannedMeal) => void
+  syncMealStatuses: (now?: Date) => void
+  pushNotificationOnce: (key: string, n: Omit<AppNotification, "id" | "createdAt" | "read">, createdAt?: string) => boolean
+  markNotificationRead: (id: string) => void
+  setShoppingItems: (items: ShoppingItem[]) => void
+  setShoppingHidden: (foodIds: string[]) => void
+  setShoppingScope: (scope: { from: string; to: string; excluded: string[] } | null) => void
+  stockPantryFromShopping: () => number
+  setPantryDeduction: (mealId: string, items: { foodId: string; grams: number }[] | null, pantry: PantryItem[]) => void
+  togglePrepTask: (key: string) => void
+  updateAdmin: (patch: Partial<AdminState>) => void
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -158,7 +198,14 @@ const EMPTY = {
   notifications: [] as AppNotification[],
   consents: [] as ConsentRecord[],
   twinPreferences: [] as State["twinPreferences"],
+  water: {} as Record<string, number>,
+  notificationKeys: [] as string[],
+  shoppingHidden: [] as string[],
+  shoppingScope: null as State["shoppingScope"],
+  prepDone: {} as Record<string, boolean>,
+  pantryDeducted: {} as State["pantryDeducted"],
   settings: DEFAULT_SETTINGS,
+  admin: { foodOverrides: {}, recipeStatus: {}, ruleChanges: [], translationStatus: {} } as AdminState,
 }
 
 function demoAdult(name: string, overrides: Partial<Profile> = {}): Profile {
@@ -336,17 +383,73 @@ export const useApp = create<State>()(
       setHydrated: () => set({ hydrated: true }),
       signIn: (email, name) =>
         set({ user: { id: uid("u"), email, name: name || email.split("@")[0].replace(/^\w/, (c) => c.toUpperCase()) } }),
-      signOut: () => set({ ...EMPTY, settings: get().settings }),
+      // Signing out keeps this device's data, as a server-backed account would; "Reset demo data" clears it.
+      signOut: () => set({ user: null }),
       resetDemo: () => set({ ...EMPTY }),
 
       completeOnboarding: (profile, consents, child) => {
+        // A new account starts empty: no plan, journal, habits, pantry or notifications (§5.9).
+        // Only "Explore with demo data" (loadDemo) gets the populated demo account.
         const user = get().user
-        const adult = demoAdult(profile.name || user?.name || "Friend", profile)
-        const kid = child ? { ...demoChild(), ...child } : null
-        const d = buildDemoData(adult, kid)
+        const self: Profile = {
+          id: "p_self",
+          type: "adult",
+          relation: "self",
+          name: profile.name || user?.name || "Friend",
+          dateOfBirth: "",
+          diet: [],
+          allergies: [],
+          conditions: [],
+          avatarColor: "forest",
+          ...profile,
+        }
+        const dep: Profile | null = child
+          ? {
+              id: child.type === "adult" ? "p_partner" : "p_baby",
+              type: "infant",
+              relation: "child",
+              name: "",
+              dateOfBirth: todayISO(),
+              diet: [],
+              allergies: [],
+              conditions: [],
+              avatarColor: "sage",
+              ...child,
+            }
+          : null
+        // Measurements entered during setup become the first growth record, keeping their source (§6.6).
+        const growth: GrowthRecord[] =
+          dep && dep.type !== "adult" && (dep.weightKg || dep.heightCm)
+            ? [{ id: uid("g"), profileId: dep.id, date: todayISO(), weightKg: dep.weightKg, lengthCm: dep.heightCm, source: dep.measurementSource === "clinical" ? "clinic" : "home" }]
+            : []
         set({
           onboarded: true,
-          profiles: kid ? [adult, kid] : [adult],
+          profiles: dep ? [self, dep] : [self],
+          activeProfileId: dep && (self.caregiverOnly || dep.type === "adult") ? dep.id : self.id,
+          plans: [],
+          activePlanId: null,
+          journal: [],
+          shopping: [],
+          pantry: [],
+          habits: [],
+          introduced: [],
+          growth,
+          notifications: [],
+          savedMeals: [],
+          twinPreferences: [],
+          water: {},
+          consents,
+        })
+      },
+      loadDemo: () => {
+        const at = new Date().toISOString()
+        const adult = demoAdult("Nadia", { measurementSource: "self_reported", region: "Dhaka", units: "metric" })
+        const kid = demoChild()
+        const d = buildDemoData(adult, kid)
+        set({
+          user: { id: "u_demo", name: "Nadia", email: "nadia@example.com" },
+          onboarded: true,
+          profiles: [adult, kid],
           activeProfileId: adult.id,
           plans: [d.plan],
           activePlanId: d.plan.id,
@@ -359,19 +462,15 @@ export const useApp = create<State>()(
           notifications: d.notifications,
           savedMeals: d.savedMeals,
           twinPreferences: d.twinPreferences,
-          consents,
+          water: Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`${adult.id}:${addDays(todayISO(), -i)}`, i === 0 ? 3 : 6 + (i % 3)])),
+          consents: [
+            { type: "health_data", granted: true, version: "1.0", at },
+            { type: "food_photos", granted: true, version: "1.0", at },
+            { type: "child_data", granted: true, version: "1.0", at },
+            { type: "ai_processing", granted: true, version: "1.0", at },
+            { type: "analytics", granted: false, version: "1.0", at },
+          ],
         })
-      },
-      loadDemo: () => {
-        const at = new Date().toISOString()
-        set({ user: { id: "u_demo", name: "Nadia", email: "nadia@example.com" } })
-        get().completeOnboarding({ name: "Nadia" }, [
-          { type: "health_data", granted: true, version: "1.0", at },
-          { type: "food_photos", granted: true, version: "1.0", at },
-          { type: "child_data", granted: true, version: "1.0", at },
-          { type: "ai_processing", granted: true, version: "1.0", at },
-          { type: "analytics", granted: false, version: "1.0", at },
-        ], {})
       },
 
       setTier: (tier, cycle) => set({ tier, billingCycle: cycle ?? get().billingCycle }),
@@ -380,15 +479,19 @@ export const useApp = create<State>()(
       upsertProfile: (p) => set({ profiles: get().profiles.some((x) => x.id === p.id) ? get().profiles.map((x) => (x.id === p.id ? p : x)) : [...get().profiles, p] }),
       removeProfile: (id) => set({ profiles: get().profiles.filter((p) => p.id !== id), activeProfileId: get().activeProfileId === id ? "p_self" : get().activeProfileId }),
 
-      addPlan: (plan, activate) =>
+      addPlan: (plan, requestedActivate) => {
+        // The "activate endpoint" rejects unsafe or unreviewed plans (§10.5, §13.3).
+        const activate = !!requestedActivate && plan.validation.safety && (!plan.validation.requiresReview || plan.review?.status === "approved")
         set({
           plans: [...get().plans.map((p) => (activate && p.status === "active" ? { ...p, status: "archived" as const } : p)), activate ? { ...plan, status: "active" } : plan],
           activePlanId: activate ? plan.id : get().activePlanId,
           shopping: activate ? buildShoppingList(plan.meals.filter((m) => m.date >= todayISO()), get().shoppingPeople, get().pantry) : get().shopping,
-        }),
+        })
+      },
       activatePlan: (id) => {
         const plan = get().plans.find((p) => p.id === id)
-        if (!plan || !plan.validation.safety) return
+        // Safety failures never activate; plans needing review need a professional's approval first (§10.5, §13.3).
+        if (!plan || !plan.validation.safety || (plan.validation.requiresReview && plan.review?.status !== "approved")) return
         set({
           plans: get().plans.map((p) => (p.id === id ? { ...p, status: "active" } : p.status === "active" ? { ...p, status: "archived" } : p)),
           activePlanId: id,
@@ -465,7 +568,74 @@ export const useApp = create<State>()(
         set({ consents: [...rest, { type, granted, version: "1.0", at }] })
       },
       setTwinPreference: (id, active) => set({ twinPreferences: get().twinPreferences.map((t) => (t.id === id ? { ...t, active } : t)) }),
+      updateTwinPreference: (id, patch) => set({ twinPreferences: get().twinPreferences.map((t) => (t.id === id ? { ...t, ...patch } : t)) }),
+      updatePlan: (id, patch) => {
+        set({ plans: get().plans.map((p) => (p.id === id ? { ...p, ...patch } : p)) })
+        if (id === get().activePlanId && patch.meals) get().rebuildShopping()
+      },
+      startScheduledPlans: () => {
+        const due = get()
+          .plans.filter((p) => p.scheduledStart && p.status === "draft" && p.startDate <= todayISO())
+          .sort((a, b) => b.startDate.localeCompare(a.startDate))[0]
+        if (!due) return
+        set({ plans: get().plans.map((p) => (p.id === due.id ? { ...p, scheduledStart: false } : p)) })
+        get().activatePlan(due.id)
+      },
       updateSettings: (patch) => set({ settings: { ...get().settings, ...patch } }),
+      addWater: (profileId, date, delta) => {
+        const key = `${profileId}:${date}`
+        set({ water: { ...get().water, [key]: Math.max(0, (get().water?.[key] ?? 0) + delta) } })
+      },
+      addMeal: (planId, meal) => {
+        set({ plans: get().plans.map((p) => (p.id === planId ? { ...p, meals: [...p.meals, meal] } : p)) })
+        get().rebuildShopping()
+      },
+      syncMealStatuses: (now) => {
+        let changed = false
+        const plans = get().plans.map((p) => {
+          if (p.status !== "active" && p.status !== "paused") return p
+          const meals = syncedMeals(p, now)
+          if (meals === p.meals) return p
+          changed = true
+          return { ...p, meals }
+        })
+        if (changed) set({ plans })
+      },
+      pushNotificationOnce: (key, n, createdAt) => {
+        const keys = get().notificationKeys ?? []
+        if (keys.includes(key)) return false
+        set({
+          notificationKeys: [...keys, key].slice(-500),
+          notifications: [{ ...n, id: uid("n"), createdAt: createdAt ?? new Date().toISOString(), read: false }, ...get().notifications],
+        })
+        return true
+      },
+      markNotificationRead: (id) => set({ notifications: get().notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) }),
+      setShoppingItems: (items) => set({ shopping: items }),
+      setShoppingHidden: (foodIds) => set({ shoppingHidden: foodIds }),
+      setShoppingScope: (scope) => set({ shoppingScope: scope }),
+      stockPantryFromShopping: () => {
+        // Merge bought plan items into the pantry by foodId (adds amounts, keeps expiry dates).
+        const bought = get().shopping.filter((s) => s.purchased && !s.manual && s.foodId && s.grams > 0)
+        if (!bought.length) return 0
+        const pantry = [...get().pantry]
+        for (const b of bought) {
+          const i = pantry.findIndex((p) => p.foodId === b.foodId)
+          if (i >= 0) pantry[i] = { ...pantry[i], grams: pantry[i].grams + b.grams }
+          else pantry.push({ id: uid("pan"), foodId: b.foodId, name: b.name, grams: b.grams })
+        }
+        const ids = new Set(bought.map((b) => b.id))
+        set({ pantry, shopping: get().shopping.filter((s) => !ids.has(s.id)) })
+        return bought.length
+      },
+      setPantryDeduction: (mealId, items, pantry) => {
+        const rest = { ...(get().pantryDeducted ?? {}) }
+        if (items) rest[mealId] = items
+        else delete rest[mealId]
+        set({ pantry, pantryDeducted: rest })
+      },
+      togglePrepTask: (key) => set({ prepDone: { ...(get().prepDone ?? {}), [key]: !get().prepDone?.[key] } }),
+      updateAdmin: (patch) => set({ admin: { ...EMPTY.admin, ...get().admin, ...patch } }),
     }),
     {
       name: "nutriplan-prototype",
@@ -485,10 +655,35 @@ export function useActiveProfile(): Profile | undefined {
   return useApp((s) => s.profiles.find((p) => p.id === s.activeProfileId) ?? s.profiles[0])
 }
 
+/** The plan driving Home/Plan. A paused plan doesn't count (see usePausedPlan). */
 export function useActivePlan(): MealPlan | undefined {
-  return useApp((s) => s.plans.find((p) => p.id === s.activePlanId))
+  return useApp((s) => s.plans.find((p) => p.id === s.activePlanId && p.status === "active"))
+}
+
+/** The current plan when it is paused, so screens can offer Resume (§19.3). */
+export function usePausedPlan(): MealPlan | undefined {
+  return useApp((s) => s.plans.find((p) => p.id === s.activePlanId && p.status === "paused"))
 }
 
 export function useSelfProfile(): Profile | undefined {
   return useApp((s) => s.profiles.find((p) => p.relation === "self"))
 }
+
+// Area C: the engine sees personal recipes (nutrition, shopping) and scheduled plans start on their date.
+registerUserRecipes(useApp.getState().userRecipes ?? [])
+useApp.subscribe((s, prev) => {
+  if (s.userRecipes !== prev.userRecipes) registerUserRecipes(s.userRecipes ?? [])
+  if (s.hydrated && !prev.hydrated) s.startScheduledPlans()
+})
+if (useApp.getState().hydrated) useApp.getState().startScheduledPlans()
+
+// Admin publishing (§28): a recipe's approved/pending status set in the admin console applies app-wide.
+// Food record edits stay drafts until reviewed, so they are deliberately not applied here.
+const ORIGINAL_STATUS = Object.fromEntries(Object.values(RECIPE_MAP).map((r) => [r.id, r.reviewStatus]))
+function applyRecipeStatus(status: Record<string, Recipe["reviewStatus"]> | undefined) {
+  for (const r of Object.values(RECIPE_MAP)) r.reviewStatus = status?.[r.id] ?? ORIGINAL_STATUS[r.id]
+}
+applyRecipeStatus(useApp.getState().admin?.recipeStatus)
+useApp.subscribe((s, prev) => {
+  if (s.admin?.recipeStatus !== prev.admin?.recipeStatus) applyRecipeStatus(s.admin?.recipeStatus)
+})

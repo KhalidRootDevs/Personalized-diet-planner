@@ -1,20 +1,24 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Barcode, History, Mic, ScanLine, Sparkles } from "lucide-react"
+import { BadgeCheck, Barcode, ChevronRight, History, Mic, ScanLine, Search, Sparkles } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { RecipeThumb } from "@/components/app/recipe-thumb"
+import { RECIPES } from "@/lib/data/recipes"
+import { foodNutrients, recipeNutrition, violatesHardConstraints } from "@/lib/nutrition"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { FoodSearchList } from "@/components/log/food-picker"
-import { ListGroup, ListRow, StickyFooter, Surface } from "@/components/app/page"
+import { ListGroup, ListRow, Pill, StickyFooter, Surface } from "@/components/app/page"
 import { FOOD_MAP, ALLERGEN_LABELS } from "@/lib/data/foods"
 import { parseMealText } from "@/lib/area-b-text"
-import { BARCODE_PRODUCT } from "@/lib/vision-mock"
+import { BARCODE_PRODUCT, VERIFIED_PRODUCTS } from "@/lib/vision-mock"
 import { MEAL_LABEL } from "@/lib/planning"
 import { useApp } from "@/lib/store"
 import { itemFromFood } from "@/lib/area-b-log"
-import type { JournalItem, MealType, Profile, SavedMeal } from "@/lib/types"
+import type { JournalItem, MealType, Profile, Recipe, SavedMeal } from "@/lib/types"
 
 /** Manual search (§41.2): pick several foods, then review portions together. */
 export function SearchStep({ items, setItems, profile, onNext }: { items: JournalItem[]; setItems: (i: JournalItem[]) => void; profile?: Profile; onNext: () => void }) {
@@ -119,14 +123,27 @@ export function VoiceStep({ onParsed }: { onParsed: (items: JournalItem[], sourc
 }
 
 /**
- * Barcode logging (§42.3, Phase 2). Packaged-product data is shown as label values and is not
- * used for calculation until it's verified in the food DB (§42.21) — no invented numbers.
+ * Barcode logging (§42.3, Phase 2). A verified product resolves to a reviewed food-DB record and
+ * goes to the normal review step. An unverified product's label data is shown for reference only
+ * and is not used for calculation until it's reviewed (§42.21) — no invented numbers.
  */
-export function BarcodeStep({ profile, onSearchInstead }: { profile?: Profile; onSearchInstead: () => void }) {
-  const [scanned, setScanned] = useState(false)
+export function BarcodeStep({ profile, onSearchInstead, onVerified }: { profile?: Profile; onSearchInstead: () => void; onVerified: (items: JournalItem[]) => void }) {
+  const [scanned, setScanned] = useState<"verified" | "unverified" | null>(null)
+  const [productIdx, setProductIdx] = useState(0)
   const [scanning, setScanning] = useState(false)
   const hits = BARCODE_PRODUCT.listedAllergens.filter((a) => profile?.allergies.includes(a as never))
   const p = BARCODE_PRODUCT.per100g
+  const product = VERIFIED_PRODUCTS[productIdx]
+  const food = FOOD_MAP[product.foodId]
+  const per = foodNutrients(product.foodId, product.servingGrams)
+  const verifiedHits = (food?.allergens ?? []).filter((a) => profile?.allergies.includes(a))
+  const scan = (kind: "verified" | "unverified") => {
+    setScanning(true)
+    window.setTimeout(() => {
+      setScanning(false)
+      setScanned(kind)
+    }, 1000)
+  }
   return (
     <div className="px-gutter space-y-4 pt-3 pb-8">
       <p className="text-callout flex items-center gap-2 text-muted-foreground">
@@ -137,22 +154,57 @@ export function BarcodeStep({ profile, onSearchInstead }: { profile?: Profile; o
           <div className="space-y-4">
             <div className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-[24px] bg-charcoal text-ivory">
               <ScanLine className="size-16 opacity-80" aria-hidden />
-              {scanning && <div className="absolute inset-x-8 top-1/2 h-0.5 animate-pulse bg-terracotta" aria-hidden />}
+              {scanning && <div className="absolute inset-x-8 top-1/2 h-0.5 animate-pulse bg-terracotta motion-reduce:animate-none" aria-hidden />}
               <p className="text-caption absolute bottom-4 opacity-80">Camera preview (demo)</p>
             </div>
+            <Button className="w-full" size="lg" disabled={scanning} onClick={() => scan("verified")}>
+              <Barcode /> {scanning ? "Scanning…" : "Simulate a scan"}
+            </Button>
+            <Button variant="ghost" className="w-full" disabled={scanning} onClick={() => scan("unverified")}>
+              Simulate an unknown product
+            </Button>
+          </div>
+        ) : scanned === "verified" ? (
+          <div className="space-y-3">
+            {verifiedHits.length > 0 && (
+              <SafetyAlert title={`Contains ${verifiedHits.map((h) => ALLERGEN_LABELS[h] ?? h).join(", ")}`}>This product contains an ingredient recorded as an allergy in your profile.</SafetyAlert>
+            )}
+            <Surface>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-headline">{product.name}</p>
+                  <p className="text-caption text-muted-foreground">
+                    {product.brand} · {product.servingLabel}
+                  </p>
+                </div>
+                <Pill tone="sage" icon={<BadgeCheck />}>
+                  Verified
+                </Pill>
+              </div>
+              <p className="text-overline mt-4 text-muted-foreground">Per serving · from our reviewed database</p>
+              <p className="tabular text-callout mt-1">
+                ~{Math.round(per.energyKcal)} kcal · protein ~{Math.round(per.proteinG)} g · carbs ~{Math.round(per.carbsG)} g · fat ~{Math.round(per.fatG)} g
+              </p>
+              <p className="text-caption mt-2 text-muted-foreground">
+                Matched to “{food?.name}”. Allergens: {food?.allergens.length ? food.allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(", ") : "none listed"}.
+              </p>
+            </Surface>
             <Button
               className="w-full"
               size="lg"
-              disabled={scanning}
+              onClick={() => onVerified([{ ...itemFromFood(product.foodId, product.servingGrams, product.servingLabel), displayName: product.name, quantityConfidence: "high", identificationConfidence: "high" }])}
+            >
+              Review and log
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full"
               onClick={() => {
-                setScanning(true)
-                window.setTimeout(() => {
-                  setScanning(false)
-                  setScanned(true)
-                }, 1200)
+                setProductIdx((i) => (i + 1) % VERIFIED_PRODUCTS.length)
+                setScanned(null)
               }}
             >
-              <Barcode /> {scanning ? "Scanning…" : "Simulate a scan"}
+              Scan another
             </Button>
           </div>
         ) : (
@@ -178,6 +230,50 @@ export function BarcodeStep({ profile, onSearchInstead }: { profile?: Profile; o
           </div>
         )}
       </PremiumGate>
+    </div>
+  )
+}
+
+/**
+ * Recipe entry (§42.3.1): log a library or personal recipe. Ingredients are scaled per serving
+ * on the review step and stay editable. Allergen conflicts are flagged here and again on review.
+ */
+export function RecipePickStep({ profile, onPick }: { profile: Profile; onPick: (r: Recipe) => void }) {
+  const userRecipes = useApp((s) => s.userRecipes)
+  const [q, setQ] = useState("")
+  const isChild = profile.type !== "adult"
+  const list = [...userRecipes, ...RECIPES]
+    .filter((r) => (isChild ? r.profile !== "adult" : r.profile === "adult"))
+    .filter((r) => !q.trim() || r.name.toLowerCase().includes(q.trim().toLowerCase()) || r.nameBn.includes(q.trim()))
+  return (
+    <div className="px-gutter space-y-4 pt-3 pb-8">
+      <p className="text-callout text-muted-foreground">Pick the dish you ate. You&apos;ll set how many servings and adjust ingredients next.</p>
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-4 size-[18px] -translate-y-1/2 text-muted-grey" aria-hidden />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search recipes — khichuri, dal…" className="pl-11" aria-label="Search recipes" />
+      </div>
+      <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
+        {list.length === 0 && <li className="text-callout p-4 text-muted-foreground">No matching recipe. Try search or describe the dish instead.</li>}
+        {list.map((r) => {
+          const conflict = violatesHardConstraints(r, profile)
+          return (
+            <li key={r.id}>
+              <button onClick={() => onPick(r)} className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50 active:bg-muted">
+                <RecipeThumb recipe={r} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-body font-medium">{r.name}</p>
+                  <p className="text-caption mt-0.5 text-muted-foreground">
+                    {r.reviewStatus === "personal" ? "Your recipe · not reviewed" : r.reviewStatus === "pending" ? "Pending review" : "Reviewed recipe"}
+                    {!isChild && <span className="tabular"> · ~{Math.round(recipeNutrition(r, 1).energyKcal)} kcal per serving</span>}
+                  </p>
+                  {conflict && <p className="text-caption mt-0.5 font-medium text-safety">{conflict}</p>}
+                </div>
+                <ChevronRight className="size-[18px] shrink-0 text-muted-grey" aria-hidden />
+              </button>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

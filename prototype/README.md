@@ -14,7 +14,9 @@ npm run dev        # http://localhost:3000 (the service worker is disabled in de
 npm run build && npm start   # production mode, enables the PWA service worker
 ```
 
-On the welcome screen, choose **Explore with demo data** to jump straight into a populated account: an adult profile, a 7‑month‑old child profile, an active 7-day plan, food journal history, habits, a pantry and notifications.
+On the welcome screen, choose **Explore with demo data** to jump straight into a populated account: an adult profile, a 7‑month‑old child profile, an active 7-day plan, food journal history, habits, a pantry and notifications. **Create account** instead runs the real new-user path: full onboarding → plan setup → an empty journal.
+
+The **Admin console** (Profile → Admin console) covers clinical review, foods, recipe publishing, the rule library, translations and analytics. Approving a recipe there applies app-wide; food edits stay drafts until reviewed.
 
 ## Install as an app (PWA)
 
@@ -39,7 +41,7 @@ After installation it opens full-screen, without browser chrome. Pages you've al
 - Food and nutrient values in `src/lib/data/` are **illustrative**, not from a validated food composition database. Infant recipes are marked *pending clinical review*.
 - **Semantic colors** (safety, caution, success in `globals.css`) are provisional. §43.7 leaves them undecided.
 - The visual style follows the references in `../design-ref/` (Lime Fresh palette, §44.2), without the parts that conflict with the PRD's safety rules (streaks, rewards, exact calorie counts).
-- Bangla covers the app shell only.
+- Bangla covers the app shell, onboarding, settings and safety messages (about 95 strings); recipe steps and most explanations are still English.
 - Food photos in `public/food/` are Wikimedia Commons placeholders (CC0 / CC BY / CC BY-SA), credited in `public/food/CREDITS.md` and in *Profile → App settings → Photo credits*. They don't show the exact recipes; production needs licensed photography.
 
 ## Project layout

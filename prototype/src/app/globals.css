@@ -150,6 +150,24 @@
     font-feature-settings: "cv11", "ss01";
     overscroll-behavior-y: none;
   }
+  /* Native feel: no text selection or callouts on controls; press feedback on tappable cards. */
+  button,
+  [role="button"],
+  nav a {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  a.shadow-card,
+  button.shadow-card,
+  a > .shadow-card {
+    transition: transform 150ms ease-out, background-color 150ms ease-out;
+  }
+  a.shadow-card:active,
+  button.shadow-card:active,
+  a:active > .shadow-card {
+    transform: scale(0.985);
+  }
   /* Bengali text needs more vertical space (§44.3) */
   :lang(bn) {
     line-height: 1.7;
@@ -226,6 +244,21 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Screen enter transition: a short fade and rise, like a native push (UI-SPEC §4.13: 150–200 ms ease-out). */
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@utility animate-screen-in {
+  animation: screen-in 180ms ease-out both;
 }
 
 /* Respect reduced-motion preferences (§44.11) */

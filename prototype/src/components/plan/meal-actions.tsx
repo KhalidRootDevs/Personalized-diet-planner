@@ -1,10 +1,13 @@
 "use client"
 
+import { useFeedbackPrompt } from "@/components/progress/meal-feedback-sheet"
+import { useAreaD } from "@/lib/area-d-store"
+
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
-import { ArrowLeftRight, BookOpen, CalendarClock, Check, CircleCheck, NotebookPen, SkipForward, Timer } from "lucide-react"
+import { ArrowLeftRight, BookOpen, CalendarClock, Check, CircleCheck, NotebookPen, RefreshCw, Scale, SkipForward, Timer } from "lucide-react"
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,14 +19,16 @@ import { EstimateNote } from "@/components/app/nutrition"
 import { BackButton, ListGroup, ListRow, Pill, StatTile } from "@/components/app/page"
 import { Segmented, Stepper } from "@/components/app/controls"
 import { useApp, useSelfProfile } from "@/lib/store"
-import { MEAL_LABEL, swapOptions, type SwapMode } from "@/lib/planning"
-import { fmt, recipeCostPerServing, recipeNutrition } from "@/lib/nutrition"
+import { MEAL_LABEL, regenerateDay, swapOptions, type SwapMode } from "@/lib/planning"
+import { fmt, recipeAllergens, recipeCostPerServing, recipeNutrition } from "@/lib/nutrition"
+import { ALLERGEN_LABELS } from "@/lib/data/foods"
 import { formatDay, formatTime } from "@/lib/date"
-import { STATUS_STYLE, mealStatus, useRecipeLookup } from "@/lib/area-c-utils"
+import { STATUS_STYLE, mealStatus, revalidateAfterChange, useRecipeLookup } from "@/lib/area-c-utils"
 import { cn } from "@/lib/utils"
 import type { PlannedMeal } from "@/lib/types"
 
-type View = "main" | "swap" | "reschedule"
+export type MealView = "main" | "swap" | "reschedule"
+type View = MealView
 
 /** Bottom sheet with the daily meal actions (§42.16) and the meal status model (§14.6). */
 export function MealActionsSheet({ meal, children }: { meal: PlannedMeal; children: React.ReactNode }) {
@@ -41,14 +46,19 @@ export function MealActionsSheet({ meal, children }: { meal: PlannedMeal; childr
 }
 
 /** Shared body for the sheet and the full-page meal detail. */
-export function MealActions({ mealId, onDone, page }: { mealId: string; onDone?: () => void; page?: boolean }) {
+export function MealActions({ mealId, onDone, page, initialView = "main" }: { mealId: string; onDone?: () => void; page?: boolean; initialView?: View }) {
   const router = useRouter()
   const meal = useApp((s) => s.plans.flatMap((p) => p.meals).find((m) => m.id === mealId))
   const setOutcome = useApp((s) => s.setMealOutcome)
   const togglePrepLater = useApp((s) => s.togglePrepLater)
   const setServings = useApp((s) => s.setMealServings)
   const lookup = useRecipeLookup()
-  const [view, setView] = useState<View>("main")
+  const [view, setView] = useState<View>(initialView)
+  const plan = useApp((s) => s.plans.find((p) => p.meals.some((m) => m.id === mealId)))
+  const pantry = useApp((s) => s.pantry)
+  const twin = useApp((s) => s.twinPreferences)
+  const updatePlan = useApp((s) => s.updatePlan)
+  const self = useSelfProfile()
 
   if (!meal) return <p className="text-callout p-6 text-muted-foreground">This meal is no longer in your plan.</p>
   const recipe = lookup(meal.recipeId)
@@ -62,7 +72,23 @@ export function MealActions({ mealId, onDone, page }: { mealId: string; onDone?:
     setOutcome(meal.id, outcome)
     toast(message, { action: { label: "Undo", onClick: () => setOutcome(meal.id, prev) } })
     onDone?.()
+    // Optional post-meal feedback (§17.5), asked once per meal.
+    const asked = useAreaD.getState().mealFeedback.some((f) => f.mealId === meal.id)
+    if ((outcome === "eaten_as_planned" || outcome === "eaten_modified") && !asked) setTimeout(() => useFeedbackPrompt.getState().ask({ ...meal, outcome }), 450)
   }
+
+  const regenerate = () => {
+    if (!plan || !self) return
+    const before = plan.meals
+    const meals = regenerateDay(plan, meal.date, self, { pantry, twin: twin.filter((t) => t.active).map((t) => t.text) })
+    updatePlan(plan.id, { meals })
+    const first = meals.find((m) => m.date === meal.date && !m.outcome)
+    const check = first ? revalidateAfterChange(first.id) : null
+    toast(`${formatDay(meal.date)} rebuilt`, { description: check?.summary ?? "Meals you already recorded were kept.", action: { label: "Undo", onClick: () => updatePlan(plan.id, { meals: before }) } })
+    onDone?.()
+  }
+  const allergens = recipeAllergens(recipe)
+  const safety = [...recipe.safetyNotes, ...(allergens.length ? [`Contains ${allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(", ").toLowerCase()}.`] : [])]
 
   if (view === "swap") return <SwapView meal={meal} page={page} onBack={() => setView("main")} onDone={onDone} />
   if (view === "reschedule") return <RescheduleView meal={meal} page={page} onBack={() => setView("main")} onDone={onDone} />
@@ -84,7 +110,20 @@ export function MealActions({ mealId, onDone, page }: { mealId: string; onDone?:
         <StatTile label="Energy" value={`~${Math.round(n.energyKcal)}`} unit="kcal" />
         <StatTile label="Protein" value={`~${Math.round(n.proteinG)}`} unit="g" />
         <StatTile label="Cost (est.)" value={fmt.bdt(cost)} />
+        <StatTile label="Carbs" value={`~${Math.round(n.carbsG)}`} unit="g" />
+        <StatTile label="Fat" value={`~${Math.round(n.fatG)}`} unit="g" />
+        <StatTile label="Fiber" value={`~${Math.round(n.fiberG)}`} unit="g" />
       </div>
+      {recipe.reviewStatus === "personal" && <Pill>Your recipe · not reviewed</Pill>}
+      {safety.length > 0 && (
+        <CautionNote title="Safety notes">
+          <ul className="list-disc space-y-0.5 pl-4">
+            {safety.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+        </CautionNote>
+      )}
 
       <ListGroup>
         <ListRow
@@ -119,7 +158,7 @@ export function MealActions({ mealId, onDone, page }: { mealId: string; onDone?:
       <ListGroup>
         <ListRow icon={<NotebookPen />} title="Log what I ate" description="Photo, search or text" onClick={() => router.push(`/log/new?meal=${meal.id}`)} />
         <ListRow icon={<ArrowLeftRight />} title="Replace meal" description="Similar, cheaper or quicker options" onClick={() => setView("swap")} />
-        <ListRow icon={<BookOpen />} title="View recipe" description={`${recipe.prepMinutes + recipe.cookMinutes} min · serves ${recipe.servings}`} onClick={() => router.push(`/recipes/${recipe.id}`)} />
+        <ListRow icon={<BookOpen />} title="View recipe" description={`${recipe.prepMinutes + recipe.cookMinutes} min · serves ${recipe.servings}`} onClick={() => router.push(`/recipes/${recipe.id}?meal=${meal.id}`)} />
         <ListRow
           icon={<Timer />}
           title="Prepare later"
@@ -138,6 +177,7 @@ export function MealActions({ mealId, onDone, page }: { mealId: string; onDone?:
           }}
         />
         <ListRow icon={<CalendarClock />} title="Reschedule" description="Move to another day or time" onClick={() => setView("reschedule")} />
+        <ListRow icon={<RefreshCw />} iconTone="sky" title="Regenerate this day" description="New picks for unrecorded meals, same rules" chevron={false} onClick={regenerate} />
         <ListRow
           icon={<SkipForward />}
           iconTone="muted"
@@ -246,6 +286,13 @@ function SwapView({ meal, onBack, onDone, page }: { meal: PlannedMeal; onBack: (
       ) : (
         list
       )}
+      {pick && (
+        <Button asChild variant="outline" className="w-full">
+          <Link href={`/recipes/compare?a=${meal.recipeId}&b=${pick.recipe.id}`}>
+            <Scale className="size-4" /> Compare cost and nutrition
+          </Link>
+        </Button>
+      )}
       {pick?.material && (
         <CautionNote title="This changes your day noticeably">This swap changes energy or protein by more than a fifth. Your daily totals will be recalculated.</CautionNote>
       )}
@@ -257,7 +304,17 @@ function SwapView({ meal, onBack, onDone, page }: { meal: PlannedMeal; onBack: (
           if (!pick) return
           const before = meal.recipeId
           replaceMeal(meal.id, pick.recipe.id)
-          toast(`Swapped to ${pick.recipe.name}`, { description: "Shopping list updated", action: { label: "Undo", onClick: () => useApp.getState().replaceMeal(meal.id, before) } })
+          const check = revalidateAfterChange(meal.id)
+          toast(`Swapped to ${pick.recipe.name}`, {
+            description: `${check?.summary ?? ""} Shopping list updated.`.trim(),
+            action: {
+              label: "Undo",
+              onClick: () => {
+                useApp.getState().replaceMeal(meal.id, before)
+                revalidateAfterChange(meal.id)
+              },
+            },
+          })
           onDone?.()
           onBack()
         }}
@@ -295,13 +352,14 @@ function RescheduleView({ meal, onBack, onDone, page }: { meal: PlannedMeal; onB
           <Input id="rs-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </div>
       </div>
-      <InfoNote>We&apos;ll recheck the day&apos;s nutrition and safety rules after the move.</InfoNote>
+      <InfoNote>We&apos;ll recheck the day&apos;s nutrition, timing and safety rules after the move and tell you the result.</InfoNote>
       <Button
         className="w-full"
         size="lg"
         onClick={() => {
           reschedule(meal.id, date, time)
-          toast(`Moved to ${formatDay(date)}, ${formatTime(time)}`)
+          const check = revalidateAfterChange(meal.id)
+          toast(`Moved to ${formatDay(date)}, ${formatTime(time)}`, { description: check?.summary })
           onDone?.()
           onBack()
         }}

@@ -1,25 +1,37 @@
 "use client"
 
 import Link from "next/link"
-import { ChefHat, ChevronRight, Refrigerator } from "lucide-react"
-import { EmptyState, ListGroup, PageBody, PageHeader, Pill, Section } from "@/components/app/page"
-import { CautionNote } from "@/components/app/alerts"
+import { Baby, ChefHat, ChevronRight, Flame, Refrigerator } from "lucide-react"
+import { EmptyState, ListGroup, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
+import { CautionNote, InfoNote } from "@/components/app/alerts"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
+import { FeatureBadge } from "@/components/app/badges"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useActivePlan, useApp } from "@/lib/store"
 import { MEAL_LABEL } from "@/lib/planning"
 import { addDays, formatDay, todayISO } from "@/lib/date"
 import { useRecipeLookup } from "@/lib/area-c-utils"
+import { INFANT_STORAGE, STORAGE_ADVICE, prepTasks } from "@/lib/shopping"
+import { cn } from "@/lib/utils"
 import type { PlannedMeal, Recipe } from "@/lib/types"
 
-/** Meal prep and batch cooking (§16.2) with storage and food-safety guidance. */
+/** Meal prep and batch cooking (§16.4) with food-specific storage and reheating guidance. */
 export default function PrepPage() {
   const plan = useActivePlan()
   const lookup = useRecipeLookup()
   const togglePrepLater = useApp((s) => s.togglePrepLater)
-  const horizon = addDays(todayISO(), 6)
-  const upcoming = (plan?.meals ?? []).filter((m) => m.date >= todayISO() && m.date <= horizon && !m.outcome)
+  const prepDone = useApp((s) => s.prepDone ?? {})
+  const toggleTask = useApp((s) => s.togglePrepTask)
+  const hasChild = useApp((s) => s.profiles.some((p) => p.type !== "adult"))
+  const today = todayISO()
+  const horizon = addDays(today, 6)
+  const paused = plan?.status === "paused"
+  const upcoming = paused ? [] : (plan?.meals ?? []).filter((m) => m.date >= today && m.date <= horizon && !m.outcome)
   const marked = upcoming.filter((m) => m.prepLater)
+  const tasks = paused ? [] : prepTasks(plan?.meals ?? [], lookup, today)
+  const taskDays = Array.from(new Set(tasks.map((t) => t.day)))
+  const done = tasks.filter((t) => prepDone[t.key]).length
 
   // Recipes that repeat this week and are tagged batch-cook are good candidates.
   const byRecipe = new Map<string, PlannedMeal[]>()
@@ -30,13 +42,49 @@ export default function PrepPage() {
     .sort((a, b) => b.meals.length - a.meals.length)
     .slice(0, 4)
 
+  // Storage advice only for foods that are actually in this week's meals.
+  const weekFoods = new Set(upcoming.flatMap((m) => lookup(m.recipeId)?.ingredients.map((i) => i.foodId) ?? []))
+  const advice = STORAGE_ADVICE.filter((a) => a.foodIds.some((f) => weekFoods.has(f)))
+
+  const dayTitle = (d: string) => (d === today ? "Today" : d === addDays(today, 1) ? "Tomorrow" : formatDay(d, { weekday: "long", day: "numeric", month: "short" }))
+
   return (
     <>
       <PageHeader title="Meal prep" back="/plan" />
       <PageBody>
+        {paused && <InfoNote title="Your plan is paused">Prep tasks come back when you resume the plan.</InfoNote>}
+
+        <Section title="This week's prep" badge={<FeatureBadge feature="shopping" />} description={tasks.length ? `${done} of ${tasks.length} done · tick tasks off as you go` : undefined}>
+          {tasks.length === 0 ? (
+            <EmptyState icon={<ChefHat />} title="No prep needed" description="Nothing in the next 7 days needs washing, soaking or cooking ahead." />
+          ) : (
+            <div className="space-y-5">
+              {taskDays.map((d) => (
+                <ListGroup key={d} label={dayTitle(d)}>
+                  {tasks
+                    .filter((t) => t.day === d)
+                    .map((t) => {
+                      const on = !!prepDone[t.key]
+                      return (
+                        <label key={t.key} className="flex min-h-[60px] cursor-pointer items-start gap-3 px-4 py-3">
+                          <Checkbox className="mt-0.5" checked={on} onCheckedChange={() => toggleTask(t.key)} aria-label={t.title} />
+                          <span className="min-w-0 flex-1">
+                            <span className={cn("text-body block font-medium", on && "text-muted-foreground line-through")}>{t.title}</span>
+                            <span className="text-caption mt-0.5 block text-muted-foreground">{t.detail}</span>
+                          </span>
+                          {on && <Pill tone="sage">Done</Pill>}
+                        </label>
+                      )
+                    })}
+                </ListGroup>
+              ))}
+            </div>
+          )}
+        </Section>
+
         <Section title="Marked to prepare" description="Meals you chose to prepare ahead in the next 7 days.">
           {marked.length === 0 ? (
-            <EmptyState icon={<ChefHat />} title="Nothing marked yet" description="Open a meal in your plan and choose “Prepare later” to collect it here." />
+            <p className="text-callout rounded-2xl bg-card px-4 py-3 text-muted-foreground shadow-card">Open a meal in your plan and choose “Prepare later” to collect it here.</p>
           ) : (
             <ListGroup>
               {marked.map((m) => {
@@ -61,9 +109,9 @@ export default function PrepPage() {
           )}
         </Section>
 
-        <Section title="Batch-cook this week" description="Meals that repeat — cook once, eat twice.">
+        <Section title="Batch-cook this week" description="Meals that repeat — cook once, eat twice (within 2 days, or freeze).">
           {batch.length === 0 ? (
-            <p className="text-callout rounded-2xl bg-card shadow-card px-4 py-3 text-muted-foreground">No repeated meals in the next 7 days.</p>
+            <p className="text-callout rounded-2xl bg-card px-4 py-3 text-muted-foreground shadow-card">No repeated meals in the next 7 days.</p>
           ) : (
             <ListGroup>
               {batch.map(({ recipe, meals }) => (
@@ -88,8 +136,41 @@ export default function PrepPage() {
           )}
         </Section>
 
+        {advice.length > 0 && (
+          <Section title="Storing and reheating" description="For the foods in this week's meals.">
+            <ListGroup>
+              {advice.map((a) => (
+                <div key={a.title} className="space-y-1.5 px-4 py-3">
+                  <p className="text-body font-medium">{a.title}</p>
+                  <p className="text-caption flex gap-1.5 text-muted-foreground">
+                    <Refrigerator className="mt-px size-4 shrink-0 text-sky-text" aria-hidden /> {a.storage}
+                  </p>
+                  <p className="text-caption flex gap-1.5 text-muted-foreground">
+                    <Flame className="mt-px size-4 shrink-0 text-terracotta" aria-hidden /> {a.reheat}
+                  </p>
+                </div>
+              ))}
+            </ListGroup>
+          </Section>
+        )}
+
+        {hasChild && (
+          <Section title="Baby food storage">
+            <Surface tone="sage" className="space-y-2">
+              <p className="text-overline flex items-center gap-1.5 text-forest">
+                <Baby className="size-3.5" aria-hidden /> Extra care for babies
+              </p>
+              <ul className="text-callout list-disc space-y-1 pl-5">
+                {INFANT_STORAGE.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+            </Surface>
+          </Section>
+        )}
+
         <CautionNote title="Storing cooked food safely">
-          Cool cooked food and refrigerate within 2 hours. Eat rice, fish and meat dishes within 2 days and reheat until steaming hot all the way through. Don&apos;t reheat rice more than once. This is general food-safety advice.
+          Cool cooked food and refrigerate within 2 hours (1 hour for rice). Reheat until steaming hot all the way through, and only once. This is general food-safety advice.
         </CautionNote>
       </PageBody>
     </>

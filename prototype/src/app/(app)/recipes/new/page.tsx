@@ -1,10 +1,12 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useState } from "react"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
 import { PageBody, PageHeader, Section, StatTile, Surface } from "@/components/app/page"
+import { ChipGroup } from "@/components/app/controls"
+import { CautionNote } from "@/components/app/alerts"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { EstimateNote } from "@/components/app/nutrition"
 import { Button } from "@/components/ui/button"
@@ -12,9 +14,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useApp } from "@/lib/store"
+import { useApp, useSelfProfile } from "@/lib/store"
 import { FOODS, FOOD_MAP } from "@/lib/data/foods"
-import { recipeNutrition } from "@/lib/nutrition"
+import { recipeCostPerServing, recipeNutrition, violatesHardConstraints } from "@/lib/nutrition"
 import { uid } from "@/lib/date"
 import type { MealType, Recipe, RecipeIngredient } from "@/lib/types"
 
@@ -25,35 +27,53 @@ const TYPES: { id: MealType; label: string }[] = [
   { id: "afternoon_snack", label: "Snack" },
 ]
 
-/** Add a personal recipe (§42.5). Nutrition is computed from ingredients; status is always "personal". */
+const TAGS = ["quick", "budget", "family favorite", "high-protein", "vegetarian", "batch-cook", "office-friendly"] as const
+
+/** Add or edit a personal recipe (§42.5). Nutrition is computed from ingredients; status is always "personal". */
 export default function NewRecipePage() {
   return (
+    <Suspense fallback={null}>
+      <NewRecipeScreen />
+    </Suspense>
+  )
+}
+
+function NewRecipeScreen() {
+  const editId = useSearchParams().get("edit")
+  const existing = useApp((s) => s.userRecipes.find((r) => r.id === editId))
+  return (
     <>
-      <PageHeader title="New recipe" back="/recipes/library" action={<FeatureBadge feature="recipe_library" />} />
+      <PageHeader title={existing ? "Edit recipe" : "New recipe"} back={existing ? `/recipes/${existing.id}` : "/recipes/library"} action={<FeatureBadge feature="recipe_library" />} />
       <PageBody>
         <PremiumGate feature="recipe_library">
-          <RecipeForm />
+          <RecipeForm key={existing?.id ?? "new"} existing={existing} />
         </PremiumGate>
       </PageBody>
     </>
   )
 }
 
-function RecipeForm() {
+function RecipeForm({ existing }: { existing?: Recipe }) {
   const router = useRouter()
   const save = useApp((s) => s.upsertUserRecipe)
-  const [name, setName] = useState("")
-  const [servings, setServings] = useState("2")
-  const [mealType, setMealType] = useState<MealType>("dinner")
-  const [minutes, setMinutes] = useState("30")
-  const [steps, setSteps] = useState("")
-  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([{ foodId: "rice_cooked", grams: 300 }])
+  const self = useSelfProfile()
+  const [id] = useState(() => existing?.id ?? uid("ur"))
+  const [name, setName] = useState(existing?.name ?? "")
+  const [servings, setServings] = useState(String(existing?.servings ?? 2))
+  const [mealType, setMealType] = useState<MealType>(existing?.mealTypes[0] ?? "dinner")
+  const [minutes, setMinutes] = useState(String(existing ? existing.prepMinutes + existing.cookMinutes : 30))
+  const [steps, setSteps] = useState(existing?.steps.join("\n") ?? "")
+  const [ingredients, setIngredients] = useState<RecipeIngredient[]>(existing?.ingredients ?? [{ foodId: "rice_cooked", grams: 300 }])
+  const [notes, setNotes] = useState(existing?.notes ?? "")
+  const [tags, setTags] = useState<string[]>(existing?.tags.filter((t) => t !== "ai-variation") ?? [])
+  const [cost, setCost] = useState(existing?.costPerServingBdt ? String(existing.costPerServingBdt) : "")
 
   const draft: Recipe = {
-    id: uid("ur"),
+    ...(existing ?? {}),
+    id,
     name: name.trim() || "My recipe",
-    nameBn: "",
-    description: "Added by you",
+    nameBn: existing?.nameBn ?? "",
+    description: existing?.description ?? "Added by you",
     mealTypes: [mealType],
     profile: "adult",
     prepMinutes: Math.round(Number(minutes) / 3) || 0,
@@ -62,13 +82,16 @@ function RecipeForm() {
     difficulty: "easy",
     ingredients: ingredients.filter((i) => i.grams > 0),
     steps: steps.split("\n").map((s) => s.trim()).filter(Boolean),
-    safetyNotes: [],
-    tags: [],
+    safetyNotes: existing?.safetyNotes ?? [],
+    tags,
     reviewStatus: "personal",
-    swatch: "ivory",
-    icon: "CookingPot",
+    swatch: existing?.swatch ?? "ivory",
+    icon: existing?.icon ?? "CookingPot",
+    notes: notes.trim() || undefined,
+    costPerServingBdt: Number(cost) > 0 ? Number(cost) : undefined,
   }
   const n = recipeNutrition(draft)
+  const conflict = self ? violatesHardConstraints(draft, self) : null
 
   return (
     <div className="space-y-7">
@@ -147,13 +170,37 @@ function RecipeForm() {
         <Textarea rows={4} value={steps} onChange={(e) => setSteps(e.target.value)} placeholder="One step per line" aria-label="Steps" />
       </Section>
 
+      <Section title="Tags">
+        <ChipGroup<string> label="Tags" options={TAGS.map((t) => ({ value: t, label: t }))} value={tags} onChange={setTags} />
+      </Section>
+
+      <Section title="Notes and cost">
+        <Surface className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="notes">Personal notes</Label>
+            <Textarea id="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Ammu adds a little more mustard paste" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cost">Your cost per serving (optional)</Label>
+            <div className="flex items-center gap-2">
+              <span className="text-callout text-muted-foreground">৳</span>
+              <Input id="cost" inputMode="numeric" className="w-28" value={cost} onChange={(e) => setCost(e.target.value.replace(/\D/g, ""))} placeholder={String(recipeCostPerServing({ ...draft, costPerServingBdt: undefined }))} />
+            </div>
+            <p className="text-caption text-muted-foreground">Leave empty to use our estimate from typical local prices.</p>
+          </div>
+        </Surface>
+      </Section>
+
       <Section title="Calculated per serving">
         <div className="grid grid-cols-2 gap-2">
           <StatTile label="Energy" value={`~${Math.round(n.energyKcal)}`} unit="kcal" />
           <StatTile label="Protein" value={`~${Math.round(n.proteinG)}`} unit="g" />
           <StatTile label="Carbohydrate" value={`~${Math.round(n.carbsG)}`} unit="g" />
           <StatTile label="Fat" value={`~${Math.round(n.fatG)}`} unit="g" />
+          <StatTile label="Fiber" value={`~${Math.round(n.fiberG)}`} unit="g" />
+          <StatTile label="Cost (est.)" value={`৳${recipeCostPerServing(draft)}`} />
         </div>
+        {conflict && <CautionNote title="Doesn't fit your rules">{conflict} You can still save it, but it can&apos;t be added to your plan.</CautionNote>}
         <EstimateNote>
           Calculated from {draft.ingredients.map((i) => FOOD_MAP[i.foodId]?.name).filter(Boolean).length} ingredients in our food database. Your recipe is saved as &quot;not reviewed&quot;.
         </EstimateNote>
@@ -165,7 +212,7 @@ function RecipeForm() {
         disabled={!name.trim() || draft.ingredients.length === 0}
         onClick={() => {
           save(draft)
-          toast("Recipe saved to your library")
+          toast(existing ? "Recipe updated" : "Recipe saved to your library", { description: "Nutrition recalculated from your ingredients." })
           router.replace(`/recipes/${draft.id}`)
         }}
       >

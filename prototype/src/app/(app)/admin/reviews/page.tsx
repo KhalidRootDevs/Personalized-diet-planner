@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { IconTile, KeyValue, PageBody, PageHeader, Pill } from "@/components/app/page"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
+import { useApp } from "@/lib/store"
+import { MOCK_REVIEWER } from "@/lib/area-c-utils"
 
 type Kind = "recipe" | "rule" | "plan" | "food"
 type Decision = "approved" | "modify" | "rejected"
@@ -27,6 +29,8 @@ interface ReviewItem {
   risk: "high" | "standard"
   checks: { label: string; ok: boolean }[]
   stage: string
+  /** User plans submitted from the app (§13.3) — decisions are stored on the plan. */
+  planId?: string
 }
 
 const STAGES = ["Draft", "Source verification", "Professional review", "Safety review", "Approval", "Published"]
@@ -107,16 +111,41 @@ const INITIAL: ReviewItem[] = [
 ]
 
 export default function AdminReviewsPage() {
-  const items = INITIAL
+  const plans = useApp((s) => s.plans)
+  const updatePlan = useApp((s) => s.updatePlan)
+  const planItems: ReviewItem[] = plans
+    .filter((p) => p.review?.status === "pending")
+    .map((p) => ({
+      id: `userplan_${p.id}`,
+      planId: p.id,
+      kind: "plan",
+      title: `${p.title} · submitted by user`,
+      summary: `${p.meals.length} meals over ${p.durationDays} days. ${p.validation.safety ? "Engine safety checks passed." : "Engine safety checks failed."} Activation is blocked until a professional approves.`,
+      population: "Adult with a condition that requires review (de-identified)",
+      source: `Nutrition engine · ${p.inputs?.find((i) => i.label === "Assessment version")?.value ?? "assessment"}`,
+      submittedBy: "User via app",
+      risk: "high",
+      checks: (p.validation.checks ?? []).filter((c) => c.blocking).map((c) => ({ label: c.label, ok: c.status !== "fail" })),
+      stage: "Professional review",
+    }))
+  const reviewedPlans = plans.filter((p) => p.review && p.review.status !== "pending")
+  const items = [...planItems, ...INITIAL]
   const [decisions, setDecisions] = useState<Record<string, { decision: Decision; note: string; at: string }>>({})
   const [open, setOpen] = useState<ReviewItem | null>(null)
   const [note, setNote] = useState("")
 
   const pending = items.filter((i) => !decisions[i.id])
-  const done = items.filter((i) => decisions[i.id])
+  const done = items.filter((i) => decisions[i.id] && !i.planId)
 
   const decide = (d: Decision) => {
     if (!open) return
+    if (open.planId) {
+      const plan = plans.find((p) => p.id === open.planId)
+      if (plan?.review)
+        updatePlan(open.planId, {
+          review: { ...plan.review, status: d === "approved" ? "approved" : "changes_requested", reviewer: MOCK_REVIEWER, decidedAt: new Date().toISOString(), note: note.trim() || undefined },
+        })
+    }
     setDecisions((x) => ({ ...x, [open.id]: { decision: d, note, at: new Date().toISOString() } }))
     toast.success(d === "approved" ? "Approved — published as a new version" : d === "modify" ? "Returned for changes" : "Rejected")
     setOpen(null)
@@ -132,7 +161,7 @@ export default function AdminReviewsPage() {
         <Tabs defaultValue="queue">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="queue">Queue ({pending.length})</TabsTrigger>
-            <TabsTrigger value="history">Decisions ({done.length})</TabsTrigger>
+            <TabsTrigger value="history">Decisions ({done.length + reviewedPlans.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="queue" className="mt-4">
@@ -173,10 +202,29 @@ export default function AdminReviewsPage() {
           </TabsContent>
 
           <TabsContent value="history" className="mt-4">
-            {done.length === 0 ? (
+            {reviewedPlans.length > 0 && (
+              <div className="mb-3 divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
+                {reviewedPlans.map((p) => (
+                  <div key={p.id} className="flex items-start gap-3 px-4 py-3.5">
+                    <IconTile tone="muted">
+                      <ClipboardList aria-hidden />
+                    </IconTile>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body font-medium">{p.title} · user plan</p>
+                      <p className="text-caption text-muted-foreground">
+                        {p.review!.status === "approved" ? `Approved by ${p.review!.reviewer}` : "Changes requested"}
+                        {p.review!.decidedAt && ` · ${new Date(p.review!.decidedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
+                      </p>
+                      {p.review!.note && <p className="text-callout mt-1">&ldquo;{p.review!.note}&rdquo;</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {done.length === 0 && reviewedPlans.length === 0 ? (
               <p className="text-callout py-10 text-center text-muted-foreground">No decisions yet.</p>
             ) : (
-              <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
+              <div className={cn("divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card", done.length === 0 && "hidden")}>
                 {done.map((i) => {
                   const d = decisions[i.id]
                   return (

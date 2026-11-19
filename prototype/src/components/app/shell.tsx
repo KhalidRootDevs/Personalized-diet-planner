@@ -76,6 +76,12 @@ const TABS: { href: string; key: DictKey; icon: typeof House; match: string[] }[
 export function BottomNav() {
   const pathname = usePathname()
   const t = useT()
+  // A light tap on supported phones (Android); silently ignored elsewhere.
+  const haptic = () => {
+    try {
+      navigator.vibrate?.(8)
+    } catch {}
+  }
   return (
     <nav className="sticky bottom-0 z-30 mt-auto" aria-label="Main">
       <ul className="grid grid-cols-5 rounded-t-[28px] bg-card px-2 pt-2 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_-12px_rgba(20,24,20,0.18)]">
@@ -87,6 +93,7 @@ export function BottomNav() {
             <li key={tab.href} className="flex">
               <Link
                 href={tab.href}
+                onClick={haptic}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex flex-1 flex-col items-center justify-end gap-1 text-[11px] leading-none transition-colors",
@@ -122,6 +129,16 @@ export function Splash() {
         </div>
         <span className="text-2xl font-bold tracking-tight">NutriPlan</span>
       </div>
+    </div>
+  )
+}
+
+/** Re-mounts on navigation so each screen enters with a short native-style transition. */
+export function ScreenTransition({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  return (
+    <div key={pathname} className="animate-screen-in flex flex-1 flex-col">
+      {children}
     </div>
   )
 }

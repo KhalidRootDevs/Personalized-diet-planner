@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Check, Database, Flag, Images, Info, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/lib/store"
+import { useTx } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -24,12 +25,13 @@ export default function SettingsPage() {
   const resetDemo = useApp((s) => s.resetDemo)
   const loadDemo = useApp((s) => s.loadDemo)
   const [resetOpen, setResetOpen] = useState(false)
+  const tx = useTx()
 
   return (
     <>
-      <PageHeader back="/profile" title="App settings" />
+      <PageHeader back="/profile" title={tx("App settings", "অ্যাপ সেটিংস")} />
       <PageBody>
-        <Section title="Language">
+        <Section title={tx("Language", "ভাষা")}>
           <ListGroup>
             {(
               [
@@ -47,20 +49,20 @@ export default function SettingsPage() {
               />
             ))}
           </ListGroup>
-          {settings.language === "bn" && <InfoNote>Prototype: navigation and home labels are translated; other screens stay in English for now.</InfoNote>}
+          {settings.language === "bn" && <InfoNote>প্রোটোটাইপ: ন্যাভিগেশন, হোম, লগইন, প্রোফাইল তৈরি ও সেটিংস অনুবাদ করা হয়েছে; কিছু স্ক্রিন এখনো ইংরেজিতে। অনুবাদ পর্যালোচনার অপেক্ষায়।</InfoNote>}
         </Section>
 
-        <Section title="Prototype options">
+        <Section title={tx("Prototype options", "প্রোটোটাইপ অপশন")}>
           <ListGroup>
             <ListRow
               icon={<Flag />}
               iconTone="amber"
-              title="Release-phase badges"
+              title={tx("Release-phase badges", "রিলিজ-পর্যায় ব্যাজ")}
               description="P1 · P2 · P3 markers from docs/prd §43"
               trailing={<Switch checked={settings.showPhaseBadges} onCheckedChange={(v) => updateSettings({ showPhaseBadges: v })} aria-label="Show release-phase badges" />}
             />
             <div className="px-4 py-3.5">
-              <p className="text-body font-medium">Simulate subscription tier</p>
+              <p className="text-body font-medium">{tx("Simulate subscription tier", "সাবস্ক্রিপশন স্তর অনুকরণ")}</p>
               <p className="text-caption mt-0.5 text-muted-foreground">Preview gated screens without checkout</p>
               <div className="mt-3 grid h-11 grid-cols-4 gap-1 rounded-full bg-muted p-1" role="radiogroup" aria-label="Subscription tier">
                 {(Object.keys(TIER_LABEL) as Tier[]).map((t) => (
@@ -79,21 +81,21 @@ export default function SettingsPage() {
             <ListRow
               icon={<Database />}
               iconTone="lime"
-              title="Reload demo data"
+              title={tx("Reload demo data", "ডেমো তথ্য আবার লোড করুন")}
               description="Nadia, a 7-month-old baby and a week of meals"
               trailing={
                 <Button size="sm" variant="outline" onClick={() => { loadDemo(); toast.success("Demo data loaded"); router.push("/home") }}>
-                  Load
+                  {tx("Load", "লোড")}
                 </Button>
               }
             />
-            <ListRow onClick={() => setResetOpen(true)} icon={<RotateCcw />} iconTone="muted" title="Reset prototype" description="Clear everything on this device" />
+            <ListRow onClick={() => setResetOpen(true)} icon={<RotateCcw />} iconTone="muted" title={tx("Reset prototype", "প্রোটোটাইপ রিসেট")} description={tx("Clear everything on this device", "এই ডিভাইসের সব মুছে ফেলুন")} />
           </ListGroup>
         </Section>
 
-        <Section title="About">
+        <Section title={tx("About", "সম্পর্কে")}>
           <ListGroup>
-            <ListRow href="/profile/settings/credits" icon={<Images />} iconTone="sky" title="Photo credits" description="Authors and licenses of the food photos" />
+            <ListRow href="/profile/settings/credits" icon={<Images />} iconTone="sky" title={tx("Photo credits", "ছবির কৃতজ্ঞতা")} description="Authors and licenses of the food photos" />
           </ListGroup>
           <Surface className="text-callout space-y-2">
             <p className="text-body flex items-center gap-2 font-semibold">
@@ -109,18 +111,18 @@ export default function SettingsPage() {
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reset the prototype?</DialogTitle>
-            <DialogDescription>Clears everything on this device and returns to the welcome screen.</DialogDescription>
+            <DialogTitle>{tx("Reset the prototype?", "প্রোটোটাইপ রিসেট করবেন?")}</DialogTitle>
+            <DialogDescription>{tx("Clears everything on this device and returns to the welcome screen.", "এই ডিভাইসের সব মুছে স্বাগতম স্ক্রিনে ফিরে যাবে।")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setResetOpen(false)}>{tx("Cancel", "বাতিল")}</Button>
             <Button
               onClick={() => {
                 resetDemo()
                 router.replace("/welcome")
               }}
             >
-              Reset
+              {tx("Reset", "রিসেট")}
             </Button>
           </DialogFooter>
         </DialogContent>

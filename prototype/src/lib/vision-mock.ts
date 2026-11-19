@@ -4,7 +4,7 @@ import { FOOD_MAP } from "@/lib/data/foods"
 import { uid } from "@/lib/date"
 import type { JournalItem, MealType } from "@/lib/types"
 
-type Sample = { foodId: string; grams: number; unitLabel?: string; id: "high" | "moderate" | "low"; q: "high" | "moderate" | "low"; cooking?: string }
+type Sample = { foodId: string; grams: number; unitLabel?: string; id: "high" | "moderate" | "low"; q: "high" | "moderate" | "low"; cooking?: string; candidates?: string[] }
 
 const SAMPLES: Record<string, Sample[]> = {
   breakfast: [
@@ -14,7 +14,7 @@ const SAMPLES: Record<string, Sample[]> = {
   ],
   lunch: [
     { foodId: "rice_cooked", grams: 250, unitLabel: "Medium plate", id: "high", q: "moderate" },
-    { foodId: "fried_fish", grams: 80, unitLabel: "1 piece", id: "moderate", q: "moderate", cooking: "Fried" },
+    { foodId: "fried_fish", grams: 80, unitLabel: "1 piece", id: "low", q: "moderate", cooking: "Fried", candidates: ["fried_fish", "rui_fish", "hilsa_fish"] },
     { foodId: "dal_cooked", grams: 180, unitLabel: "Medium bowl", id: "high", q: "low" },
     { foodId: "mixed_veg", grams: 100, unitLabel: "Small bowl", id: "moderate", q: "moderate" },
   ],
@@ -42,6 +42,7 @@ export function analyzePhoto(mealType: MealType): JournalItem[] {
     confirmedByUser: false,
     cookingMethod: s.cooking,
     aiOriginal: { foodId: s.foodId, grams: s.grams },
+    candidates: s.candidates,
   }))
 }
 
@@ -57,7 +58,17 @@ export function hasSweetDrink(items: JournalItem[]): boolean {
   return items.some((i) => i.foodId === "milk_tea")
 }
 
-// Simulated packaged product for barcode logging (§42.3, §42.21).
+/**
+ * Verified packaged products (§42.3, §42.21): the barcode resolves to a product whose label was
+ * checked against a reviewed food-DB record, so nutrition comes from that record per serving.
+ */
+export const VERIFIED_PRODUCTS = [
+  { barcode: "8 941100 500019", name: "UHT milk, 200 ml pack", brand: "Sample dairy", foodId: "milk", servingGrams: 200, servingLabel: "1 pack (200 ml)" },
+  { barcode: "8 941100 500026", name: "Plain set yogurt cup", brand: "Sample dairy", foodId: "doi", servingGrams: 100, servingLabel: "1 cup (100 g)" },
+  { barcode: "8 941100 500033", name: "Rolled oats sachet", brand: "Sample mills", foodId: "oats_dry", servingGrams: 40, servingLabel: "1 sachet (40 g dry)" },
+] as const
+
+// Simulated unverified packaged product for barcode logging (§42.3, §42.21).
 export const BARCODE_PRODUCT = {
   name: "Chocolate cream biscuits (packaged)",
   brand: "Sample brand",

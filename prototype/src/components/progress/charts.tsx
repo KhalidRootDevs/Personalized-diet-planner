@@ -23,13 +23,20 @@ export function DailyBars({
   unit,
   label,
   highlight,
+  labelFor,
+  legend = "Logged",
 }: {
   data: { date: string; value: number; planned?: number }[]
   unit: string
   label: string
   /** ISO date drawn in the stronger lime (defaults to the last day). */
   highlight?: string
+  /** X-axis label for a bar (defaults to the short weekday). */
+  labelFor?: (date: string) => string
+  /** Legend label for the main series. */
+  legend?: string
 }) {
+  const xLabel = labelFor ?? ((d: string) => formatDay(d, { weekday: "short" }))
   const peak = Math.max(1, ...data.map((d) => Math.max(d.value, d.planned ?? 0)))
   const W = 340
   const H = 170
@@ -39,7 +46,7 @@ export function DailyBars({
   const hi = highlight ?? data[data.length - 1]?.date
   const y = (v: number) => T + H - (v / peak) * H
   const short = (v: number) => (v >= 1000 ? `${(v / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k` : `${Math.round(v)}`)
-  const summary = data.map((d) => `${formatDay(d.date, { weekday: "short" })}: ${d.value ? `about ${Math.round(d.value)} ${unit}` : "not logged"}${d.planned ? `, planned ${Math.round(d.planned)}` : ""}`).join("; ")
+  const summary = data.map((d) => `${xLabel(d.date)}: ${d.value ? `about ${Math.round(d.value)} ${unit}` : "not logged"}${d.planned ? `, planned ${Math.round(d.planned)}` : ""}`).join("; ")
   return (
     <figure>
       <svg viewBox={`0 0 ${W} ${T + H + 26}`} className="w-full" role="img" aria-label={`${label}. ${summary}`}>
@@ -69,15 +76,15 @@ export function DailyBars({
                 <rect x={cx - bar / 2} y={T + H - 4} width={bar} height={4} rx={2} fill={GRID} />
               )}
               <text x={cx} y={T + H + 19} textAnchor="middle" fontSize={12} fontWeight={strong ? 700 : 400} fill={strong ? "var(--charcoal)" : AXIS}>
-                {formatDay(d.date, { weekday: "short" })}
+                {xLabel(d.date)}
               </text>
             </g>
           )
         })}
       </svg>
       <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-        <LegendItem swatch={<span className="inline-block h-3 w-2 rounded-full bg-lime" />}>Logged ({unit}, estimate)</LegendItem>
-        <LegendItem swatch={<span className="inline-block h-3 w-2 rounded-full bg-[repeating-linear-gradient(45deg,#eff1eb_0_2px,#d9ddd4_2px_4px)]" />}>Planned</LegendItem>
+        <LegendItem swatch={<span className="inline-block h-3 w-2 rounded-full bg-lime" />}>{legend} ({unit}, estimate)</LegendItem>
+        {data.some((d) => d.planned) && <LegendItem swatch={<span className="inline-block h-3 w-2 rounded-full bg-[repeating-linear-gradient(45deg,#eff1eb_0_2px,#d9ddd4_2px_4px)]" />}>Planned</LegendItem>}
       </figcaption>
     </figure>
   )

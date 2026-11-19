@@ -1,5 +1,7 @@
 "use client"
 
+import { useConsent } from "@/lib/consent"
+
 import { useState } from "react"
 import Link from "next/link"
 import { Baby, Plus, Ruler } from "lucide-react"
@@ -19,11 +21,32 @@ import { EmptyState, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, St
 import { LegendItem, LineTrend } from "@/components/progress/charts"
 import { useChildProfile } from "@/components/child/use-child"
 
+/**
+ * Simplified WHO-style weight-for-age bands (kg) at selected months, 0–24 months.
+ * ILLUSTRATIVE ONLY — rounded approximations for the prototype, not the WHO Child Growth Standards tables.
+ * Production must load the official WHO tables (versioned, clinically reviewed, §6.6, §7).
+ */
+const REF_MONTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 18, 21, 24]
+const WEIGHT_REF: Record<"male" | "female", { p3: number[]; p50: number[]; p97: number[] }> = {
+  male: {
+    p3: [2.5, 3.4, 4.4, 5.1, 5.6, 6.1, 6.4, 6.7, 7.0, 7.2, 7.5, 7.7, 7.8, 8.4, 8.9, 9.4, 9.9],
+    p50: [3.3, 4.5, 5.6, 6.4, 7.0, 7.5, 7.9, 8.3, 8.6, 8.9, 9.2, 9.4, 9.6, 10.3, 10.9, 11.5, 12.2],
+    p97: [4.3, 5.7, 7.0, 7.9, 8.6, 9.2, 9.7, 10.2, 10.5, 10.9, 11.2, 11.5, 11.8, 12.6, 13.4, 14.1, 14.8],
+  },
+  female: {
+    p3: [2.4, 3.2, 4.0, 4.6, 5.1, 5.5, 5.8, 6.1, 6.3, 6.6, 6.8, 7.0, 7.1, 7.7, 8.2, 8.7, 9.2],
+    p50: [3.2, 4.2, 5.1, 5.8, 6.4, 6.9, 7.3, 7.6, 7.9, 8.2, 8.5, 8.7, 8.9, 9.6, 10.2, 10.9, 11.5],
+    p97: [4.2, 5.4, 6.5, 7.4, 8.1, 8.7, 9.2, 9.6, 10.0, 10.4, 10.7, 11.0, 11.3, 12.2, 13.0, 13.7, 14.6],
+  },
+}
+const TABLE_MONTHS = [0, 3, 6, 9, 12, 18, 24]
+
 /** Growth records (§6.6, §12). Measurements only — interpretation belongs to clinicians. */
 export default function ChildGrowthPage() {
   const child = useChildProfile()
   const all = useApp((s) => s.growth)
   const addGrowth = useApp((s) => s.addGrowth)
+  const childConsent = useConsent("child_data")
   const [open, setOpen] = useState(false)
 
   if (!child)
@@ -50,7 +73,7 @@ export default function ChildGrowthPage() {
         subtitle={`${child.name} · ${ageInMonths(child.dateOfBirth)} months`}
         back="/child"
         action={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={() => setOpen(true)} disabled={!childConsent} title={childConsent ? undefined : "Read-only: child information consent withdrawn"}>
             <Plus /> Add
           </Button>
         }
@@ -66,6 +89,10 @@ export default function ChildGrowthPage() {
         <InfoNote title="A measurement, not a diagnosis">
           These records help you and your clinician follow {child.name}&apos;s growth over time. Growth is assessed on WHO growth charts by a health professional. NutriPlan does not interpret these numbers.
         </InfoNote>
+
+        <Section title="Weight-for-age reference" badge={<FeatureBadge feature="baby_module" />} description="Illustrative, not clinical">
+          <WeightReference sex={child.sex} dob={child.dateOfBirth} points={weights} name={child.name} />
+        </Section>
 
         {records.length === 0 ? (
           <EmptyState icon={<Ruler />} title="No measurements yet" description="Add weight and length from a clinic visit or a home measurement." />
@@ -187,5 +214,104 @@ function Legend() {
       <LegendItem swatch={<span className="inline-block size-2.5 rounded-full bg-forest" />}>Clinic measurement</LegendItem>
       <LegendItem swatch={<span className="inline-block size-2.5 rounded-full border-2 border-forest bg-card" />}>Home measurement</LegendItem>
     </div>
+  )
+}
+
+/**
+ * Child's weights plotted over an illustrative 3rd–97th band and median (§6.6). No percentile or
+ * classification is computed: a clinician interprets growth on official charts. Never adult BMI.
+ */
+function WeightReference({ sex, dob, points, name }: { sex?: "female" | "male"; dob: string; points: { date: string; value: number; source: GrowthRecord["source"] }[]; name: string }) {
+  if (!sex)
+    return <InfoNote>Add {name}&apos;s sex in the family profile to show the matching reference. A clinician should interpret growth.</InfoNote>
+  const ref = WEIGHT_REF[sex]
+  const W = 320
+  const H = 190
+  const pad = { l: 30, r: 8, t: 8, b: 26 }
+  const x = (m: number) => pad.l + (m / 24) * (W - pad.l - pad.r)
+  const y = (kg: number) => H - pad.b - (kg / 16) * (H - pad.t - pad.b)
+  const line = (vals: number[]) => vals.map((v, i) => `${x(REF_MONTHS[i])},${y(v)}`).join(" ")
+  const band = `${line(ref.p97)} ${[...ref.p3].map((v, i) => [REF_MONTHS[i], v] as const).reverse().map(([m, v]) => `${x(m)},${y(v)}`).join(" ")}`
+  const born = new Date(dob).getTime()
+  const plotted = points
+    .map((pt) => ({ ...pt, months: (new Date(pt.date).getTime() - born) / (30.44 * 24 * 3600 * 1000) }))
+    .filter((pt) => pt.months >= 0 && pt.months <= 24)
+  const ageNow = ageInMonths(dob)
+
+  return (
+    <Surface className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        <Pill tone="caution">Illustrative · not clinical</Pill>
+        <Pill tone="neutral">{sex === "female" ? "Girls" : "Boys"} · 0–24 months</Pill>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${name}'s weights plotted against an illustrative weight-for-age band for ${sex === "female" ? "girls" : "boys"}, 0 to 24 months. See the table below for values.`}>
+        {[0, 4, 8, 12, 16].map((kg) => (
+          <g key={kg}>
+            <line x1={pad.l} x2={W - pad.r} y1={y(kg)} y2={y(kg)} className="stroke-border" strokeWidth={1} />
+            <text x={pad.l - 6} y={y(kg) + 4} textAnchor="end" className="fill-muted-foreground text-[10px]">
+              {kg}
+            </text>
+          </g>
+        ))}
+        {[0, 6, 12, 18, 24].map((m) => (
+          <text key={m} x={x(m)} y={H - 10} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+            {m}
+          </text>
+        ))}
+        <text x={W - pad.r} y={H - 1} textAnchor="end" className="fill-muted-foreground text-[10px]">
+          age (months)
+        </text>
+        <text x={2} y={pad.t + 6} className="fill-muted-foreground text-[10px]">
+          kg
+        </text>
+        <polygon points={band} className="fill-sage-strong" opacity={0.8} />
+        <polyline points={line(ref.p50)} fill="none" className="stroke-forest" strokeWidth={1.5} strokeDasharray="4 3" />
+        {plotted.map((pt) => (
+          <circle key={pt.date} cx={x(pt.months)} cy={y(pt.value)} r={4} strokeWidth={2} className={pt.source === "clinic" ? "fill-charcoal stroke-charcoal" : "fill-card stroke-charcoal"} />
+        ))}
+      </svg>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        <LegendItem swatch={<span className="inline-block h-2.5 w-4 rounded-sm bg-sage-strong" />}>3rd–97th band (illustrative)</LegendItem>
+        <LegendItem swatch={<span className="inline-block w-4 border-t-2 border-dashed border-forest" />}>Median (50th)</LegendItem>
+        <LegendItem swatch={<span className="inline-block size-2.5 rounded-full bg-charcoal" />}>{name} · clinic</LegendItem>
+        <LegendItem swatch={<span className="inline-block size-2.5 rounded-full border-2 border-charcoal bg-card" />}>{name} · home</LegendItem>
+      </div>
+      {ageNow > 24 && <p className="text-caption text-muted-foreground">This illustrative reference covers 0–24 months only. Older children are assessed on other age-specific charts by a clinician.</p>}
+      <details className="text-callout rounded-xl bg-muted px-3 py-2">
+        <summary className="cursor-pointer font-semibold text-forest">Reference table (kg)</summary>
+        <table className="tabular mt-2 w-full text-right">
+          <caption className="sr-only">Illustrative weight-for-age reference values in kilograms</caption>
+          <thead className="text-caption text-muted-foreground">
+            <tr>
+              <th scope="col" className="py-1 text-left font-medium">Month</th>
+              <th scope="col" className="py-1 font-medium">3rd</th>
+              <th scope="col" className="py-1 font-medium">50th</th>
+              <th scope="col" className="py-1 font-medium">97th</th>
+            </tr>
+          </thead>
+          <tbody>
+            {TABLE_MONTHS.map((m) => {
+              const i = REF_MONTHS.indexOf(m)
+              return (
+                <tr key={m}>
+                  <th scope="row" className="py-0.5 text-left font-normal">{m}</th>
+                  <td>{ref.p3[i]}</td>
+                  <td>{ref.p50[i]}</td>
+                  <td>{ref.p97[i]}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {plotted.length > 0 && (
+          <p className="mt-2 text-caption text-muted-foreground">
+            {name}: {plotted.map((pt) => `${pt.value} kg at ~${Math.round(pt.months)} months (${pt.source})`).join("; ")}.
+          </p>
+        )}
+      </details>
+      <p className="text-caption text-muted-foreground">
+        Simplified values for illustration, not the official WHO tables. NutriPlan doesn&apos;t calculate percentiles or classify growth, and never uses adult BMI for babies or children. Please ask a clinician to interpret {name}&apos;s growth, especially if a premature birth means a corrected age applies.
+      </p>
+    </Surface>
   )
 }

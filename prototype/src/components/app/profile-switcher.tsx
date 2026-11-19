@@ -15,6 +15,7 @@ export function ProfileAvatar({ profile, size = "md", ring }: { profile: Pick<Pr
 }
 
 export function profileAgeLabel(p: Profile): string {
+  if (p.caregiverOnly || !p.dateOfBirth) return "Caregiver account"
   if (p.type === "adult") return `${ageInYears(p.dateOfBirth)} years`
   const m = ageInMonths(p.dateOfBirth)
   return m < 24 ? `${m} months` : `${Math.floor(m / 12)} years`

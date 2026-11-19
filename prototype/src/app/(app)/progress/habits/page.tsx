@@ -1,10 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Check, ListChecks, Plus, Trash2 } from "lucide-react"
+import { Check, ListChecks, Plus, Sparkles, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import { formatDay, todayISO, uid } from "@/lib/date"
-import { useApp } from "@/lib/store"
+import { addDays, formatDay, startOfWeek, todayISO, uid } from "@/lib/date"
+import { useActivePlan, useApp, useSelfProfile } from "@/lib/store"
+import { useAreaD, useAreaDSync } from "@/lib/area-d-store"
+import { useConsent } from "@/lib/consent"
+import { track } from "@/lib/analytics"
+import { adultTargets } from "@/lib/nutrition"
+import { foodVariety, habitSuggestions, type InsightInput } from "@/lib/insights"
 import { lastNDays } from "@/lib/area-d-stats"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -15,16 +20,25 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { DataIcon } from "@/components/app/icon"
 import { FeatureBadge, PremiumGate, useFeature } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
-import { EmptyState, IconTile, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
+import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
+import { Chip } from "@/components/app/controls"
 
-const SUGGESTIONS = [
-  { title: "Add a vegetable to dinner", description: "Easy way to add fiber and variety.", icon: "Carrot" },
-  { title: "Pack a snack for work", description: "Helps on long workdays.", icon: "Apple" },
-  { title: "Eat lunch away from the desk", description: "A short break can make meals more enjoyable.", icon: "Coffee" },
+const GENERIC = [
+  { title: "Add a vegetable to dinner", description: "Easy way to add fiber and variety.", icon: "Carrot", reason: "A common first habit." },
+  { title: "Pack a snack for work", description: "Helps on long workdays.", icon: "Apple", reason: "A common first habit." },
+  { title: "Eat lunch away from the desk", description: "A short break can make meals more enjoyable.", icon: "Coffee", reason: "A common first habit." },
 ]
 
 /** Habit Builder (§42.18). Small habits, no streaks, no penalties for missed days. */
 export default function HabitsPage() {
+  useAreaDSync()
+  const self = useSelfProfile()
+  const plan = useActivePlan()
+  const journal = useApp((s) => s.journal)
+  const water = useApp((s) => s.water)
+  const feedback = useAreaD((s) => s.mealFeedback)
+  const checkIns = useAreaD((s) => s.checkIns)
+  const healthOk = useConsent("health_data")
   const habits = useApp((s) => s.habits)
   const toggleHabit = useApp((s) => s.toggleHabit)
   const addHabit = useApp((s) => s.addHabit)
@@ -33,9 +47,12 @@ export default function HabitsPage() {
   const { allowed } = useFeature("habits")
   const days = lastNDays(7)
   const today = todayISO()
+  const input: InsightInput | null = self ? { journal, plan, profile: self, water, feedback, checkIns, days } : null
+  const personal = input ? habitSuggestions(input, self && healthOk ? adultTargets(self) : null, habits.map((h) => h.title)) : []
+  const suggestions = personal.length ? personal : GENERIC.filter((g) => !habits.some((h) => h.title === g.title))
 
-  const create = (h: { title: string; description: string; icon: string }) => {
-    addHabit({ id: uid("h"), ...h, days: {} })
+  const create = (h: { title: string; description: string; icon: string; reason?: string }) => {
+    addHabit({ id: uid("h"), title: h.title, description: h.reason ?? h.description, icon: h.icon, days: {} })
     setOpen(false)
     toast.success("Habit added")
   }
@@ -135,19 +152,28 @@ export default function HabitsPage() {
             </Section>
           )}
 
-          <Section title="This week">
-            <Surface tone="sage">
-              <p className="text-callout">
-                {habits.length ? (
-                  <>
-                    You checked off habits on <b className="tabular">{days.filter((d) => habits.some((h) => h.days[d])).length}</b> of 7 days. Small, repeated actions add up. Keep the habits that feel useful and drop the ones that don&apos;t.
-                  </>
-                ) : (
-                  "Add a habit to see your weekly review here."
-                )}
-              </p>
-            </Surface>
-          </Section>
+          {personal.length > 0 && (
+            <Section title="Suggested for you" description="Picked from your recent records. Add one only if it fits.">
+              <ListGroup>
+                {personal.slice(0, 3).map((s) => (
+                  <ListRow
+                    key={s.title}
+                    icon={<DataIcon name={s.icon} />}
+                    iconTone="amber"
+                    title={s.title}
+                    description={`Why: ${s.reason}`}
+                    trailing={
+                      <Button size="sm" variant="secondary" onClick={() => create(s)}>
+                        <Plus /> Add
+                      </Button>
+                    }
+                  />
+                ))}
+              </ListGroup>
+            </Section>
+          )}
+
+          {input && <HabitReviewSection input={input} />}
         </PremiumGate>
       </PageBody>
 
@@ -160,14 +186,14 @@ export default function HabitsPage() {
           <div className="space-y-5 px-5 pt-2">
             <p className="text-overline text-muted-foreground">Suggestions</p>
             <div className="-mt-3 space-y-2">
-              {SUGGESTIONS.filter((s) => !habits.some((h) => h.title === s.title)).map((s) => (
+              {suggestions.map((s) => (
                 <button key={s.title} onClick={() => create(s)} className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-card shadow-card px-4 py-3 text-left transition-colors hover:bg-muted/50">
                   <IconTile size="sm" tone="amber">
                     <DataIcon name={s.icon} />
                   </IconTile>
                   <span className="min-w-0 flex-1">
                     <span className="text-body block font-medium">{s.title}</span>
-                    <span className="text-caption block text-muted-foreground">{s.description}</span>
+                    <span className="text-caption block text-muted-foreground">{s.reason !== "A common first habit." ? `Why: ${s.reason}` : s.description}</span>
                   </span>
                   <Plus className="size-[18px] text-muted-grey" />
                 </button>
@@ -207,5 +233,87 @@ function CustomHabitForm({ onSave }: { onSave: (h: { title: string; description:
         Add habit
       </Button>
     </form>
+  )
+}
+
+/** Weekly habit review (§42.18): what went consistently, what was hard, and 1–2 priorities. No streaks or scores. */
+function HabitReviewSection({ input }: { input: InsightInput }) {
+  const habits = useApp((s) => s.habits)
+  const reviews = useAreaD((s) => s.habitReviews)
+  const saveReview = useAreaD((s) => s.saveHabitReview)
+  const week = startOfWeek(todayISO())
+  const saved = reviews.find((r) => r.weekStart === week)
+  const days = input.days
+  const doneCount = (id: string) => days.filter((d) => habits.find((h) => h.id === id)?.days[d]).length
+  const consistent = habits.filter((h) => doneCount(h.id) >= 5)
+  const autoStruggled = habits.filter((h) => doneCount(h.id) <= 2).map((h) => h.title)
+  const [struggled, setStruggled] = useState<string[]>(saved?.struggled ?? autoStruggled)
+  const [priorities, setPriorities] = useState<string[]>(saved?.priorities ?? [])
+  const prevDays = days.map((d) => addDays(d, -7))
+  const now = foodVariety(input)
+  const before = foodVariety({ ...input, days: prevDays })
+  const toggle = (list: string[], v: string, max?: number) => (list.includes(v) ? list.filter((x) => x !== v) : max && list.length >= max ? list : [...list, v])
+
+  return (
+    <Section title="Weekly habit review" description="A look back, not a scorecard. Missing days is part of building a habit.">
+      <div id="review" className="scroll-mt-20 space-y-3">
+        {saved && (
+          <Surface tone="sage">
+            <p className="text-overline text-lime-text">Your priorities this week</p>
+            <p className="text-body mt-1 font-medium">{saved.priorities.join(" · ") || "Keep things as they are"}</p>
+          </Surface>
+        )}
+        <Surface className="space-y-3">
+          <div>
+            <p className="text-callout font-semibold">Went consistently</p>
+            <p className="text-callout mt-0.5 text-muted-foreground">{consistent.length ? consistent.map((h) => h.title).join(", ") : "Nothing on most days yet — that's fine."}</p>
+          </div>
+          <div className="border-t border-border/70 pt-3">
+            <p className="text-callout font-semibold">Changes in your recorded food</p>
+            <p className="text-callout mt-0.5 text-muted-foreground tabular">
+              Logged on {now.loggedDays} days (previous week {before.loggedDays}) · vegetables on {now.groups.vegetable.days} days ({before.groups.vegetable.days}) · fruit on {now.groups.fruit.days} days ({before.groups.fruit.days})
+            </p>
+            <p className="text-caption mt-1 text-muted-foreground">Based only on what was logged.</p>
+          </div>
+        </Surface>
+        {habits.length > 0 && (
+          <div>
+            <p className="text-callout mb-2 font-medium">Which did you struggle with?</p>
+            <div className="flex flex-wrap gap-2">
+              {habits.map((h) => (
+                <Chip key={h.id} selected={struggled.includes(h.title)} onClick={() => setStruggled((x) => toggle(x, h.title))}>
+                  {h.title}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+          <p className="text-callout mb-2 font-medium">
+            Choose 1–2 priorities for next week <Pill tone="neutral" className="ml-1">{priorities.length} of 2</Pill>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {[...habits.map((h) => h.title), "Keep things as they are"].map((t) => (
+              <Chip key={t} selected={priorities.includes(t)} onClick={() => setPriorities((x) => toggle(x, t, 2))}>
+                {priorities.includes(t) && <Check />}
+                {t}
+              </Chip>
+            ))}
+          </div>
+        </div>
+        <Button
+          variant="secondary"
+          className="w-full"
+          disabled={priorities.length === 0}
+          onClick={() => {
+            saveReview({ weekStart: week, struggled, priorities })
+            track("habit_review_saved", { priorities: priorities.length })
+            toast.success("Habit review saved")
+          }}
+        >
+          <Sparkles className="size-[18px]" /> {saved ? "Update review" : "Save review"}
+        </Button>
+      </div>
+    </Section>
   )
 }

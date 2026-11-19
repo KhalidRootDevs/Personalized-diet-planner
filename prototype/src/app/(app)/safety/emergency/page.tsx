@@ -1,5 +1,6 @@
 import { Baby, Phone, Siren, TriangleAlert, X } from "lucide-react"
 import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
+import { TrackView } from "@/components/privacy/track-view"
 
 const SIGNS = [
   "Trouble breathing, wheezing or a tight throat",
@@ -30,6 +31,7 @@ const DONT = [
 export default function EmergencyPage() {
   return (
     <>
+      <TrackView name="emergency_guidance_viewed" />
       <PageHeader title="Emergency help" back />
       <PageBody>
         <div className="rounded-2xl border border-safety/25 bg-safety-surface p-5" role="alert">

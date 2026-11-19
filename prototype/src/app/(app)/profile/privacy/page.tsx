@@ -3,27 +3,34 @@
 // Consent management, export and deletion (§5.10, §21.4, §29, §41.10).
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Camera, Download, FileLock2, HeartPulse, Baby, Sparkles, BarChart3, Trash2 } from "lucide-react"
+import { Camera, Download, FileLock2, HeartPulse, Baby, Sparkles, BarChart3, Trash2, History } from "lucide-react"
 import { toast } from "sonner"
 import { useApp } from "@/lib/store"
+import { useAreaD, useAreaDSync } from "@/lib/area-d-store"
+import { track } from "@/lib/analytics"
 import type { ConsentRecord } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
+import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, SectionLink, Surface } from "@/components/app/page"
+import { PhaseBadge } from "@/components/app/badges"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
 
 const CONSENTS: { type: ConsentRecord["type"]; icon: typeof Camera; title: string; text: string; off: string }[] = [
-  { type: "health_data", icon: HeartPulse, title: "Health information", text: "Allergies and conditions used to filter unsafe foods.", off: "Without it, allergies can't be checked and new plans can't be generated." },
+  { type: "health_data", icon: HeartPulse, title: "Health information", text: "Allergies and conditions used to filter unsafe foods.", off: "New plans can't be generated and personal targets are hidden. Your existing plan stays available." },
   { type: "food_photos", icon: Camera, title: "Food photos", text: "Private storage, no public links, location data removed.", off: "Photo logging is turned off. Manual and text logging still work." },
   { type: "child_data", icon: Baby, title: "Child information", text: "Feeding, growth and food introductions for children you manage.", off: "Child profiles become read-only until you allow this again." },
-  { type: "ai_processing", icon: Sparkles, title: "AI processing", text: "De-identified photos and text sent to our AI provider for food suggestions.", off: "Photos won't be analyzed. You can still log meals manually." },
+  { type: "ai_processing", icon: Sparkles, title: "AI processing", text: "De-identified photos and text sent to our AI provider for food suggestions.", off: "Photo and text analysis and the AI coach are off. You can still log meals manually." },
   { type: "analytics", icon: BarChart3, title: "Product analytics", text: "Anonymous usage data to improve the app.", off: "" },
 ]
 
 export default function PrivacyPage() {
+  useAreaDSync()
   const router = useRouter()
+  const audit = useAreaD((s) => s.audit)
+  const auditLog = useAreaD((s) => s.auditLog)
+  const [showAllAudit, setShowAllAudit] = useState(false)
   const consents = useApp((s) => s.consents)
   const setConsent = useApp((s) => s.setConsent)
   const resetDemo = useApp((s) => s.resetDemo)
@@ -65,6 +72,8 @@ export default function PrivacyPage() {
                       checked={granted}
                       onCheckedChange={(v) => {
                         setConsent(type, v)
+                        audit(v ? "Consent granted" : "Consent withdrawn", title)
+                        track("consent_changed", { type, granted: v })
                         toast(v ? `${title}: allowed` : `${title}: withdrawn`)
                       }}
                     />
@@ -79,10 +88,15 @@ export default function PrivacyPage() {
         <Section title="Your data">
           <ListGroup>
             <ListRow
-              onClick={() => toast.success("Export requested", { description: "Prototype: you'd receive a download link by email within 48 hours." })}
+              onClick={() => {
+                exportData()
+                audit("Data exported", "Full JSON export downloaded")
+                track("data_exported")
+                toast.success("Export downloaded", { description: "A JSON file with everything stored for you in this prototype." })
+              }}
               icon={<Download />}
               title="Export my data"
-              description="Profile, plans, journal and consents (JSON + PDF)"
+              description="Profile, plans, journal, progress and consents (JSON)"
             />
             <ListRow
               onClick={() => setPhotosOpen(true)}
@@ -94,6 +108,28 @@ export default function PrivacyPage() {
           <InfoNote title="How we protect you">
             Health data is stored separately from your general profile and encrypted. Support staff can&apos;t see your medical details. Calendar events never include health information. Photos are kept for 12 months unless you delete them sooner.
           </InfoNote>
+        </Section>
+
+        <Section title="Activity log" badge={<PhaseBadge phase={1} />} description="Consent changes, exports, deletions and professional access." action={auditLog.length > 5 && <SectionLink onClick={() => setShowAllAudit((x) => !x)}>{showAllAudit ? "Show less" : "Show all"}</SectionLink>}>
+          {auditLog.length === 0 ? (
+            <p className="text-callout px-1 text-muted-foreground">Nothing recorded yet.</p>
+          ) : (
+            <ListGroup>
+              {(showAllAudit ? auditLog : auditLog.slice(0, 5)).map((a) => (
+                <ListRow
+                  key={a.id}
+                  icon={<History />}
+                  iconTone={a.actor === "professional" ? "sky" : "muted"}
+                  title={a.action}
+                  description={
+                    <span className="tabular">
+                      {a.detail} · {a.actor === "you" ? "by you" : a.actor === "professional" ? "by your dietitian" : "system"} · {new Date(a.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  }
+                />
+              ))}
+            </ListGroup>
+          )}
         </Section>
 
         <Section title="Delete account">
@@ -132,6 +168,7 @@ export default function PrivacyPage() {
               onClick={() => {
                 // §41.10: deleting a photo keeps nutrition history unless the user explicitly chooses otherwise.
                 photoEntries.forEach((e) => (keepNutrition ? updateEntry({ ...e, hasPhoto: false }) : deleteEntry(e.id)))
+                audit("Food photos deleted", `${photoCount} ${photoCount === 1 ? "photo" : "photos"} · nutrition history ${keepNutrition ? "kept" : "deleted"}`)
                 setPhotosOpen(false)
                 toast.success(keepNutrition ? "Photos deleted. Nutrition history kept." : "Photos and their entries deleted.")
               }}
@@ -167,4 +204,21 @@ export default function PrivacyPage() {
       </Dialog>
     </>
   )
+}
+
+/** Downloads everything this prototype stores for the user (§29, FR-041). */
+function exportData() {
+  const { hydrated: _h, ...app } = useApp.getState() as unknown as Record<string, unknown>
+  void _h
+  const progress = useAreaD.getState() as unknown as Record<string, unknown>
+  const strip = (o: Record<string, unknown>) => Object.fromEntries(Object.entries(o).filter(([, v]) => typeof v !== "function"))
+  const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), format: "nutriplan-prototype-export/1", app: strip(app), progress: strip(progress) }, null, 2)], { type: "application/json" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `nutriplan-export-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { BookHeart, Clock, Flame, Plus, Search, ShieldCheck } from "lucide-react"
+import { BookHeart, Clock, Flame, Plus, Scale, Search, ShieldCheck } from "lucide-react"
 import { EmptyState, ListLink, PageBody, PageHeader, Pill, Section } from "@/components/app/page"
 import { SCENE_PHOTO } from "@/lib/data/photos"
 import { cn } from "@/lib/utils"
@@ -102,6 +102,19 @@ export default function RecipesPage() {
               </>
             }
             description={userRecipes.length ? `${userRecipes.length} of your own recipes` : "Save family recipes and see their nutrition"}
+          />
+        )}
+        {!infant && (
+          <ListLink
+            href="/recipes/compare"
+            icon={<Scale />}
+            iconTone="amber"
+            title={
+              <>
+                Compare two meals <FeatureBadge feature="budget_optimizer" />
+              </>
+            }
+            description="Cost and nutrition side by side"
           />
         )}
 

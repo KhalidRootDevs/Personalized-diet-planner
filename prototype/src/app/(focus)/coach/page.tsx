@@ -2,15 +2,18 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
-import { ArrowUp, Leaf, RotateCcw } from "lucide-react"
+import { ArrowUp, Leaf, Mic, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FeatureBadge, PremiumGate, useFeature } from "@/components/app/badges"
 import { SafetyAlert } from "@/components/app/alerts"
 import { HeaderIconButton, IconTile, PageHeader, Pill } from "@/components/app/page"
 import { useApp, useActivePlan, useSelfProfile } from "@/lib/store"
 import { adultTargets } from "@/lib/nutrition"
-import { nowHHMM, todayISO, uid } from "@/lib/date"
-import { coachReply, EMERGENCY_SOURCE, REFERRAL_SOURCE, STARTERS } from "@/lib/coach"
+import { addDays, nowHHMM, todayISO, uid } from "@/lib/date"
+import { coachReply, EMERGENCY_SOURCE, REFERRAL_SOURCE, STARTERS, VOICE_SAMPLES } from "@/lib/coach"
+import { useConsent } from "@/lib/consent"
+import { track } from "@/lib/analytics"
+import { ConsentPrompt } from "@/components/privacy/consent-prompt"
 import { dayRange, entriesFor, remainingMeals } from "@/lib/area-b-log"
 import { useRecipeLookup } from "@/lib/area-c-utils"
 import { cn } from "@/lib/utils"
@@ -20,6 +23,7 @@ export default function CoachPage() {
   const coach = useApp((s) => s.coach)
   const clear = useApp((s) => s.clearCoach)
   const { allowed } = useFeature("coach")
+  const aiOk = useConsent("ai_processing")
   return (
     <div className="flex min-h-dvh flex-1 flex-col lg:min-h-full">
       <PageHeader
@@ -38,7 +42,13 @@ export default function CoachPage() {
           )
         }
       />
-      {allowed ? (
+      {allowed && !aiOk ? (
+        <div className="px-gutter pt-2">
+          <ConsentPrompt type="ai_processing" feature="The nutrition coach">
+            The coach uses AI to phrase answers from your records. Manual logging, your plan and safety features keep working without it.
+          </ConsentPrompt>
+        </div>
+      ) : allowed ? (
         <Chat />
       ) : (
         <div className="px-gutter pt-2">
@@ -53,7 +63,12 @@ function Chat() {
   const self = useSelfProfile()
   const plan = useActivePlan()
   const journal = useApp((s) => s.journal)
+  const pantry = useApp((s) => s.pantry)
+  const shopping = useApp((s) => s.shopping)
+  const water = useApp((s) => s.water)
   const messages = useApp((s) => s.coach)
+  const [followUps, setFollowUps] = useState<string[]>([])
+  const [listening, setListening] = useState(false)
   const addMessage = useApp((s) => s.addCoachMessage)
   const lookup = useRecipeLookup()
   const [text, setText] = useState("")
@@ -71,9 +86,11 @@ function Chat() {
     if (!question || typing) return
     addMessage({ id: uid("msg"), role: "user", text: question, createdAt: new Date().toISOString() })
     setText("")
+    setFollowUps([])
     setTyping(true)
     const today = todayISO()
     const entries = entriesFor(journal, self.id, today)
+    const waterDays = Array.from({ length: 7 }, (_, i) => water[`${self.id}:${addDays(today, -i)}`]).filter((v): v is number => typeof v === "number")
     const reply = coachReply(question, {
       profile: self,
       targets: adultTargets(self),
@@ -81,11 +98,29 @@ function Chat() {
       loggedCount: entries.filter((e) => e.analysisStatus === "confirmed").length,
       remaining: remainingMeals((plan?.meals ?? []).filter((m) => m.date === today), nowHHMM()),
       lookup,
+      pantry,
+      shopping,
+      weekMeals: plan?.meals ?? [],
+      waterAvg: waterDays.length ? waterDays.reduce((a, b) => a + b, 0) / waterDays.length : undefined,
+      nowHHMM: nowHHMM(),
     })
+    // Only the intent category is tracked, never the question text (§29).
+    track(reply.kind === "emergency" ? "coach_emergency_route" : reply.kind === "referral" ? "coach_escalation" : "coach_question")
     window.setTimeout(() => {
       addMessage({ id: uid("msg"), role: "coach", text: reply.text, createdAt: new Date().toISOString(), sources: reply.sources })
+      setFollowUps(reply.followUps ?? [])
       setTyping(false)
     }, 700)
+  }
+
+  // Prototype: simulates speech-to-text by filling the box with a sample question to review before sending.
+  const listen = () => {
+    if (listening || typing) return
+    setListening(true)
+    window.setTimeout(() => {
+      setText(VOICE_SAMPLES[Math.floor(Math.random() * VOICE_SAMPLES.length)])
+      setListening(false)
+    }, 1400)
   }
 
   return (
@@ -143,9 +178,9 @@ function Chat() {
       </div>
 
       <div className="sticky bottom-0 z-10 border-t border-border/70 bg-background/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
-        {messages.length === 0 && (
-          <div className="no-scrollbar px-gutter flex gap-2 overflow-x-auto pt-3" aria-label="Suggested questions">
-            {STARTERS.map((s) => (
+        {(messages.length === 0 || followUps.length > 0) && !typing && (
+          <div className="no-scrollbar px-gutter flex gap-2 overflow-x-auto pt-3" aria-label={messages.length ? "Quick replies" : "Suggested questions"}>
+            {(messages.length ? followUps : STARTERS).map((s) => (
               <button key={s} onClick={() => send(s)} className="text-callout h-9 shrink-0 rounded-full bg-card shadow-card px-3.5 whitespace-nowrap transition-colors hover:bg-muted">
                 {s}
               </button>
@@ -159,10 +194,13 @@ function Chat() {
             send(text)
           }}
         >
+          <Button type="button" size="icon" variant="outline" className={cn("size-12 shrink-0 rounded-full", listening && "border-forest bg-sage text-forest")} aria-label={listening ? "Listening" : "Speak your question"} aria-pressed={listening} onClick={listen}>
+            <Mic className="size-5" />
+          </Button>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Ask about your meals…"
+            placeholder={listening ? "Listening… (simulated)" : "Ask about your meals…"}
             aria-label="Message"
             className="h-12 min-w-0 flex-1 rounded-full bg-card px-5 shadow-card text-[15px] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />

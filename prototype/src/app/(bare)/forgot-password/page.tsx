@@ -8,14 +8,16 @@ import { Input } from "@/components/ui/input"
 import { Field } from "@/components/app/controls"
 import { AuthShell } from "@/components/profile/auth-shell"
 import { IconTile } from "@/components/app/page"
+import { useTx } from "@/lib/i18n"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string>()
+  const tx = useTx()
 
   return (
-    <AuthShell back="/login" title={sent ? "Check your email" : "Reset your password"} subtitle={sent ? undefined : "We'll send a link to reset it."}>
+    <AuthShell back="/login" title={sent ? tx("Check your email", "ইমেইল দেখুন") : tx("Reset your password", "পাসওয়ার্ড রিসেট করুন")} subtitle={sent ? undefined : tx("We'll send a link to reset it.", "রিসেট করার লিংক পাঠানো হবে।")}>
       {sent ? (
         <div className="space-y-6">
           <div className="flex gap-3 rounded-2xl bg-card p-4 shadow-card">
@@ -27,7 +29,7 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
           <Button asChild size="lg" className="w-full">
-            <Link href="/login">Back to sign in</Link>
+            <Link href="/login">{tx("Back to sign in", "সাইন ইনে ফিরে যান")}</Link>
           </Button>
         </div>
       ) : (
@@ -40,11 +42,11 @@ export default function ForgotPasswordPage() {
             setSent(true)
           }}
         >
-          <Field label="Email" htmlFor="email" error={error}>
+          <Field label={tx("Email", "ইমেইল")} htmlFor="email" error={error}>
             <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
           <Button type="submit" size="lg" className="w-full">
-            Send reset link
+            {tx("Send reset link", "রিসেট লিংক পাঠান")}
           </Button>
         </form>
       )}

@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Minus, Plus, Replace, Trash2 } from "lucide-react"
+import { CircleCheck, Minus, Plus, Replace, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfidenceChip } from "@/components/app/nutrition"
+import { Chip } from "@/components/app/controls"
 import { FoodPickerSheet } from "@/components/log/food-picker"
 import { FoodTile } from "@/components/log/food-tile"
 import { FOOD_MAP } from "@/lib/data/foods"
@@ -15,6 +16,9 @@ import { cn } from "@/lib/utils"
 import type { JournalItem, Profile } from "@/lib/types"
 
 const GRAMS = "__grams"
+const NOT_SET = "__none"
+export const COOKING_METHODS = ["Boiled", "Steamed", "Curry", "Bhuna", "Fried", "Deep-fried", "Grilled", "Baked", "Raw"]
+const COOKABLE = new Set(["fish", "meat", "egg", "vegetable", "mixed_dish", "pulse"])
 
 function initialUnit(item: JournalItem): string {
   const units = FOOD_MAP[item.foodId]?.units ?? []
@@ -53,7 +57,10 @@ export function ItemEditor({
   const count = unit ? Math.round((item.grams / unit.grams) * 2) / 2 : item.grams
   const n = foodNutrients(item.foodId, item.grams)
   const flag = infantFlags(item.foodId, profile)
-  const lowId = showConfidence && item.identificationConfidence === "low"
+  const lowId = showConfidence && item.identificationConfidence === "low" && !item.confirmedByUser
+  const candidates = (item.candidates ?? []).filter((id) => FOOD_MAP[id]).slice(0, 3)
+  const cookable = food && COOKABLE.has(food.category)
+  const pickFood = (foodId: string) => onChange({ ...item, foodId, displayName: FOOD_MAP[foodId]?.name ?? foodId, unitLabel: undefined, confirmedByUser: true })
 
   const setCount = (c: number) => {
     if (!unit) return
@@ -77,7 +84,7 @@ export function ItemEditor({
           <FoodPickerSheet
             profile={profile}
             title="Change food"
-            onPick={(foodId) => onChange({ ...item, foodId, displayName: FOOD_MAP[foodId]?.name ?? foodId, unitLabel: undefined, identificationConfidence: "high", confirmedByUser: true })}
+            onPick={pickFood}
             trigger={
               <Button variant="ghost" size="icon-sm" className="text-charcoal" aria-label={`Change ${item.displayName}`}>
                 <Replace />
@@ -92,7 +99,7 @@ export function ItemEditor({
         </div>
       </div>
 
-      {showConfidence && !item.confirmedByUser && (
+      {showConfidence && (
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
           <span className="text-caption flex items-center gap-1.5 text-muted-foreground">
             Food <ConfidenceChip level={item.identificationConfidence} />
@@ -100,9 +107,35 @@ export function ItemEditor({
           <span className="text-caption flex items-center gap-1.5 text-muted-foreground">
             Portion <ConfidenceChip level={item.quantityConfidence} />
           </span>
+          {item.confirmedByUser && (
+            <span className="text-caption inline-flex items-center gap-1 font-medium text-forest">
+              <CircleCheck className="size-3.5" aria-hidden /> Confirmed by you
+            </span>
+          )}
         </div>
       )}
-      {lowId && <p className="text-caption mt-2 text-caution">We&apos;re not sure about this one — tap the swap icon if it&apos;s a different food.</p>}
+      {lowId && (
+        <div className="mt-3 rounded-xl bg-card/80 p-3" role="group" aria-label={`Which food is ${item.displayName}?`}>
+          <p className="text-callout font-semibold">We&apos;re not sure about this one. Which is it?</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(candidates.length ? candidates : [item.foodId]).map((id) => (
+              <Chip key={id} selected={false} onClick={() => pickFood(id)}>
+                {FOOD_MAP[id]?.name ?? id}
+              </Chip>
+            ))}
+            <FoodPickerSheet
+              profile={profile}
+              title="Pick the right food"
+              onPick={pickFood}
+              trigger={
+                <button type="button" className="text-callout h-9 rounded-full px-3 font-semibold text-forest hover:underline">
+                  Something else
+                </button>
+              }
+            />
+          </div>
+        </div>
+      )}
       {flag && <p className="text-caption mt-2 font-medium text-safety">{flag}</p>}
 
       <div className="mt-3 flex items-center gap-2">
@@ -154,6 +187,24 @@ export function ItemEditor({
         )}
       </div>
       {unit && <p className="tabular text-caption mt-1.5 text-right text-muted-foreground">≈ {item.grams} g</p>}
+      {cookable && (
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-caption text-muted-foreground">How it was cooked</span>
+          <Select value={item.cookingMethod ?? NOT_SET} onValueChange={(v) => onChange({ ...item, cookingMethod: v === NOT_SET ? undefined : v, confirmedByUser: true })}>
+            <SelectTrigger className="h-10 w-40" aria-label={`Cooking method for ${item.displayName}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NOT_SET}>Not specified</SelectItem>
+              {COOKING_METHODS.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   )
 }

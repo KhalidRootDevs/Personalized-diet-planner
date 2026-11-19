@@ -104,6 +104,8 @@ export default function ProfilePage() {
           <ListGroup>
             <ListRow href="/safety/emergency" icon={<TriangleAlert />} iconTone="safety" title="Emergency guidance" description="When to stop and get medical help" />
             <ListRow href="/admin/reviews" icon={<ClipboardCheck />} iconTone="muted" title="Clinical review queue" description="Staff view (prototype)" />
+            <ListRow href="/admin/analytics" icon={<ClipboardCheck />} iconTone="muted" title="Analytics and safety metrics" description="Staff view (prototype data)" />
+            <ListRow href="/admin" icon={<ClipboardCheck />} iconTone="muted" title="Admin console" description="Foods, recipes, rules and translations (staff, prototype)" />
           </ListGroup>
         </Section>
 

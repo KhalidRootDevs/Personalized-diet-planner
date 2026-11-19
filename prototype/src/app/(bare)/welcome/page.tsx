@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Leaf } from "lucide-react"
 import { useApp } from "@/lib/store"
+import { useTx } from "@/lib/i18n"
 import { SCENE_PHOTO } from "@/lib/data/photos"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -58,22 +59,23 @@ function Hero() {
 export default function WelcomePage() {
   const router = useRouter()
   const loadDemo = useApp((s) => s.loadDemo)
+  const tx = useTx()
 
   return (
     <main className="flex flex-1 flex-col">
       <Hero />
 
       <div className="px-gutter pt-5">
-        <h1 className="text-[28px] leading-[34px] font-bold tracking-tight">Personalized nutrition for every stage of life</h1>
-        <p className="text-callout mt-2 text-muted-foreground">Plan what to eat and understand what you actually eat, with local foods you know.</p>
+        <h1 className="text-[28px] leading-[34px] font-bold tracking-tight">{tx("Personalized nutrition for every stage of life", "জীবনের প্রতিটি পর্যায়ে ব্যক্তিগত পুষ্টি")}</h1>
+        <p className="text-callout mt-2 text-muted-foreground">{tx("Plan what to eat and understand what you actually eat, with local foods you know.", "পরিচিত স্থানীয় খাবার দিয়ে কী খাবেন তার পরিকল্পনা করুন এবং আসলে কী খাচ্ছেন তা বুঝুন।")}</p>
       </div>
 
       <div className="px-gutter mt-auto space-y-2 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <Button asChild size="lg" className="w-full">
-          <Link href="/signup">Get started</Link>
+          <Link href="/signup">{tx("Get started", "শুরু করুন")}</Link>
         </Button>
         <Button asChild size="lg" variant="outline" className="w-full">
-          <Link href="/login">I have an account</Link>
+          <Link href="/login">{tx("I have an account", "আমার অ্যাকাউন্ট আছে")}</Link>
         </Button>
         <Button
           variant="ghost"
@@ -83,9 +85,9 @@ export default function WelcomePage() {
             router.push("/home")
           }}
         >
-          Explore with demo data
+          {tx("Explore with demo data", "ডেমো তথ্য দিয়ে দেখুন")}
         </Button>
-        <p className="text-caption hidden text-center text-muted-foreground [@media(min-height:700px)]:block">Prototype · supports healthy eating, doesn&apos;t replace medical care.</p>
+        <p className="text-caption hidden text-center text-muted-foreground [@media(min-height:700px)]:block">{tx("Prototype · supports healthy eating, doesn't replace medical care.", "প্রোটোটাইপ · স্বাস্থ্যকর খাবারে সহায়তা করে, চিকিৎসার বিকল্প নয়।")}</p>
       </div>
     </main>
   )
