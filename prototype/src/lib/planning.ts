@@ -18,7 +18,11 @@ import {
   ZERO,
   type Targets,
 } from "@/lib/nutrition"
+import { CUISINE_MAP, recipeCuisine } from "@/lib/recipe-bank"
 import type { MealPlan, MealType, Nutrients, PantryItem, PlanCheck, PlannedMeal, PlanPreset, PlanSettings, Profile, Recipe, ShoppingItem } from "@/lib/types"
+
+/** Score added to non-local cuisines (lower score wins); a little more than one repeat of the same recipe (7). */
+const NON_LOCAL_PENALTY = 8
 
 export type PlanOptions = PlanSettings
 
@@ -191,6 +195,10 @@ function score(b: Builder, r: Recipe, slot: MealType, date: string): number {
       s -= (r.tags.includes("batch-cook") || r.tags.includes("family-meal") ? 5 : 0) + (r.servings >= 2 ? 3 : 0)
       break
   }
+  // Soft preference for the local market's food (§27, §42.6): Bangladeshi/South Asian recipes first,
+  // international recipes only occasionally (they win once local options have been used a few times).
+  // Ranking only: eligibility and hard constraints are untouched.
+  if (!CUISINE_MAP[recipeCuisine(r)].local) s += NON_LOCAL_PENALTY
   if (b.opts.favorites?.includes(r.id)) s -= 6
   if (b.opts.avoid?.includes(r.id)) s += 15
   const weekday = new Date(`${date}T00:00:00`).getDay()
