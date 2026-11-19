@@ -243,6 +243,8 @@ export interface Profile {
   // ── Onboarding details (§5.2–§5.8). All optional and additive. ──
   /** Account owner who set up NutriPlan only to care for a dependent: no health data, no own plan (§5.10). */
   caregiverOnly?: boolean
+  /** Setup asked only safety-critical questions; work, schedule, food likes and kitchen are still on defaults (§5.1). */
+  personalizeLater?: boolean
   region?: string
   units?: "metric" | "imperial"
   /** Where height/weight came from (§5.2): self-reported vs clinically measured. */

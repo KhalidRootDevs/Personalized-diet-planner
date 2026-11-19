@@ -48,10 +48,17 @@ export function EntryCard({ entry, hideNutrition }: { entry: JournalEntry; hideN
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element -- static prototype asset
         <img src={photo} alt={own ? "Your meal photo" : ""} className="size-[68px] shrink-0 rounded-full object-cover ring-2 ring-card" />
+      ) : entry.items[0] ? (
+        <span className="relative shrink-0">
+          <FoodTile foodId={entry.items[0].foodId} size="lg" className="size-[68px]" />
+          {entry.hasPhoto && (
+            <span className="absolute -right-0.5 -bottom-0.5 grid size-6 place-items-center rounded-full bg-card text-forest shadow-card" aria-hidden>
+              <Camera className="size-3.5" />
+            </span>
+          )}
+        </span>
       ) : entry.hasPhoto ? (
         <PhotoPlaceholder className="size-[68px] shrink-0 rounded-full" />
-      ) : entry.items[0] ? (
-        <FoodTile foodId={entry.items[0].foodId} size="lg" className="size-[68px]" />
       ) : (
         <span className="grid size-[68px] shrink-0 place-items-center rounded-full bg-amber-tint text-amber-text">
           <NotebookPen className="size-6" aria-hidden />

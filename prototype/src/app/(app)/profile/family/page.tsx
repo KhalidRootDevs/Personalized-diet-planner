@@ -73,146 +73,158 @@ export default function FamilyPage() {
           {children.length === 0 ? (
             <EmptyState icon={<Baby />} title="No child profiles yet" description="Add a baby or child to get age-appropriate feeding guidance, first-food tracking and growth records." action={<Button onClick={() => setAdding(true)}>Add a child</Button>} />
           ) : (
-            <ListGroup>
+            <div className="space-y-3">
               {children.map((c) => (
-                <div key={c.id} className="flex min-h-[64px] items-center gap-2 py-3 pr-2 pl-4">
-                  <ProfileAvatar profile={c} />
-                  <div className="ml-1 min-w-0 flex-1">
-                    <p className="text-body font-medium">{c.name}</p>
-                    <p className="text-caption text-muted-foreground">
-                      {profileAgeLabel(c)} · {c.type === "infant" ? "baby" : "child"}
-                      {c.allergies.length > 0 && ` · ${c.allergies.length} ${c.allergies.length === 1 ? "allergy" : "allergies"}`}
-                    </p>
+                <div key={c.id} className="rounded-2xl bg-card p-4 shadow-card">
+                  <div className="flex items-center gap-3">
+                    <ProfileAvatar profile={c} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-headline truncate">{c.name}</p>
+                      <p className="text-caption text-muted-foreground">
+                        {profileAgeLabel(c)} · {c.type === "infant" ? "baby" : "child"} · managed by you
+                      </p>
+                      {c.allergies.length > 0 && (
+                        <Pill tone="safety" className="mt-1.5">
+                          {c.allergies.length} {c.allergies.length === 1 ? "allergy" : "allergies"} protected
+                        </Pill>
+                      )}
+                    </div>
                   </div>
-                  <Button asChild size="sm" variant="secondary">
-                    <Link href="/child" onClick={() => setActiveProfile(c.id)}>
-                      Open
-                    </Link>
-                  </Button>
-                  <Button asChild size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Edit ${c.name}`}>
-                    <Link href={`/profile/family/${c.id}`}>
-                      <Pencil className="size-[18px]" />
-                    </Link>
-                  </Button>
-                  <Button size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Remove ${c.name}`} disabled={!childConsent} onClick={() => setRemoving(c)}>
-                    <Trash2 className="size-[18px]" />
-                  </Button>
+                  <div className="mt-4 flex items-center gap-2">
+                    <Button asChild variant="secondary" className="flex-1">
+                      <Link href="/child" onClick={() => setActiveProfile(c.id)}>
+                        <Baby className="size-[18px]" /> Open feeding view
+                      </Link>
+                    </Button>
+                    <Button asChild size="icon" variant="outline" aria-label={`Edit ${c.name}`}>
+                      <Link href={`/profile/family/${c.id}`}>
+                        <Pencil className="size-[18px]" />
+                      </Link>
+                    </Button>
+                    <Button size="icon" variant="outline" aria-label={`Remove ${c.name}`} disabled={!childConsent} onClick={() => setRemoving(c)}>
+                      <Trash2 className="size-[18px]" />
+                    </Button>
+                  </div>
                 </div>
               ))}
-            </ListGroup>
+            </div>
           )}
           <InfoNote>Child profiles are free. You see their data as their caregiver; nobody else does unless you allow it.</InfoNote>
         </Section>
 
-        <Section title="Household members" badge={<FeatureBadge feature="family" />} description="Adults keep control of their own health information.">
-          {!family.allowed ? (
+        {!family.allowed ? (
+          <Section title="Household and shared meals" badge={<FeatureBadge feature="family" />} description="Add other adults, who keep control of their own health information, and cook one pot with the right serving for everyone.">
             <PremiumGate feature="family" variant="row">
               {null}
             </PremiumGate>
-          ) : (
-            <div className="space-y-3">
-              {adults.length === 0 && <InfoNote>No other adults yet. Add a partner or family member to plan shared meals.</InfoNote>}
-              {adults.map((m) => {
-                const p = perms[m.id] ?? { shared_meals: true, shopping: true, plan: false, health: false }
-                return (
-                  <div key={m.id} className="overflow-hidden rounded-2xl bg-card shadow-card">
-                    <div className="flex items-center gap-3 py-3.5 pr-2 pl-4">
-                      <ProfileAvatar profile={m} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-body font-medium">{m.name}</p>
-                        <p className="text-caption text-muted-foreground">{RELATION_LABEL[m.relation]} · {profileAgeLabel(m)}</p>
-                      </div>
-                      <Button asChild size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Edit ${m.name}`}>
-                        <Link href={`/profile/family/${m.id}`}>
-                          <Pencil className="size-[18px]" />
-                        </Link>
-                      </Button>
-                      <Button size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Remove ${m.name}`} onClick={() => setRemoving(m)}>
-                        <Trash2 className="size-[18px]" />
-                      </Button>
-                    </div>
-                    <div className="divide-y divide-border/70 border-t border-border/70">
-                      {PERMISSIONS.map((perm) => {
-                        const v = p[perm.id]
-                        return (
-                          <label key={perm.id} className="text-callout flex min-h-12 cursor-pointer items-center justify-between gap-3 px-4 py-2">
-                            <span className="flex flex-wrap items-center gap-2">
-                              {perm.label}
-                              {v === "requested" && <Pill tone="outline">Waiting for {m.name}</Pill>}
-                            </span>
-                            <Switch
-                              checked={v === true}
-                              onCheckedChange={(on) => {
-                                // Health information needs the other adult's own approval (§29.1).
-                                const next = perm.id === "health" && on ? "requested" : on
-                                setPerm(m.id, perm.id, next)
-                                audit(on ? "Household permission requested" : "Household permission removed", `${perm.label} · ${RELATION_LABEL[m.relation]}`)
-                                if (next === "requested") toast("Request sent", { description: `${m.name} must approve before you can see their health information.` })
-                              }}
-                            />
-                          </label>
-                        )
-                      })}
-                    </div>
-                    {p.health === "requested" && (
-                      <div className="border-t border-border/70 px-4 py-2.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="-ml-3"
-                          onClick={() => {
-                            setPerm(m.id, "health", true)
-                            audit("Household permission approved", `Health information · ${RELATION_LABEL[m.relation]}`, "system")
-                          }}
-                        >
-                          Simulate {m.name}&apos;s approval (prototype)
+          </Section>
+        ) : (
+          <>
+          <Section title="Household members" badge={<FeatureBadge feature="family" />} description="Adults keep control of their own health information.">
+              <div className="space-y-3">
+                {adults.length === 0 && <InfoNote>No other adults yet. Add a partner or family member to plan shared meals.</InfoNote>}
+                {adults.map((m) => {
+                  const p = perms[m.id] ?? { shared_meals: true, shopping: true, plan: false, health: false }
+                  return (
+                    <div key={m.id} className="overflow-hidden rounded-2xl bg-card shadow-card">
+                      <div className="flex items-center gap-3 py-3.5 pr-2 pl-4">
+                        <ProfileAvatar profile={m} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-body font-medium">{m.name}</p>
+                          <p className="text-caption text-muted-foreground">{RELATION_LABEL[m.relation]} · {profileAgeLabel(m)}</p>
+                        </div>
+                        <Button asChild size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Edit ${m.name}`}>
+                          <Link href={`/profile/family/${m.id}`}>
+                            <Pencil className="size-[18px]" />
+                          </Link>
+                        </Button>
+                        <Button size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Remove ${m.name}`} onClick={() => setRemoving(m)}>
+                          <Trash2 className="size-[18px]" />
                         </Button>
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={() => setAddingAdult(true)}>
-                  <UserPlus className="size-[18px]" /> Add a member
-                </Button>
-                <Button variant="outline" onClick={() => copyInvite("partner")}>
-                  <Link2 className="size-[18px]" /> Invite link
-                </Button>
+                      <div className="divide-y divide-border/70 border-t border-border/70">
+                        {PERMISSIONS.map((perm) => {
+                          const v = p[perm.id]
+                          return (
+                            <label key={perm.id} className="text-callout flex min-h-12 cursor-pointer items-center justify-between gap-3 px-4 py-2">
+                              <span className="flex flex-wrap items-center gap-2">
+                                {perm.label}
+                                {v === "requested" && <Pill tone="outline">Waiting for {m.name}</Pill>}
+                              </span>
+                              <Switch
+                                checked={v === true}
+                                onCheckedChange={(on) => {
+                                  // Health information needs the other adult's own approval (§29.1).
+                                  const next = perm.id === "health" && on ? "requested" : on
+                                  setPerm(m.id, perm.id, next)
+                                  audit(on ? "Household permission requested" : "Household permission removed", `${perm.label} · ${RELATION_LABEL[m.relation]}`)
+                                  if (next === "requested") toast("Request sent", { description: `${m.name} must approve before you can see their health information.` })
+                                }}
+                              />
+                            </label>
+                          )
+                        })}
+                      </div>
+                      {p.health === "requested" && (
+                        <div className="border-t border-border/70 px-4 py-2.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="-ml-3"
+                            onClick={() => {
+                              setPerm(m.id, "health", true)
+                              audit("Household permission approved", `Health information · ${RELATION_LABEL[m.relation]}`, "system")
+                            }}
+                          >
+                            Simulate {m.name}&apos;s approval (prototype)
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" onClick={() => setAddingAdult(true)}>
+                    <UserPlus className="size-[18px]" /> Add a member
+                  </Button>
+                  <Button variant="outline" onClick={() => copyInvite("partner")}>
+                    <Link2 className="size-[18px]" /> Invite link
+                  </Button>
+                </div>
+                {invites.length > 0 && (
+                  <ListGroup label="Pending invites">
+                    {invites.map((inv) => (
+                      <ListRow
+                        key={inv.id}
+                        icon={<Copy />}
+                        iconTone="muted"
+                        title={<span className="tabular">Code {inv.code}</span>}
+                        description={`${RELATION_LABEL[inv.relation]} · not sent by NutriPlan`}
+                        trailing={
+                          <Button size="sm" variant="ghost" onClick={() => cancelInvite(inv.id)}>
+                            Cancel
+                          </Button>
+                        }
+                      />
+                    ))}
+                  </ListGroup>
+                )}
               </div>
-              {invites.length > 0 && (
-                <ListGroup label="Pending invites">
-                  {invites.map((inv) => (
-                    <ListRow
-                      key={inv.id}
-                      icon={<Copy />}
-                      iconTone="muted"
-                      title={<span className="tabular">Code {inv.code}</span>}
-                      description={`${RELATION_LABEL[inv.relation]} · not sent by NutriPlan`}
-                      trailing={
-                        <Button size="sm" variant="ghost" onClick={() => cancelInvite(inv.id)}>
-                          Cancel
-                        </Button>
-                      }
-                    />
-                  ))}
-                </ListGroup>
-              )}
-            </div>
-          )}
-        </Section>
+          </Section>
 
-        <Section title="Shared family meal" badge={<FeatureBadge feature="family" />} description="One pot, the right serving for everyone. A baby never gets a smaller adult portion.">
-          <PremiumGate feature="family" variant="row">
-            {profiles.length < 2 ? (
-              <ListGroup>
-                <ListRow icon={<UsersRound />} title="Add a family member first" description="Shared meals compare servings across your household." />
-              </ListGroup>
-            ) : (
-              <SharedMeal />
-            )}
-          </PremiumGate>
-        </Section>
+          <Section title="Shared family meal" badge={<FeatureBadge feature="family" />} description="One pot, the right serving for everyone. A baby never gets a smaller adult portion.">
+            <PremiumGate feature="family" variant="row">
+              {profiles.length < 2 ? (
+                <ListGroup>
+                  <ListRow icon={<UsersRound />} title="Add a family member first" description="Shared meals compare servings across your household." />
+                </ListGroup>
+              ) : (
+                <SharedMeal />
+              )}
+            </PremiumGate>
+          </Section>
+          </>
+        )}
       </PageBody>
 
       <AddChildDialog

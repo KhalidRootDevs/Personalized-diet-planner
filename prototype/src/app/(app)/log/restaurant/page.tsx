@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { ArrowRightLeft, Check, Search, Store } from "lucide-react"
-import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
+import { ArrowRightLeft, Check, Search } from "lucide-react"
+import { ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { EstimateNote } from "@/components/app/nutrition"
@@ -15,6 +15,7 @@ import { foodNutrients } from "@/lib/nutrition"
 import { parseMealText, suggestMealType } from "@/lib/area-b-text"
 import { allergenHits, itemFromFood, setLogHandoff } from "@/lib/area-b-log"
 import { cn } from "@/lib/utils"
+import { FoodTile } from "@/components/log/food-tile"
 import type { Profile } from "@/lib/types"
 
 type Part = { foodId: string; grams: number }
@@ -102,23 +103,24 @@ function Assistant() {
 
   return (
     <div className="space-y-7">
-      <Section title="What are you ordering?" description="Search a dish or type your order. Restaurant portions and oil vary a lot, so estimates are ranges.">
+      <Section title="What are you ordering?" description="Search a dish or type your order. Restaurant portions and oil vary a lot, so estimates are ranges for a typical serving.">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-4 size-[18px] -translate-y-1/2 text-muted-grey" aria-hidden />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. biryani, singara, “paratha and tea”" className="pl-11" aria-label="Search or describe your order" />
         </div>
         <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card" role="radiogroup" aria-label="Dishes">
           {shown.map((d) => (
-            <DishRow key={d.id} name={d.name} hint={estimate(d.parts).kcalText} selected={pick?.id === d.id} onClick={() => setPick(d)} />
+            <DishRow key={d.id} foodId={d.parts[0].foodId} name={d.name} hint={estimate(d.parts).kcalText} selected={pick?.id === d.id} onClick={() => setPick(d)} />
           ))}
           {foodMatches
             .filter((f) => !shown.some((d) => d.parts.length === 1 && d.parts[0].foodId === f.id))
             .map((f) => {
               const d: Dish = { id: `food:${f.id}`, name: f.name, parts: [{ foodId: f.id, grams: f.units[f.units.length - 1]?.grams ?? 100 }], tips: ["A smaller portion or sharing is always an option"] }
-              return <DishRow key={d.id} name={f.name} hint={`${f.units[f.units.length - 1]?.label ?? "Portion"} · ${estimate(d.parts).kcalText}`} selected={pick?.id === d.id} onClick={() => setPick(d)} />
+              return <DishRow key={d.id} foodId={f.id} name={f.name} hint={`${f.units[f.units.length - 1]?.label ?? "Portion"} · ${estimate(d.parts).kcalText}`} selected={pick?.id === d.id} onClick={() => setPick(d)} />
             })}
           {parsed.length > 0 && (
             <DishRow
+              foodId={parsed[0].foodId}
               name={`Your order: “${q.trim()}”`}
               hint={parsed.map((i) => i.displayName).join(", ")}
               selected={pick?.id === "custom"}
@@ -178,8 +180,11 @@ function Assistant() {
           <Section title="Ideas when ordering">
             <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
               {pick.tips.map((t) => (
-                <li key={t} className="text-callout flex gap-3 px-4 py-3">
-                  <Check className="mt-0.5 size-4 shrink-0 text-forest" aria-hidden /> {t}
+                <li key={t} className="text-callout flex min-h-[52px] items-center gap-3 px-4 py-3">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-sage text-forest" aria-hidden>
+                    <Check className="size-4" />
+                  </span>
+                  {t}
                 </li>
               ))}
             </ul>
@@ -195,13 +200,11 @@ function Assistant() {
   )
 }
 
-function DishRow({ name, hint, selected, onClick }: { name: string; hint: string; selected: boolean; onClick: () => void }) {
+function DishRow({ foodId, name, hint, selected, onClick }: { foodId: string; name: string; hint: string; selected: boolean; onClick: () => void }) {
   return (
     <li>
       <button role="radio" aria-checked={selected} onClick={onClick} className={cn("flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50", selected && "bg-sage/35 hover:bg-sage/45")}>
-        <IconTile tone={selected ? "forest" : "sage"}>
-          <Store />
-        </IconTile>
+        <FoodTile foodId={foodId} name={name} size="sm" className="size-11" />
         <span className="min-w-0 flex-1">
           <span className="text-body block font-medium">{name}</span>
           <span className="tabular text-caption block text-muted-foreground">{hint}</span>

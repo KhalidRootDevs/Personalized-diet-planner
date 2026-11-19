@@ -2,7 +2,7 @@
 
 // Admin clinical-review queue (§28.1–§28.3, §13.4). Mock data; actions stay in this page's state.
 import { useState } from "react"
-import { BookOpenCheck, ChefHat, ClipboardList, FileWarning, History, Scale } from "lucide-react"
+import { BookOpenCheck, ChefHat, ChevronRight, ClipboardCheck, ClipboardList, FileWarning, History, Scale } from "lucide-react"
 import { toast } from "sonner"
 import { RECIPES } from "@/lib/data/recipes"
 import { cn } from "@/lib/utils"
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { IconTile, KeyValue, PageBody, PageHeader, Pill } from "@/components/app/page"
+import { EmptyState, IconTile, type IconTone, KeyValue, PageBody, PageHeader, Pill } from "@/components/app/page"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
 import { useApp } from "@/lib/store"
 import { MOCK_REVIEWER } from "@/lib/area-c-utils"
@@ -35,11 +35,11 @@ interface ReviewItem {
 
 const STAGES = ["Draft", "Source verification", "Professional review", "Safety review", "Approval", "Published"]
 
-const KIND: Record<Kind, { label: string; icon: typeof ChefHat }> = {
-  recipe: { label: "Recipe", icon: ChefHat },
-  rule: { label: "Clinical rule", icon: Scale },
-  plan: { label: "Plan", icon: ClipboardList },
-  food: { label: "Food data", icon: BookOpenCheck },
+const KIND: Record<Kind, { label: string; icon: typeof ChefHat; tone: IconTone }> = {
+  recipe: { label: "Recipe", icon: ChefHat, tone: "amber" },
+  rule: { label: "Clinical rule", icon: Scale, tone: "terracotta" },
+  plan: { label: "Plan", icon: ClipboardList, tone: "lime" },
+  food: { label: "Food data", icon: BookOpenCheck, tone: "sky" },
 }
 
 const INITIAL: ReviewItem[] = [
@@ -154,9 +154,9 @@ export default function AdminReviewsPage() {
 
   return (
     <>
-      <PageHeader back="/profile" title="Clinical review" subtitle="Staff view · prototype" />
+      <PageHeader back="/admin" title="Clinical review" subtitle="Staff view · prototype" />
       <PageBody>
-        <InfoNote>Signed in as <strong>Clinical reviewer</strong>. Support agents can&apos;t open this queue, and content editors can&apos;t publish high-risk rules without review.</InfoNote>
+        <InfoNote title="Signed in as Clinical reviewer"> Support agents can&apos;t open this queue, and content editors can&apos;t publish high-risk rules without review.</InfoNote>
 
         <Tabs defaultValue="queue">
           <TabsList className="grid w-full grid-cols-2">
@@ -166,7 +166,7 @@ export default function AdminReviewsPage() {
 
           <TabsContent value="queue" className="mt-4">
             {pending.length === 0 ? (
-              <p className="text-callout py-10 text-center text-muted-foreground">Nothing waiting for review.</p>
+              <EmptyState icon={<ClipboardCheck />} title="Queue is clear" description="New recipes, rules, plans and food data changes appear here when they need review." />
             ) : (
               <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
                 {pending.map((i) => {
@@ -174,7 +174,7 @@ export default function AdminReviewsPage() {
                   const failing = i.checks.filter((c) => !c.ok).length
                   return (
                     <button key={i.id} onClick={() => setOpen(i)} className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 active:bg-muted">
-                      <IconTile>
+                      <IconTile tone={K.tone}>
                         <K.icon aria-hidden />
                       </IconTile>
                       <div className="min-w-0 flex-1">
@@ -194,6 +194,7 @@ export default function AdminReviewsPage() {
                           )}
                         </div>
                       </div>
+                      <ChevronRight className="mt-2.5 size-[18px] shrink-0 text-muted-grey" aria-hidden />
                     </button>
                   )
                 })}
@@ -222,7 +223,7 @@ export default function AdminReviewsPage() {
               </div>
             )}
             {done.length === 0 && reviewedPlans.length === 0 ? (
-              <p className="text-callout py-10 text-center text-muted-foreground">No decisions yet.</p>
+              <EmptyState icon={<History />} title="No decisions yet" description="Approvals, change requests and rejections are listed here with the reviewer's note." />
             ) : (
               <div className={cn("divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card", done.length === 0 && "hidden")}>
                 {done.map((i) => {

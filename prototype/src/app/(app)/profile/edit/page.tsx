@@ -3,6 +3,7 @@
 // Edit the account owner's profile: every onboarding answer (§5.2–§5.8) stays editable here.
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { Briefcase, Clock, ShieldCheck, Target, UserRound, UtensilsCrossed, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { useApp, useSelfProfile } from "@/lib/store"
 import { useTx } from "@/lib/i18n"
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { PageBody, PageHeader, Pill, Section } from "@/components/app/page"
+import { IconTile, PageBody, PageHeader, Section, type IconTone } from "@/components/app/page"
 import { CautionNote, InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { Splash } from "@/components/app/shell"
 import { ChipGroup, Field, PillGroup } from "@/components/app/controls"
@@ -39,7 +40,7 @@ export default function EditProfilePage() {
   return <EditForm initial={self} />
 }
 
-const TRIGGER = "text-body py-4 font-semibold hover:no-underline"
+const TRIGGER = "text-body items-center py-3 font-semibold hover:no-underline"
 const CONTENT = "space-y-5 pt-1 pb-5"
 
 function EditForm({ initial }: { initial: Profile }) {
@@ -62,12 +63,12 @@ function EditForm({ initial }: { initial: Profile }) {
 
   const save = () => {
     const weekly = budget.amountBdt ? Math.round(budget.period === "day" ? budget.amountBdt * 7 : budget.period === "month" ? budget.amountBdt / 4.33 : budget.amountBdt) : p.budgetPerWeekBdt
-    upsertProfile({ ...p, budgetPerWeekBdt: weekly, weightLossPace: p.goal === "lose_weight" && !noRestriction ? p.weightLossPace : undefined })
+    upsertProfile({ ...p, personalizeLater: undefined, budgetPerWeekBdt: weekly, weightLossPace: p.goal === "lose_weight" && !noRestriction ? p.weightLossPace : undefined })
     toast.success(tx("Profile updated", "প্রোফাইল হালনাগাদ হয়েছে"), { description: p.caregiverOnly ? undefined : tx("Your next generated plan will use these details.", "পরের পরিকল্পনায় এই তথ্য ব্যবহার হবে।") })
     router.push("/profile")
   }
 
-  const header = <PageHeader back="/profile" title={tx("Personal details", "ব্যক্তিগত তথ্য")} action={<Button size="sm" variant="ghost" disabled={!dirty} onClick={save}>{tx("Save", "সংরক্ষণ")}</Button>} />
+  const header = <PageHeader back="/profile" title={tx("Personal details", "ব্যক্তিগত তথ্য")} />
 
   // Caregiver accounts hold no health data of their own (§5.10) until the person chooses to add it.
   if (p.caregiverOnly)
@@ -102,9 +103,11 @@ function EditForm({ initial }: { initial: Profile }) {
         </Section>
 
         <Section title={tx("Your details", "আপনার তথ্য")}>
-          <Accordion type="multiple" defaultValue={["body"]} className="divide-y divide-border/70 rounded-2xl bg-card px-4 shadow-card [&>[data-slot=accordion-item]]:border-b-0">
+          <Accordion type="multiple" defaultValue={["body"]} className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card px-4 shadow-card [&>[data-slot=accordion-item]]:border-b-0">
             <AccordionItem value="body">
-              <AccordionTrigger className={TRIGGER}>{tx("Body and basics", "শরীর ও মৌলিক তথ্য")}</AccordionTrigger>
+              <AccordionTrigger className={TRIGGER}>
+                <TriggerLabel icon={<UserRound />} tone="lime">{tx("Body and basics", "শরীর ও মৌলিক তথ্য")}</TriggerLabel>
+              </AccordionTrigger>
               <AccordionContent className={CONTENT}>
                 <Field label={tx("Name", "নাম")} htmlFor="name">
                   <Input id="name" value={p.name} onChange={(e) => set({ name: e.target.value })} />
@@ -123,7 +126,7 @@ function EditForm({ initial }: { initial: Profile }) {
                     <Input id="w" type="number" inputMode="decimal" value={p.weightKg ?? ""} onChange={(e) => set({ weightKg: Number(e.target.value) || undefined })} />
                   </Field>
                 </div>
-                <Field label={tx("Measurement source", "মাপের উৎস")} hint={<MeasurementFlag source={p.measurementSource} />}>
+                <Field label={tx("Measurement source", "মাপের উৎস")} hint={p.measurementSource === "clinical" ? tx("Measured by a health professional.", "স্বাস্থ্যকর্মী মেপেছেন।") : tx("Entered by you. Assessments treat these as approximate.", "আপনার দেওয়া। মূল্যায়নে এগুলো আনুমানিক ধরা হয়।")}>
                   <PillGroup label="Measurement source" value={p.measurementSource ?? "self_reported"} onChange={(v) => set({ measurementSource: v })} options={[{ value: "self_reported", label: tx("Self-reported", "নিজে দেওয়া") }, { value: "clinical", label: tx("Clinically measured", "ক্লিনিকে মাপা") }]} />
                 </Field>
                 <Field label={tx("Preferred units", "পছন্দের একক")} hint={tx("Values are stored in cm and kg.", "মান সেমি ও কেজিতে সংরক্ষিত হয়।")}>
@@ -136,7 +139,9 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionItem>
 
             <AccordionItem value="goal">
-              <AccordionTrigger className={TRIGGER}>{tx("Goal", "লক্ষ্য")}</AccordionTrigger>
+              <AccordionTrigger className={TRIGGER}>
+                <TriggerLabel icon={<Target />} tone="amber">{tx("Goal", "লক্ষ্য")}</TriggerLabel>
+              </AccordionTrigger>
               <AccordionContent className={CONTENT}>
                 <PillGroup label="Goal" value={p.goal} onChange={(v) => set({ goal: v })} options={GOALS.filter((g) => !ROUTING_GOALS.includes(g.value)).map((g) => ({ value: g.value, label: g.label }))} />
                 {p.goal === "lose_weight" &&
@@ -152,7 +157,9 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionItem>
 
             <AccordionItem value="work">
-              <AccordionTrigger className={TRIGGER}>{tx("Work and activity", "কাজ ও সক্রিয়তা")}</AccordionTrigger>
+              <AccordionTrigger className={TRIGGER}>
+                <TriggerLabel icon={<Briefcase />} tone="sky">{tx("Work and activity", "কাজ ও সক্রিয়তা")}</TriggerLabel>
+              </AccordionTrigger>
               <AccordionContent className={CONTENT}>
                 <Field label={tx("Occupation", "পেশা")}>
                   <PillGroup label="Occupation" value={p.occupation} onChange={(v) => set({ occupation: v })} options={OCCUPATIONS} />
@@ -189,7 +196,9 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionItem>
 
             <AccordionItem value="schedule">
-              <AccordionTrigger className={TRIGGER}>{tx("Daily schedule", "দৈনিক সময়সূচি")}</AccordionTrigger>
+              <AccordionTrigger className={TRIGGER}>
+                <TriggerLabel icon={<Clock />} tone="terracotta">{tx("Daily schedule", "দৈনিক সময়সূচি")}</TriggerLabel>
+              </AccordionTrigger>
               <AccordionContent className={CONTENT}>
                 <div className="grid grid-cols-2 gap-3">
                   {(
@@ -210,7 +219,9 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionItem>
 
             <AccordionItem value="food">
-              <AccordionTrigger className={TRIGGER}>{tx("Food preferences", "খাবারের পছন্দ")}</AccordionTrigger>
+              <AccordionTrigger className={TRIGGER}>
+                <TriggerLabel icon={<UtensilsCrossed />} tone="lime">{tx("Food preferences", "খাবারের পছন্দ")}</TriggerLabel>
+              </AccordionTrigger>
               <AccordionContent className={CONTENT}>
                 <Field label={tx("Dietary preferences", "খাদ্যাভ্যাস")}>
                   <ChipGroup label="Dietary preferences" value={p.diet} onChange={(v) => set({ diet: v })} options={DIETS} />
@@ -237,7 +248,9 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionItem>
 
             <AccordionItem value="budget">
-              <AccordionTrigger className={TRIGGER}>{tx("Budget and cooking", "বাজেট ও রান্না")}</AccordionTrigger>
+              <AccordionTrigger className={TRIGGER}>
+                <TriggerLabel icon={<Wallet />} tone="amber">{tx("Budget and cooking", "বাজেট ও রান্না")}</TriggerLabel>
+              </AccordionTrigger>
               <AccordionContent className={CONTENT}>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label={tx("Budget (৳)", "বাজেট (৳)")} htmlFor="b">
@@ -266,7 +279,9 @@ function EditForm({ initial }: { initial: Profile }) {
             </AccordionItem>
 
             <AccordionItem value="health" className="border-b-0">
-              <AccordionTrigger className={TRIGGER}>{tx("Allergies and health", "অ্যালার্জি ও স্বাস্থ্য")}</AccordionTrigger>
+              <AccordionTrigger className={TRIGGER}>
+                <TriggerLabel icon={<ShieldCheck />} tone="safety">{tx("Allergies and health", "অ্যালার্জি ও স্বাস্থ্য")}</TriggerLabel>
+              </AccordionTrigger>
               <AccordionContent className={CONTENT}>
                 {!healthConsent ? (
                   <CautionNote title={tx("Health permission is off", "স্বাস্থ্য অনুমতি বন্ধ")}>{tx("Turn it on in Privacy and data to record allergies and conditions.", "অ্যালার্জি ও রোগ লিখতে প্রাইভেসি থেকে চালু করুন।")}</CautionNote>
@@ -300,18 +315,24 @@ function EditForm({ initial }: { initial: Profile }) {
           </Accordion>
         </Section>
 
-        <Button size="lg" className="w-full" disabled={!dirty} onClick={save}>
-          {tx("Save changes", "পরিবর্তন সংরক্ষণ করুন")}
-        </Button>
-        <p className="text-caption -mt-4 text-center text-muted-foreground">{tx("Saving doesn't change your active plan. Generate a new plan to use updated targets.", "সংরক্ষণে সক্রিয় পরিকল্পনা বদলায় না। নতুন লক্ষ্য ব্যবহারে নতুন পরিকল্পনা তৈরি করুন।")}</p>
+        <div className="space-y-3">
+          <Button size="lg" className="w-full" disabled={!dirty} onClick={save}>
+            {tx("Save changes", "পরিবর্তন সংরক্ষণ করুন")}
+          </Button>
+          <p className="text-caption text-center text-muted-foreground">{tx("Saving doesn't change your active plan. Generate a new plan to use updated targets.", "সংরক্ষণে সক্রিয় পরিকল্পনা বদলায় না। নতুন লক্ষ্য ব্যবহারে নতুন পরিকল্পনা তৈরি করুন।")}</p>
+        </div>
       </PageBody>
     </>
   )
 }
 
-/** Shows whether height/weight are self-reported or clinically measured (§5.2). Text, not color alone. */
-function MeasurementFlag({ source }: { source?: Profile["measurementSource"] }) {
-  return source === "clinical" ? <Pill tone="sage">Clinically measured</Pill> : <Pill tone="outline">Self-reported</Pill>
+function TriggerLabel({ icon, tone, children }: { icon: React.ReactNode; tone: IconTone; children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-3">
+      <IconTile tone={tone}>{icon}</IconTile>
+      {children}
+    </span>
+  )
 }
 
 function SwitchRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {

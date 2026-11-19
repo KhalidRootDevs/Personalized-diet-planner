@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { Baby, Beef, Bell, CalendarDays, CalendarRange, ChartLine, ChefHat, ClipboardCheck, Droplet, MessageCircle, Minus, Pause, Play, Plus, ShoppingBasket, Sparkles, Zap } from "lucide-react"
+import { Baby, Beef, Bell, CalendarDays, CalendarRange, ChartLine, ChefHat, ClipboardCheck, Droplet, MessageCircle, Minus, Pause, Play, Plus, ShoppingBasket, SlidersHorizontal, Sparkles, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState, HeaderIconButton, IconTile, ListGroup, ListRow, PageBody, Section, SectionLink, Surface, type IconTone } from "@/components/app/page"
 import { FeatureBadge } from "@/components/app/badges"
@@ -244,6 +244,9 @@ function AdultHome() {
 
       <Section title="More for you">
         <ListGroup>
+          {self.personalizeLater && (
+            <ListRow href="/profile/edit" icon={<SlidersHorizontal />} iconTone="lime" title="Personalize your plan" description="Add your work, activity, meal times and foods you like" />
+          )}
           <ListRow href="/progress/weekly-review" icon={<ClipboardCheck />} iconTone="lime" title="Weekly review" description="How the week went and one focus for next week" />
           <ListRow href="/progress" icon={<ChartLine />} iconTone="sky" title="Trends" description="Intake, meals and weight over time" />
           <ListRow href="/plan/shopping" icon={<ShoppingBasket />} iconTone="amber" title="Shopping list" description="Built from this week's plan" />

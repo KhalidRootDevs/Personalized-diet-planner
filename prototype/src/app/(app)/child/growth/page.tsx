@@ -1,14 +1,13 @@
 "use client"
 
-import { useConsent } from "@/lib/consent"
-
 import { useState } from "react"
 import Link from "next/link"
-import { Baby, Plus, Ruler } from "lucide-react"
+import { Baby, House, Plus, Ruler, Stethoscope, Weight } from "lucide-react"
 import { toast } from "sonner"
 import { formatDay, todayISO, uid } from "@/lib/date"
 import { ageInMonths } from "@/lib/nutrition"
 import { useApp } from "@/lib/store"
+import { useConsent } from "@/lib/consent"
 import type { GrowthRecord } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +16,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { InfoNote } from "@/components/app/alerts"
 import { FeatureBadge } from "@/components/app/badges"
-import { EmptyState, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
+import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
 import { LegendItem, LineTrend } from "@/components/progress/charts"
 import { useChildProfile } from "@/components/child/use-child"
 
@@ -80,9 +79,9 @@ export default function ChildGrowthPage() {
       />
       <PageBody>
         {latest && (
-          <div className="grid grid-cols-2 gap-2">
-            <StatTile className="bg-sky-tint" label="Latest weight" value={latestW?.weightKg ?? "–"} unit="kg" hint={latestW ? formatDay(latestW.date, { day: "numeric", month: "short" }) : undefined} />
-            <StatTile className="bg-amber-tint" label="Latest length" value={latestL?.lengthCm ?? "–"} unit="cm" hint={latestL ? formatDay(latestL.date, { day: "numeric", month: "short" }) : undefined} />
+          <div className="grid grid-cols-2 gap-3">
+            <StatTile className="bg-sky-tint" icon={<Weight />} iconTone="white" label="Latest weight" value={latestW?.weightKg ?? "–"} unit="kg" hint={latestW ? formatDay(latestW.date, { day: "numeric", month: "short" }) : undefined} />
+            <StatTile className="bg-amber-tint" icon={<Ruler />} iconTone="white" label="Latest length" value={latestL?.lengthCm ?? "–"} unit="cm" hint={latestL ? formatDay(latestL.date, { day: "numeric", month: "short" }) : undefined} />
           </div>
         )}
 
@@ -90,7 +89,7 @@ export default function ChildGrowthPage() {
           These records help you and your clinician follow {child.name}&apos;s growth over time. Growth is assessed on WHO growth charts by a health professional. NutriPlan does not interpret these numbers.
         </InfoNote>
 
-        <Section title="Weight-for-age reference" badge={<FeatureBadge feature="baby_module" />} description="Illustrative, not clinical">
+        <Section title="Weight-for-age reference" badge={<FeatureBadge feature="baby_module" />} description="For conversation with your clinician, not for diagnosis.">
           <WeightReference sex={child.sex} dob={child.dateOfBirth} points={weights} name={child.name} />
         </Section>
 
@@ -122,6 +121,8 @@ export default function ChildGrowthPage() {
                 {[...records].reverse().map((r) => (
                   <ListRow
                     key={r.id}
+                    icon={r.source === "clinic" ? <Stethoscope /> : <House />}
+                    iconTone={r.source === "clinic" ? "sage" : "sky"}
                     title={<span className="tabular">{formatDay(r.date, { day: "numeric", month: "short", year: "numeric" })}</span>}
                     description={
                       <span className="tabular">
@@ -135,7 +136,17 @@ export default function ChildGrowthPage() {
             </Section>
           </>
         )}
-        <p className="text-caption px-1 text-muted-foreground">If you are worried about your child&apos;s growth, feeding or weight, please speak to your clinician. Measurements never change feeding guidance on their own.</p>
+        <Surface tone="sage">
+          <div className="flex gap-3">
+            <IconTile tone="white">
+              <Stethoscope />
+            </IconTile>
+            <div className="min-w-0 flex-1">
+              <p className="text-body font-medium">Worried about growth or feeding?</p>
+              <p className="text-callout mt-0.5 text-muted-foreground">Please speak to your clinician about {child.name}&apos;s growth, feeding or weight. Measurements never change feeding guidance on their own.</p>
+            </div>
+          </div>
+        </Surface>
       </PageBody>
 
       <AddGrowthSheet
@@ -226,8 +237,8 @@ function WeightReference({ sex, dob, points, name }: { sex?: "female" | "male"; 
     return <InfoNote>Add {name}&apos;s sex in the family profile to show the matching reference. A clinician should interpret growth.</InfoNote>
   const ref = WEIGHT_REF[sex]
   const W = 320
-  const H = 190
-  const pad = { l: 30, r: 8, t: 8, b: 26 }
+  const H = 206
+  const pad = { l: 30, r: 8, t: 20, b: 36 }
   const x = (m: number) => pad.l + (m / 24) * (W - pad.l - pad.r)
   const y = (kg: number) => H - pad.b - (kg / 16) * (H - pad.t - pad.b)
   const line = (vals: number[]) => vals.map((v, i) => `${x(REF_MONTHS[i])},${y(v)}`).join(" ")
@@ -254,15 +265,15 @@ function WeightReference({ sex, dob, points, name }: { sex?: "female" | "male"; 
           </g>
         ))}
         {[0, 6, 12, 18, 24].map((m) => (
-          <text key={m} x={x(m)} y={H - 10} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+          <text key={m} x={x(m)} y={H - pad.b + 15} textAnchor="middle" className="fill-muted-foreground text-[10px]">
             {m}
           </text>
         ))}
-        <text x={W - pad.r} y={H - 1} textAnchor="end" className="fill-muted-foreground text-[10px]">
-          age (months)
+        <text x={pad.l + (W - pad.l - pad.r) / 2} y={H - 2} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+          Age (months)
         </text>
-        <text x={2} y={pad.t + 6} className="fill-muted-foreground text-[10px]">
-          kg
+        <text x={2} y={10} className="fill-muted-foreground text-[10px]">
+          Weight (kg)
         </text>
         <polygon points={band} className="fill-sage-strong" opacity={0.8} />
         <polyline points={line(ref.p50)} fill="none" className="stroke-forest" strokeWidth={1.5} strokeDasharray="4 3" />

@@ -254,9 +254,19 @@ export function RescheduleBanner({ plan, profile }: { plan: MealPlan; profile: P
   if (plan.status === "paused" || (!conflicts.length && !snackDays)) return null
   return (
     <Surface tone="sage" className="space-y-3">
-      <p className="text-overline flex items-center gap-1.5 text-forest">
-        <CalendarClock className="size-3.5" aria-hidden /> Work hours {profile.workStart}–{profile.workEnd}
-      </p>
+      <div className="flex items-center gap-3">
+        <IconTile tone="white">
+          <CalendarClock />
+        </IconTile>
+        <div className="min-w-0 flex-1">
+          <p className="text-body font-semibold">Fitting meals around work</p>
+          {profile.workStart && profile.workEnd && (
+            <p className="tabular text-caption text-muted-foreground">
+              Your work hours: {formatTime(profile.workStart)} – {formatTime(profile.workEnd)}
+            </p>
+          )}
+        </div>
+      </div>
       {conflicts.map((c) => {
         const k = `${c.mealType}:${c.suggestedTime}`
         return (
@@ -286,7 +296,7 @@ export function RescheduleBanner({ plan, profile }: { plan: MealPlan; profile: P
           </div>
         )
       })}
-      {snackDays > 0 && <p className="text-caption text-muted-foreground">Snacks on {snackDays} day{snackDays > 1 ? "s" : ""} fall during work — pick a portable option (fruit, doi, peanuts if safe for you) or replace it from the meal sheet.</p>}
+      {snackDays > 0 && <p className="text-callout">Snacks on {snackDays} day{snackDays > 1 ? "s" : ""} fall during work — pick a portable option (fruit, doi, peanuts if safe for you) or replace it from the meal sheet.</p>}
       <p className="text-caption text-muted-foreground">Suggestions only. Meals that no longer fit can be replaced or prepared the evening before.</p>
     </Surface>
   )

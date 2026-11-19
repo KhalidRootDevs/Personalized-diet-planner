@@ -2,7 +2,7 @@
 
 // Admin recipe publishing (§9, §28.2). Approval records a named reviewer; infant recipes need a clinical reviewer.
 import { useState } from "react"
-import Link from "next/link"
+import { ClipboardCheck } from "lucide-react"
 import { toast } from "sonner"
 import { RECIPES } from "@/lib/data/recipes"
 import { useApp } from "@/lib/store"
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ListGroup, ListRow, PageBody, PageHeader, Pill, Section, type PillTone } from "@/components/app/page"
+import { ListGroup, ListLink, ListRow, PageBody, PageHeader, Pill, Section, type PillTone } from "@/components/app/page"
 import { Field, Segmented } from "@/components/app/controls"
 import { InfoNote } from "@/components/app/alerts"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
@@ -34,7 +34,7 @@ export default function AdminRecipesPage() {
     <>
       <PageHeader back="/admin" title="Recipes" subtitle={`${RECIPES.length} verified-recipe candidates`} />
       <PageBody>
-        <InfoNote>Only published recipes appear in plans. Prototype: status changes are stored as admin overrides in this browser and don&apos;t change what other screens show.</InfoNote>
+        <InfoNote title="Only published recipes appear in plans">In this prototype, status changes are saved in this browser only and don&apos;t change what other screens show.</InfoNote>
         <Segmented label="Filter" value={filter} onChange={setFilter} options={[{ value: "all", label: "All" }, { value: "pending", label: "Awaiting review" }, { value: "approved", label: "Published" }]} />
         <Section title={`${list.length} recipes`}>
           <ListGroup>
@@ -47,42 +47,37 @@ export default function AdminRecipesPage() {
                   iconTone="white"
                   title={r.name}
                   description={
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      <Pill tone={TONE[s]}>{LABEL[s]}</Pill>
-                      {r.profile !== "adult" && <Pill tone="neutral">{r.profile === "infant" ? `Infant · ${r.minAgeMonths ?? 6}+ mo` : "Child"}</Pill>}
-                      {overrides[r.id] && <Pill tone="terracotta">Changed here</Pill>}
+                    <span className="mt-1 flex items-center justify-between gap-2">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <Pill tone={TONE[s]}>{LABEL[s]}</Pill>
+                        {r.profile !== "adult" && <Pill tone="neutral">{r.profile === "infant" ? `Infant · ${r.minAgeMonths ?? 6}+ mo` : "Child"}</Pill>}
+                        {overrides[r.id] && <Pill tone="terracotta">Changed here</Pill>}
+                      </span>
+                      {s === "pending" ? (
+                        <Button size="sm" variant="secondary" className="shrink-0" onClick={() => setTarget(r)}>
+                          Review
+                        </Button>
+                      ) : s === "approved" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          onClick={() => {
+                            setStatus(r, "pending")
+                            toast("Unpublished", { description: `${r.name} returns to the review queue.` })
+                          }}
+                        >
+                          Unpublish
+                        </Button>
+                      ) : null}
                     </span>
-                  }
-                  trailing={
-                    s === "pending" ? (
-                      <Button size="sm" onClick={() => setTarget(r)}>
-                        Review
-                      </Button>
-                    ) : s === "approved" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setStatus(r, "pending")
-                          toast("Unpublished", { description: `${r.name} returns to the review queue.` })
-                        }}
-                      >
-                        Unpublish
-                      </Button>
-                    ) : null
                   }
                 />
               )
             })}
           </ListGroup>
         </Section>
-        <p className="text-caption text-muted-foreground">
-          Full review with safety checklists lives in the{" "}
-          <Link href="/admin/reviews" className="font-semibold text-forest underline-offset-4 hover:underline">
-            clinical review queue
-          </Link>
-          .
-        </p>
+        <ListLink href="/admin/reviews" icon={<ClipboardCheck />} iconTone="lime" title="Clinical review queue" description="Full review with safety checklists" />
       </PageBody>
 
       {target && (

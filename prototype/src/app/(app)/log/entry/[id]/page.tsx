@@ -4,13 +4,13 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
-import { CircleCheck, History, ImageOff, Pencil, Plus, Trash2 } from "lucide-react"
+import { CircleCheck, History, ImageOff, Lock, Pencil, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { EmptyState, HeaderIconButton, KeyValue, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { EmptyState, HeaderIconButton, KeyValue, ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
 import { MacroTiles } from "@/components/log/macro-tiles"
 import { recipePhoto } from "@/lib/data/photos"
 import { ConfidenceChip, EstimateNote } from "@/components/app/nutrition"
@@ -156,7 +156,24 @@ export default function EntryPage() {
             <p className="text-caption text-muted-foreground">Private photo · stored without location data</p>
           </div>
         )}
-        {!ownPhotos.length && entry.hasPhoto && <PhotoPlaceholder src={stockPhoto} className="aspect-[4/3] w-full rounded-2xl [&_svg]:size-8" />}
+        {!ownPhotos.length && entry.hasPhoto &&
+          (stockPhoto ? (
+            <PhotoPlaceholder src={stockPhoto} className="aspect-[4/3] w-full rounded-2xl" />
+          ) : (
+            <Surface tone="sage" padding="lg" className="flex items-center gap-4">
+              <div className="flex shrink-0 -space-x-3">
+                {entry.items.slice(0, 3).map((i) => (
+                  <FoodTile key={i.id} foodId={i.foodId} name={i.displayName} size="md" className="ring-2 ring-sage" />
+                ))}
+              </div>
+              <div className="min-w-0">
+                <p className="text-callout flex items-center gap-1.5 font-semibold">
+                  <Lock className="size-4 text-forest" aria-hidden /> Private photo
+                </p>
+                <p className="text-caption mt-0.5 text-muted-foreground">Kept on your account only, without location data.</p>
+              </div>
+            </Surface>
+          ))}
 
         {allergenNames.length > 0 && (
           <SafetyAlert title={`Contains ${allergenNames.join(", ")}`} emergency>
@@ -264,21 +281,21 @@ export default function EntryPage() {
                       {i.cookingMethod ? ` · ${i.cookingMethod}` : ""}
                     </p>
                     {showConfidence && (
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span className="text-caption flex items-center gap-1 text-muted-foreground">
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 [&_span>span]:whitespace-nowrap">
+                        <span className="text-caption flex items-center gap-1.5 text-muted-foreground">
                           Food <ConfidenceChip level={i.identificationConfidence} />
                         </span>
-                        <span className="text-caption flex items-center gap-1 text-muted-foreground">
+                        <span className="text-caption flex items-center gap-1.5 text-muted-foreground">
                           Portion <ConfidenceChip level={i.quantityConfidence} />
                         </span>
                       </div>
                     )}
+                    {i.confirmedByUser && (
+                      <p className="text-caption mt-1.5 flex items-center gap-1 font-medium text-forest">
+                        <CircleCheck className="size-3.5" aria-hidden /> Confirmed by you
+                      </p>
+                    )}
                   </div>
-                  {i.confirmedByUser && (
-                    <Pill tone="sage" icon={<CircleCheck />} className="h-[22px] shrink-0 px-2 text-[11px]">
-                      Confirmed by you
-                    </Pill>
-                  )}
                 </li>
               ))}
             </ul>
@@ -328,7 +345,7 @@ export default function EntryPage() {
         )}
 
         <Section title="Record details">
-          <Surface tone="muted" padding="none" className="divide-y divide-border/70 px-4 py-1">
+          <Surface padding="none" className="divide-y divide-border/70 px-4 py-1">
             <KeyValue label="Status" value={entry.analysisStatus === "confirmed" ? "Confirmed by you" : "Awaiting confirmation"} />
             {entry.source === "photo" && <KeyValue label="Image model" value={VERSIONS.model} />}
             <KeyValue label="Food database" value={VERSIONS.foodDb} />
@@ -347,14 +364,10 @@ export default function EntryPage() {
           </Surface>
         </Section>
 
-        <div className="space-y-3 pt-2">
+        <ListGroup>
           {entry.hasPhoto && (
             <ConfirmDialog
-              trigger={
-                <Button variant="outline" className="w-full">
-                  <ImageOff /> Delete photo only
-                </Button>
-              }
+              trigger={(open) => <ListRow onClick={open} icon={<ImageOff />} iconTone="muted" title="Delete photo only" description="Foods and nutrition stay in your history" chevron={false} />}
               title="Delete this photo?"
               description="The photo is removed permanently. Your foods and nutrition for this meal stay in your history."
               confirm="Delete photo"
@@ -362,11 +375,7 @@ export default function EntryPage() {
             />
           )}
           <ConfirmDialog
-            trigger={
-              <Button variant="outline" className="w-full text-safety hover:text-safety">
-                <Trash2 /> Delete entry
-              </Button>
-            }
+            trigger={(open) => <ListRow onClick={open} icon={<Trash2 />} iconTone="safety" title={<span className="text-safety">Delete entry</span>} description="Removes this meal from your food log" chevron={false} />}
             title="Delete this entry?"
             description={`This removes the foods, nutrition${entry.hasPhoto ? " and photo" : ""} for this meal.${entry.linkedPlannedMealId ? " The planned meal goes back to “not recorded”." : ""}`}
             confirm="Delete entry"
@@ -376,32 +385,35 @@ export default function EntryPage() {
               router.replace("/log")
             }}
           />
-        </div>
+        </ListGroup>
       </PageBody>
     </>
   )
 }
 
-function ConfirmDialog({ trigger, title, description, confirm, onConfirm }: { trigger: React.ReactNode; title: string; description: string; confirm: string; onConfirm: () => void }) {
+function ConfirmDialog({ trigger, title, description, confirm, onConfirm }: { trigger: (open: () => void) => React.ReactNode; title: string; description: string; confirm: string; onConfirm: () => void }) {
+  const [open, setOpen] = useState(false)
   return (
-    <Dialog>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="grid grid-cols-2 gap-3">
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-          <DialogClose asChild>
-            <Button variant="destructive" onClick={onConfirm}>
-              {confirm}
-            </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      {trigger(() => setOpen(true))}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="grid grid-cols-2 gap-3">
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <DialogClose asChild>
+              <Button variant="destructive" onClick={onConfirm}>
+                {confirm}
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

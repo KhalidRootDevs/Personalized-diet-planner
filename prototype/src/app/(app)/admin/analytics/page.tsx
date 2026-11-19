@@ -3,8 +3,7 @@
 // Admin analytics and safety metrics (§31, §42.26, Phase 1 admin). Prototype: computed from this
 // browser's local data for a single user, plus the consented event log. Safety metrics are listed
 // individually rather than hidden inside an aggregate (§31.6).
-import Link from "next/link"
-import { Activity, Baby, BarChart3, CheckCircle2, Circle, ClipboardX, ShieldAlert, Siren, Stethoscope, TriangleAlert } from "lucide-react"
+import { Activity, Baby, Barcode, BookOpen, Bookmark, CalendarCheck, Camera, CheckCircle2, Circle, ClipboardCheck, ClipboardX, Mic, PenLine, Route, ShieldAlert, Siren, Stethoscope, Store, TriangleAlert, Type } from "lucide-react"
 import { RECIPES } from "@/lib/data/recipes"
 import { useApp } from "@/lib/store"
 import { useAreaD, useAreaDSync } from "@/lib/area-d-store"
@@ -15,7 +14,19 @@ import { EMERGENCY_SOURCE, REFERRAL_SOURCE } from "@/lib/coach"
 import { Button } from "@/components/ui/button"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
 import { PhaseBadge } from "@/components/app/badges"
-import { KeyValue, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
+import { EmptyState, type IconTone, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile } from "@/components/app/page"
+
+const SOURCE_ICON: Record<string, [React.ReactNode, IconTone]> = {
+  planned: [<CalendarCheck key="i" />, "lime"],
+  photo: [<Camera key="i" />, "sky"],
+  manual: [<PenLine key="i" />, "amber"],
+  text: [<Type key="i" />, "sage"],
+  voice: [<Mic key="i" />, "terracotta"],
+  barcode: [<Barcode key="i" />, "muted"],
+  saved: [<Bookmark key="i" />, "sage"],
+  recipe: [<BookOpen key="i" />, "amber"],
+  restaurant: [<Store key="i" />, "terracotta"],
+}
 
 export default function AdminAnalyticsPage() {
   useAreaDSync()
@@ -61,13 +72,13 @@ export default function AdminAnalyticsPage() {
 
   return (
     <>
-      <PageHeader back="/profile" title={<span className="flex items-center gap-2">Analytics <PhaseBadge phase={1} /></span>} subtitle="Staff view (prototype)" />
+      <PageHeader back="/admin" title={<span className="flex items-center gap-2">Analytics <PhaseBadge phase={1} /></span>} subtitle="Staff view (prototype)" />
       <PageBody>
         <CautionNote title="Prototype data">
-          Computed from this browser only — one user, illustrative records. Production metrics come from the analytics pipeline across all users, with no personal or health details in events.
+          Computed from this browser only: one user and illustrative records. Production metrics come from the analytics pipeline across all users, with no personal or health details in events.
         </CautionNote>
 
-        <Section title="Activation funnel" description="§31.2 · core workflow §42.26">
+        <Section title="Activation funnel" description="How far this account has moved through the core workflow.">
           <ListGroup>
             {funnel.map((f) => (
               <ListRow
@@ -75,44 +86,50 @@ export default function AdminAnalyticsPage() {
                 icon={f.done ? <CheckCircle2 /> : <Circle />}
                 iconTone={f.done ? "lime" : "muted"}
                 title={f.label}
-                trailing={<Pill tone={f.done ? "sage" : "outline"}>{f.done === null ? "Needs analytics consent" : f.done ? "Reached" : "Not yet"}</Pill>}
+                description={f.done === null ? "Needs analytics consent" : undefined}
+                trailing={<Pill tone={f.done ? "sage" : "outline"}>{f.done === null ? "Unknown" : f.done ? "Reached" : "Not yet"}</Pill>}
               />
             ))}
+            <ListRow
+              icon={<Route />}
+              iconTone={coreDone ? "forest" : "muted"}
+              title="Core workflow completed"
+              description="Plan → log → review"
+              trailing={<Pill tone={coreDone ? "forest" : "outline"}>{coreDone ? "Yes" : "Not yet"}</Pill>}
+              className="bg-sage/50"
+            />
           </ListGroup>
-          <Surface tone={coreDone ? "sage" : "muted"}>
-            <KeyValue label="Core workflow completed (plan → log → review)" value={coreDone ? "Yes" : "Not yet"} />
-          </Surface>
         </Section>
 
-        <Section title="Logging" description="§31.3, §41.12">
-          <div className="grid grid-cols-3 gap-2">
-            <StatTile label="Days logged (7)" value={daysLogged(d7)} unit="of 7" />
-            <StatTile label="Days logged (30)" value={daysLogged(d30)} unit="of 30" />
-            <StatTile label="Outcomes (7)" value={`${withOutcome}/${pastMeals.length}`} />
+        <Section title="Logging" description="Days with at least one logged meal, and planned meals with a recorded outcome.">
+          <div className="grid grid-cols-3 gap-3">
+            <StatTile label="Last 7 days" value={daysLogged(d7)} unit="/ 7" hint="days logged" className="bg-card shadow-card" />
+            <StatTile label="Last 30 days" value={daysLogged(d30)} unit="/ 30" hint="days logged" className="bg-card shadow-card" />
+            <StatTile label="Outcomes" value={withOutcome} unit={`/ ${pastMeals.length}`} hint="meals, 7 days" className="bg-card shadow-card" />
           </div>
           <ListGroup label="Entries by input">
             {bySource.map(([src, n]) => (
-              <ListRow key={src} title={SOURCE_LABEL[src as keyof typeof SOURCE_LABEL] ?? src} trailing={<span className="tabular text-headline">{n}</span>} />
+              <ListRow key={src} icon={SOURCE_ICON[src]?.[0] ?? <Activity />} iconTone={SOURCE_ICON[src]?.[1] ?? "muted"} title={SOURCE_LABEL[src as keyof typeof SOURCE_LABEL] ?? src} trailing={<span className="tabular text-headline">{n}</span>} />
             ))}
           </ListGroup>
         </Section>
 
-        <Section title="Safety metrics" description="§31.6 — each one is reviewed individually, never averaged away.">
+        <Section title="Safety metrics" description="Each one is reviewed individually, never averaged away.">
           <ListGroup>
             <ListRow icon={<ShieldAlert />} iconTone="safety" title="Recipes blocked by allergy, age or diet rules" description="Across all profiles on this account" trailing={<span className="tabular text-headline">{recipesBlocked}</span>} />
             <ListRow icon={<TriangleAlert />} iconTone="caution" title="Allergen warnings on logged food" trailing={<span className="tabular text-headline">{allergenWarnings}</span>} />
             <ListRow icon={<Baby />} iconTone="caution" title="Child food-safety flags on logged food" trailing={<span className="tabular text-headline">{childFlags}</span>} />
-            <ListRow icon={<Baby />} iconTone="sky" title="Child reactions recorded (for clinician)" trailing={<span className="tabular text-headline">{reactions}</span>} />
+            <ListRow icon={<Stethoscope />} iconTone="sky" title="Child reactions recorded (for clinician)" trailing={<span className="tabular text-headline">{reactions}</span>} />
             <ListRow icon={<Siren />} iconTone="safety" title="Coach emergency routes" description={`Emergency guidance opened ${consentOn ? emergencyViews : "–"} times`} trailing={<span className="tabular text-headline">{emergencies}</span>} />
-            <ListRow icon={<Stethoscope />} iconTone="sky" title="Coach professional referrals" trailing={<span className="tabular text-headline">{referrals}</span>} />
+            <ListRow icon={<ClipboardCheck />} iconTone="sky" title="Coach professional referrals" trailing={<span className="tabular text-headline">{referrals}</span>} />
             <ListRow icon={<ClipboardX />} iconTone={unsafeActive ? "safety" : "lime"} title="Active plans without required approval" description="Must always be 0" trailing={<Pill tone={unsafeActive ? "safety" : "sage"}>{unsafeActive}</Pill>} />
           </ListGroup>
         </Section>
 
-        <Section title="Event log" description="Only recorded while the user allows product analytics. Events carry enums and counts — never names, text or health details.">
+        <Section title="Event log" description="Recorded only while the user allows product analytics. Events carry categories and counts, never names, text or health details.">
           {!consentOn && <InfoNote>Product analytics is off for this user, so no new events are recorded. Turn it on in Profile → Privacy and data to see events here.</InfoNote>}
           {events.length === 0 ? (
-            <p className="text-callout px-1 text-muted-foreground">No events yet.</p>
+            <EmptyState icon={<Activity />} title="No events yet" description="Events appear here as the app is used with analytics turned on." />
           ) : (
             <>
               <ListGroup>
@@ -139,14 +156,9 @@ export default function AdminAnalyticsPage() {
         </Section>
 
         <ListGroup>
-          <ListRow href="/admin/reviews" icon={<BarChart3 />} iconTone="muted" title="Clinical review queue" description="Staff view (prototype)" />
+          <ListRow href="/admin/reviews" icon={<ClipboardCheck />} iconTone="lime" title="Clinical review queue" description="Approve, request changes or reject" />
         </ListGroup>
-        <p className="text-caption px-1 text-muted-foreground">
-          Benchmarks are set after observing real users (§42.26).{" "}
-          <Link href="/profile" className="font-semibold text-forest underline underline-offset-2">
-            Back to profile
-          </Link>
-        </p>
+        <p className="text-caption px-1 text-muted-foreground">Target benchmarks are set after observing real users.</p>
       </PageBody>
     </>
   )

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { CalendarCheck, Check, ClipboardList, ListChecks, NotebookPen, Repeat2, ShieldCheck, Shuffle, Sparkles, Target, Wand2 } from "lucide-react"
+import { CalendarCheck, Check, ClipboardList, Crown, Lightbulb, ListChecks, NotebookPen, Repeat2, ShieldCheck, Shuffle, Target, Wand2 } from "lucide-react"
 import { toast } from "sonner"
 import { formatDay, startOfWeek, todayISO } from "@/lib/date"
 import { adherence } from "@/lib/nutrition"
@@ -13,7 +13,8 @@ import { dayStats, lastNDays, mealsInRange, recordConfidence } from "@/lib/area-
 import { adjustmentSuggestions, computeInsights, recurringPatterns, type InsightInput } from "@/lib/insights"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { FeatureBadge, PremiumGate, useFeature } from "@/components/app/badges"
+import { FeatureBadge, useFeature } from "@/components/app/badges"
+import { FEATURES } from "@/lib/features"
 import { InfoNote } from "@/components/app/alerts"
 import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, SectionLink, Surface } from "@/components/app/page"
 import { FeedbackPrompts, PendingAdjustments, PlanReviewTriggers } from "@/components/progress/review-cards"
@@ -37,6 +38,18 @@ export default function WeeklyReviewPage() {
   const approve = useAreaD((s) => s.approveAdjustment)
   const dismiss = useAreaD((s) => s.dismissAdjustment)
   const insightsAllowed = useFeature("insights").allowed
+  const habitsAllowed = useFeature("habits").allowed
+  const adaptiveAllowed = useFeature("adaptive").allowed
+  const autopilotAllowed = useFeature("autopilot").allowed
+  // Gated parts of the review collapse into one grouped list, so upsells never stack (UI-SPEC §5.5).
+  const gated = (
+    [
+      { id: "habits", ok: habitsAllowed, icon: <ListChecks />, hint: "Check off small habits and pick 1–2 priorities" },
+      { id: "insights", ok: insightsAllowed, icon: <Lightbulb />, hint: "Explained patterns in your records" },
+      { id: "adaptive", ok: adaptiveAllowed, icon: <ClipboardList />, hint: "Plan changes you approve, based on your week" },
+      { id: "autopilot", ok: autopilotAllowed, icon: <Wand2 />, hint: "A draft plan and shopping list for next week" },
+    ] as const
+  ).filter((g) => !g.ok)
   const thisWeek = startOfWeek(todayISO())
   const currentFocus = focus?.weekStart === thisWeek ? focus.text : null
   const [priority, setPriority] = useState<string | null>(currentFocus)
@@ -105,7 +118,7 @@ export default function WeeklyReviewPage() {
         </Section>
 
         <Section title={currentFocus ? "Change your focus" : "Choose one focus for this week"} description="Small, specific goals are easier to keep.">
-          <div className="space-y-2" role="radiogroup" aria-label="Focus for this week">
+          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card" role="radiogroup" aria-label="Focus for this week">
             {priorities.map((p) => {
               const on = priority === p
               return (
@@ -114,7 +127,7 @@ export default function WeeklyReviewPage() {
                   role="radio"
                   aria-checked={on}
                   onClick={() => setPriority(p)}
-                  className={cn("text-body flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 bg-card px-4 py-3 text-left shadow-card transition-colors", on ? "border-lime bg-sage font-medium" : "border-transparent hover:bg-muted/50")}
+                  className={cn("text-body flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors", on ? "bg-sage font-medium" : "hover:bg-muted/50")}
                 >
                   <span className={cn("grid size-6 shrink-0 place-items-center rounded-full border-[1.5px] transition-colors", on ? "border-forest bg-forest text-white" : "border-input bg-card")}>{on && <Check className="size-3.5" strokeWidth={3} />}</span>
                   {p}
@@ -123,7 +136,6 @@ export default function WeeklyReviewPage() {
             })}
           </div>
           <Button
-            variant="secondary"
             className="w-full"
             disabled={!priority || priority === currentFocus}
             onClick={() => {
@@ -144,21 +156,21 @@ export default function WeeklyReviewPage() {
           </ListGroup>
         </Section>
 
-        <Section title="Habits" badge={<FeatureBadge feature="habits" />}>
-          <PremiumGate variant="row" feature="habits">
+        {habitsAllowed && (
+          <Section title="Habits" badge={<FeatureBadge feature="habits" />}>
             <ListGroup>
-              <ListRow href="/progress/habits#review" icon={<ListChecks />} title="Weekly habit review" description={`Checked off ${habitDone} times across ${habits.length} ${habits.length === 1 ? "habit" : "habits"} · choose 1–2 priorities`} />
+              <ListRow href="/progress/habits#review" icon={<ListChecks />} iconTone="amber" title="Weekly habit review" description={`Checked off ${habitDone} times across ${habits.length} ${habits.length === 1 ? "habit" : "habits"} · choose 1–2 priorities`} />
             </ListGroup>
-          </PremiumGate>
-        </Section>
+          </Section>
+        )}
 
-        <Section title="Insights" badge={<FeatureBadge feature="insights" />} action={insightsAllowed && <SectionLink href="/progress/insights">See all</SectionLink>}>
-          <PremiumGate variant="row" feature="insights">
+        {insightsAllowed && (
+        <Section title="Insights" badge={<FeatureBadge feature="insights" />} action={<SectionLink href="/progress/insights">See all</SectionLink>}>
             {insights[0] ? (
               <Surface>
                 <div className="flex gap-3">
-                  <IconTile>
-                    <Sparkles />
+                  <IconTile tone="sky">
+                    <Lightbulb />
                   </IconTile>
                   <div className="min-w-0 flex-1">
                     <p className="text-body font-medium">{insights[0].title}</p>
@@ -173,11 +185,11 @@ export default function WeeklyReviewPage() {
             ) : (
               <InfoNote>Not enough records for an insight yet. Insights appear once a pattern shows up on several days.</InfoNote>
             )}
-          </PremiumGate>
         </Section>
+        )}
 
+        {adaptiveAllowed && (
         <Section title="Suggested adjustments" badge={<FeatureBadge feature="adaptive" />} description="Based on your outcomes and ratings. Nothing changes unless you approve it.">
-          <PremiumGate variant="row" feature="adaptive">
             <PendingAdjustments />
             {suggestions.length === 0 ? (
               <InfoNote>No new adjustments suggested this week.</InfoNote>
@@ -186,7 +198,7 @@ export default function WeeklyReviewPage() {
                 {suggestions.slice(0, 3).map((s) => (
                   <Surface key={s.key}>
                     <div className="flex gap-3">
-                      <IconTile>
+                      <IconTile tone="amber">
                         <ClipboardList />
                       </IconTile>
                       <div className="min-w-0 flex-1">
@@ -214,22 +226,45 @@ export default function WeeklyReviewPage() {
                 ))}
               </div>
             )}
-          </PremiumGate>
         </Section>
+        )}
 
-        <Section title="Weekly Autopilot" badge={<FeatureBadge feature="autopilot" />}>
-          <PremiumGate variant="row" feature="autopilot">
+        {autopilotAllowed && (
+          <Section title="Weekly Autopilot" badge={<FeatureBadge feature="autopilot" />}>
             <ListGroup>
-              <ListRow href="/plan/autopilot" icon={<Wand2 />} title="Prepare next week" description="A draft plan and shopping list for you to review" />
+              <ListRow href="/plan/autopilot" icon={<Wand2 />} iconTone="sky" title="Prepare next week" description="A draft plan and shopping list for you to review" />
             </ListGroup>
-          </PremiumGate>
-        </Section>
+          </Section>
+        )}
+
+        {gated.length > 0 && (
+          <Section title="More in your review" description="Included in Premium. Safety features and core planning always stay free.">
+            <ListGroup>
+              {gated.map((g) => (
+                <ListRow
+                  key={g.id}
+                  href={`/subscription?feature=${g.id}`}
+                  icon={g.icon}
+                  iconTone="muted"
+                  title={
+                    <>
+                      {FEATURES[g.id].name} <FeatureBadge feature={g.id} />
+                    </>
+                  }
+                  description={g.hint}
+                  trailing={<Crown className="size-4 shrink-0 text-lime-text" aria-label="Premium" />}
+                />
+              ))}
+            </ListGroup>
+          </Section>
+        )}
 
         <Section title="Record confidence" badge={<FeatureBadge feature="confidence" />}>
           <ListGroup>
             <ListRow
               href="/progress/insights#confidence"
               icon={<ShieldCheck />}
+              iconTone="lime"
               title={
                 <span>
                   <span className="tabular">{completeDays}</span> of 7 days well recorded

@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { useActivePlan, useApp, useSelfProfile } from "@/lib/store"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
+import { IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, Surface, type IconTone } from "@/components/app/page"
 import { Button } from "@/components/ui/button"
 import { PhaseBadge, PremiumGate } from "@/components/app/badges"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
@@ -18,17 +18,17 @@ import { formatTime, todayISO } from "@/lib/date"
 import { DEFAULT_QUIET, LEAD_OPTIONS, REMINDER_MEAL_TYPES, mealReminderOn, mealReminderTime, reminderSetting, timingSuggestions, type TimingSuggestion } from "@/lib/reminders"
 import type { MealType } from "@/lib/types"
 
-const REMINDERS: { key: string; icon: typeof Bell; title: string; text: string; time?: boolean; child?: boolean }[] = [
-  { key: "meals", icon: UtensilsCrossed, title: "Meal times", text: "A gentle nudge before each planned meal" },
-  { key: "prep", icon: ChefHat, title: "Prep ahead", text: "Soak, marinate or defrost the evening before", time: true },
-  { key: "logging", icon: NotebookPen, title: "Log your meals", text: "Only if something wasn't logged today", time: true },
-  { key: "water", icon: Droplets, title: "Water", text: "Hydration reminders during the day" },
-  { key: "shopping", icon: ShoppingBasket, title: "Shopping", text: "Before your usual shopping day" },
-  { key: "plan_review", icon: ClipboardList, title: "Plan review", text: "When your plan is about to end", time: true },
-  { key: "progress_entry", icon: Scale, title: "Progress check-in", text: "A weekly note on how things went — weight optional" },
-  { key: "weekly_review", icon: CalendarCheck, title: "Weekly review", text: "Look back at the week and plan the next" },
-  { key: "child_review", icon: Sprout, title: "Age-related review", text: "When your child reaches a new feeding stage", time: true, child: true },
-  { key: "baby_feeding", icon: Baby, title: "Baby feeding", text: "Follows your routine — never a rigid schedule", child: true },
+const REMINDERS: { key: string; tone: IconTone; icon: typeof Bell; title: string; text: string; time?: boolean; child?: boolean }[] = [
+  { key: "meals", tone: "lime", icon: UtensilsCrossed, title: "Meal times", text: "A gentle nudge before each planned meal" },
+  { key: "prep", tone: "terracotta", icon: ChefHat, title: "Prep ahead", text: "Soak, marinate or defrost the evening before", time: true },
+  { key: "logging", tone: "sage", icon: NotebookPen, title: "Log your meals", text: "Only if something wasn't logged today", time: true },
+  { key: "water", tone: "sky", icon: Droplets, title: "Water", text: "Hydration reminders during the day" },
+  { key: "shopping", tone: "amber", icon: ShoppingBasket, title: "Shopping", text: "Before your usual shopping day" },
+  { key: "plan_review", tone: "lime", icon: ClipboardList, title: "Plan review", text: "When your plan is about to end", time: true },
+  { key: "progress_entry", tone: "sky", icon: Scale, title: "Progress check-in", text: "A weekly note on how things went — weight optional" },
+  { key: "weekly_review", tone: "sage", icon: CalendarCheck, title: "Weekly review", text: "Look back at the week and plan the next" },
+  { key: "child_review", tone: "lime", icon: Sprout, title: "Age-related review", text: "When your child reaches a new feeding stage", time: true, child: true },
+  { key: "baby_feeding", tone: "terracotta", icon: Baby, title: "Baby feeding", text: "Follows your routine — never a rigid schedule", child: true },
 ]
 
 export default function NotificationsSettingsPage() {
@@ -56,12 +56,12 @@ export default function NotificationsSettingsPage() {
 
         <Section title="Reminders" badge={<PhaseBadge phase={1} />}>
           <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
-            {REMINDERS.filter((r) => !r.child || hasChild).map(({ key, icon: Icon, title, text, time }) => {
+            {REMINDERS.filter((r) => !r.child || hasChild).map(({ key, tone, icon: Icon, title, text, time }) => {
               const r = reminderSetting(settings, key)
               return (
                 <div key={key} className="px-4 py-3">
                   <label className="flex min-h-10 cursor-pointer items-center gap-3">
-                    <IconTile>
+                    <IconTile tone={tone}>
                       <Icon aria-hidden />
                     </IconTile>
                     <span className="min-w-0 flex-1">
@@ -129,8 +129,8 @@ export default function NotificationsSettingsPage() {
           </ListGroup>
         </Section>
 
-        <Section title="Learning reminders" badge={<PhaseBadge phase={2} />}>
-          <PremiumGate feature="smart_reminders" compact>
+        <Section title="Learning reminders" badge={<PhaseBadge phase={2} />} description="Suggests better reminder times from your routine. You approve every change.">
+          <PremiumGate feature="smart_reminders" variant="row">
             <LearningSuggestions />
           </PremiumGate>
         </Section>
@@ -176,10 +176,10 @@ function LearningSuggestions() {
           </p>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Button size="sm" variant="outline" onClick={() => setKept([...kept, `${s.mealType}:${s.suggested}`])}>
-              Keep {s.current}
+              Keep {formatTime(s.current)}
             </Button>
             <Button size="sm" onClick={() => apply(s)}>
-              Use {s.suggested}
+              Use {formatTime(s.suggested)}
             </Button>
           </div>
           <Button size="sm" variant="ghost" className="mt-2 w-full" onClick={() => moveMeals(s)}>

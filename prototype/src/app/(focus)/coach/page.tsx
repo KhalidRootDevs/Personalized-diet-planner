@@ -2,11 +2,11 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
-import { ArrowUp, Leaf, Mic, RotateCcw } from "lucide-react"
+import { ArrowUp, Beef, ChefHat, Leaf, Mic, RotateCcw, ShoppingBasket, Soup, UtensilsCrossed } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FeatureBadge, PremiumGate, useFeature } from "@/components/app/badges"
 import { SafetyAlert } from "@/components/app/alerts"
-import { HeaderIconButton, IconTile, PageHeader, Pill } from "@/components/app/page"
+import { HeaderIconButton, IconTile, ListGroup, ListRow, PageHeader, Pill, type IconTone } from "@/components/app/page"
 import { useApp, useActivePlan, useSelfProfile } from "@/lib/store"
 import { adultTargets } from "@/lib/nutrition"
 import { addDays, nowHHMM, todayISO, uid } from "@/lib/date"
@@ -17,6 +17,14 @@ import { ConsentPrompt } from "@/components/privacy/consent-prompt"
 import { dayRange, entriesFor, remainingMeals } from "@/lib/area-b-log"
 import { useRecipeLookup } from "@/lib/area-c-utils"
 import { cn } from "@/lib/utils"
+
+const STARTER_LOOK: { icon: React.ReactNode; tone: IconTone }[] = [
+  { icon: <Soup />, tone: "amber" },
+  { icon: <ChefHat />, tone: "lime" },
+  { icon: <ShoppingBasket />, tone: "sky" },
+  { icon: <UtensilsCrossed />, tone: "terracotta" },
+  { icon: <Beef />, tone: "sage" },
+]
 
 /** AI Nutrition Coach (§42.2, Phase 2): a contextual helper, not a chat-first tab (§44.17). */
 export default function CoachPage() {
@@ -127,7 +135,7 @@ function Chat() {
     <div className="flex flex-1 flex-col">
       <div className="px-gutter flex-1 space-y-4 pt-2 pb-4" aria-live="polite">
         <div className="flex gap-3 rounded-2xl bg-lime-card p-4">
-          <IconTile tone="white" size="sm">
+          <IconTile tone="white">
             <Leaf />
           </IconTile>
           <div className="min-w-0">
@@ -137,6 +145,18 @@ function Chat() {
             </p>
           </div>
         </div>
+
+        {messages.length === 0 && (
+          <div className="space-y-3 pt-3">
+            <p className="text-overline px-1 text-muted-foreground">Try asking</p>
+            <ListGroup>
+              {STARTERS.slice(0, 5).map((q, i) => {
+                const look = STARTER_LOOK[i % STARTER_LOOK.length]
+                return <ListRow key={q} onClick={() => send(q)} icon={look.icon} iconTone={look.tone} title={<span className="text-callout font-medium">{q}</span>} />
+              })}
+            </ListGroup>
+          </div>
+        )}
 
         {messages.map((m) => {
           if (m.role === "user")
@@ -178,10 +198,10 @@ function Chat() {
       </div>
 
       <div className="sticky bottom-0 z-10 border-t border-border/70 bg-background/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
-        {(messages.length === 0 || followUps.length > 0) && !typing && (
-          <div className="no-scrollbar px-gutter flex gap-2 overflow-x-auto pt-3" aria-label={messages.length ? "Quick replies" : "Suggested questions"}>
-            {(messages.length ? followUps : STARTERS).map((s) => (
-              <button key={s} onClick={() => send(s)} className="text-callout h-9 shrink-0 rounded-full bg-card shadow-card px-3.5 whitespace-nowrap transition-colors hover:bg-muted">
+        {messages.length > 0 && followUps.length > 0 && !typing && (
+          <div className="no-scrollbar px-gutter flex gap-2 overflow-x-auto pt-3" aria-label="Quick replies">
+            {followUps.map((s) => (
+              <button key={s} onClick={() => send(s)} className="text-callout h-10 shrink-0 rounded-full bg-card px-4 font-medium whitespace-nowrap shadow-card transition-colors hover:bg-muted">
                 {s}
               </button>
             ))}

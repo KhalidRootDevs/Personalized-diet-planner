@@ -57,7 +57,7 @@ export default function FoodLogPage() {
         }
       />
 
-      <PageBody className="space-y-6 pt-1">
+      <PageBody className="pt-1">
         <WeekStrip value={date} onChange={(d) => setDate(d > today ? today : d)} marked={(d) => journal.some((e) => e.profileId === profile.id && e.consumedAt.startsWith(d))} />
 
         {child ? (
@@ -168,7 +168,7 @@ export default function FoodLogPage() {
           <Section title="Suggestions" badge={<FeatureBadge feature="dashboard" />}>
             <div className="space-y-3">
               {recs.map((r) => (
-                <div key={r.id} className="flex gap-3 rounded-2xl bg-sage/70 p-4">
+                <Surface key={r.id} tone="sage" className="flex gap-3">
                   <IconTile tone="white" size="sm">
                     <Lightbulb />
                   </IconTile>
@@ -181,7 +181,7 @@ export default function FoodLogPage() {
                       </Link>
                     )}
                   </div>
-                </div>
+                </Surface>
               ))}
             </div>
             <EstimateNote>Based on your logged meals only. Suggestions never mean skipping meals or eating less to make up for a day.</EstimateNote>

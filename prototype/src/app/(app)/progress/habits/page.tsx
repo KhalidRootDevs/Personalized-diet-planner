@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, ListChecks, Plus, Sparkles, Trash2 } from "lucide-react"
+import { Check, ListChecks, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { addDays, formatDay, startOfWeek, todayISO, uid } from "@/lib/date"
 import { useActivePlan, useApp, useSelfProfile } from "@/lib/store"
@@ -20,7 +20,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { DataIcon } from "@/components/app/icon"
 import { FeatureBadge, PremiumGate, useFeature } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
-import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
+import { EmptyState, IconTile, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, StatTile, Surface } from "@/components/app/page"
 import { Chip } from "@/components/app/controls"
 
 const GENERIC = [
@@ -263,22 +263,29 @@ function HabitReviewSection({ input }: { input: InsightInput }) {
             <p className="text-body mt-1 font-medium">{saved.priorities.join(" · ") || "Keep things as they are"}</p>
           </Surface>
         )}
-        <Surface className="space-y-3">
-          <div>
-            <p className="text-callout font-semibold">Went consistently</p>
-            <p className="text-callout mt-0.5 text-muted-foreground">{consistent.length ? consistent.map((h) => h.title).join(", ") : "Nothing on most days yet — that's fine."}</p>
+        <Surface className="space-y-4">
+          <div className="flex items-start gap-3">
+            <IconTile tone="lime">
+              <Check />
+            </IconTile>
+            <div className="min-w-0 flex-1">
+              <p className="text-body font-medium">Went consistently</p>
+              <p className="text-caption mt-0.5 text-muted-foreground">{consistent.length ? consistent.map((h) => h.title).join(", ") : "Nothing on most days yet — that's fine."}</p>
+            </div>
           </div>
-          <div className="border-t border-border/70 pt-3">
-            <p className="text-callout font-semibold">Changes in your recorded food</p>
-            <p className="text-callout mt-0.5 text-muted-foreground tabular">
-              Logged on {now.loggedDays} days (previous week {before.loggedDays}) · vegetables on {now.groups.vegetable.days} days ({before.groups.vegetable.days}) · fruit on {now.groups.fruit.days} days ({before.groups.fruit.days})
-            </p>
-            <p className="text-caption mt-1 text-muted-foreground">Based only on what was logged.</p>
+          <div className="border-t border-border/70 pt-4">
+            <p className="text-overline text-muted-foreground">Your recorded food · this week vs last</p>
+            <div className="mt-2.5 grid grid-cols-3 gap-2">
+              <StatTile label="Logged" value={now.loggedDays} unit="days" hint={`was ${before.loggedDays}`} />
+              <StatTile label="Vegetables" value={now.groups.vegetable.days} unit="days" hint={`was ${before.groups.vegetable.days}`} />
+              <StatTile label="Fruit" value={now.groups.fruit.days} unit="days" hint={`was ${before.groups.fruit.days}`} />
+            </div>
+            <p className="text-caption mt-2.5 text-muted-foreground">Based only on what was logged.</p>
           </div>
         </Surface>
         {habits.length > 0 && (
-          <div>
-            <p className="text-callout mb-2 font-medium">Which did you struggle with?</p>
+          <div className="pt-2">
+            <p className="text-callout mb-2.5 font-semibold">Which felt hard this week?</p>
             <div className="flex flex-wrap gap-2">
               {habits.map((h) => (
                 <Chip key={h.id} selected={struggled.includes(h.title)} onClick={() => setStruggled((x) => toggle(x, h.title))}>
@@ -288,9 +295,9 @@ function HabitReviewSection({ input }: { input: InsightInput }) {
             </div>
           </div>
         )}
-        <div>
-          <p className="text-callout mb-2 font-medium">
-            Choose 1–2 priorities for next week <Pill tone="neutral" className="ml-1">{priorities.length} of 2</Pill>
+        <div className="pt-2">
+          <p className="text-callout mb-2.5 flex items-center gap-2 font-semibold">
+            Choose 1–2 priorities for next week <Pill tone="neutral">{priorities.length} of 2</Pill>
           </p>
           <div className="flex flex-wrap gap-2">
             {[...habits.map((h) => h.title), "Keep things as they are"].map((t) => (
@@ -302,8 +309,7 @@ function HabitReviewSection({ input }: { input: InsightInput }) {
           </div>
         </div>
         <Button
-          variant="secondary"
-          className="w-full"
+          className="mt-2 w-full"
           disabled={priorities.length === 0}
           onClick={() => {
             saveReview({ weekStart: week, struggled, priorities })
@@ -311,7 +317,7 @@ function HabitReviewSection({ input }: { input: InsightInput }) {
             toast.success("Habit review saved")
           }}
         >
-          <Sparkles className="size-[18px]" /> {saved ? "Update review" : "Save review"}
+          {saved ? "Update review" : "Save review"}
         </Button>
       </div>
     </Section>

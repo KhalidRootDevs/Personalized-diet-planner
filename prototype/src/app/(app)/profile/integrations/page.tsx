@@ -9,7 +9,7 @@ import type { FeatureId } from "@/lib/features"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { IconTile, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
+import { IconTile, PageBody, PageHeader, Pill, Section, Surface, type IconTone } from "@/components/app/page"
 import { ChoiceCard } from "@/components/app/controls"
 import { PhaseBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
@@ -26,14 +26,16 @@ interface Integration {
   reads: string[]
   writes: string[]
   never?: string[]
+  tone: IconTone
 }
 
 const INTEGRATIONS: Integration[] = [
-  { id: "google_calendar", name: "Google Calendar", icon: CalendarDays, description: "Add meals and prep tasks to your calendar", feature: "google_calendar", phase: 2, reads: ["Free/busy times, to avoid scheduling meals during meetings"], writes: ["Events titled “Lunch”, “Meal prep” — never health details"] },
+  { id: "google_calendar", name: "Google Calendar", icon: CalendarDays, description: "Add meals and prep tasks to your calendar", feature: "google_calendar", phase: 2, tone: "sky", reads: ["Free/busy times, to avoid scheduling meals during meetings"], writes: ["Events titled “Lunch”, “Meal prep” — never health details"] },
   {
     id: "health_connect",
     name: "Health Connect",
     icon: HeartPulse,
+    tone: "terracotta",
     description: "Android steps, activity and weight",
     feature: "wearables",
     phase: 3,
@@ -45,6 +47,7 @@ const INTEGRATIONS: Integration[] = [
     id: "apple_health",
     name: "Apple Health",
     icon: Activity,
+    tone: "lime",
     description: "iPhone activity and weight",
     feature: "wearables",
     phase: 3,
@@ -52,7 +55,7 @@ const INTEGRATIONS: Integration[] = [
     writes: [],
     never: ["Device calorie-burn estimates never raise your food targets automatically", "No clinical records or medications"],
   },
-  { id: "fitbit", name: "Fitbit", icon: Watch, description: "Activity and sleep from your Fitbit", feature: "wearables", phase: 3, reads: ["Steps, active minutes and sleep"], writes: [], never: ["Device calorie-burn estimates never raise your food targets automatically"] },
+  { id: "fitbit", name: "Fitbit", icon: Watch, description: "Activity and sleep from your Fitbit", feature: "wearables", phase: 3, tone: "amber", reads: ["Steps, active minutes and sleep"], writes: [], never: ["Device calorie-burn estimates never raise your food targets automatically"] },
 ]
 
 export default function IntegrationsPage() {
@@ -64,9 +67,9 @@ export default function IntegrationsPage() {
 
   const setConnected = (id: string, v: boolean) => updateSettings({ integrations: { ...useApp.getState().settings.integrations, [id]: v } })
 
-  const groups: { phase: 2 | 3; title: string }[] = [
-    { phase: 2, title: "Calendar" },
-    { phase: 3, title: "Health apps and wearables" },
+  const groups: { phase: 2 | 3; title: string; description: string }[] = [
+    { phase: 2, title: "Calendar", description: "Meals and prep tasks in Google Calendar, with neutral titles." },
+    { phase: 3, title: "Health apps and wearables", description: "Steps and activity from Health Connect, Apple Health or Fitbit." },
   ]
 
   return (
@@ -74,15 +77,15 @@ export default function IntegrationsPage() {
       <PageHeader back="/profile" title="Connected apps" />
       <PageBody>
         {groups.map((g) => (
-          <Section key={g.phase} title={g.title} badge={<PhaseBadge phase={g.phase} />}>
-            <PremiumGate feature={g.phase === 2 ? "google_calendar" : "wearables"} compact>
+          <Section key={g.phase} title={g.title} badge={<PhaseBadge phase={g.phase} />} description={g.description}>
+            <PremiumGate feature={g.phase === 2 ? "google_calendar" : "wearables"} variant="row">
               <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
                 {INTEGRATIONS.filter((i) => i.phase === g.phase).map((i) => {
                   const on = integrations[i.id]
                   const isCal = i.id === "google_calendar"
                   return (
                     <div key={i.id} className="flex min-h-[68px] items-center gap-3 px-4 py-3">
-                      <IconTile>
+                      <IconTile tone={i.tone}>
                         <i.icon aria-hidden />
                       </IconTile>
                       <div className="min-w-0 flex-1">
@@ -125,7 +128,7 @@ export default function IntegrationsPage() {
             <DialogDescription>NutriPlan will ask {pending?.name} for permission to:</DialogDescription>
           </DialogHeader>
           {pending && (
-            <div className="text-callout space-y-3 rounded-xl bg-muted p-4">
+            <div className="text-callout space-y-3 rounded-2xl bg-muted p-4">
               <div>
                 <p className="font-semibold">Read</p>
                 <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">

@@ -84,10 +84,10 @@ export function Macro({ label, value, unit = "g", estimate }: { label: string; v
   )
 }
 
-export function ConfidenceChip({ level }: { level: "high" | "moderate" | "low" }) {
+export function ConfidenceChip({ level, className }: { level: "high" | "moderate" | "low"; className?: string }) {
   const style = { high: "bg-sage text-forest", moderate: "bg-muted text-charcoal", low: "bg-caution-surface text-caution" }[level]
   const label = { high: "High confidence", moderate: "Moderate confidence", low: "Low confidence" }[level]
-  return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium", style)}>{label}</span>
+  return <span className={cn("inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap", style, className)}>{label}</span>
 }
 
 /**

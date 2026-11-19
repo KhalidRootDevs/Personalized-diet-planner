@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bell, Cake, ChevronRight, ClipboardCheck, Crown, Globe, Link2, LogOut, Pencil, Plus, Ruler, Scale, Settings, ShieldCheck, Stethoscope, Target, TriangleAlert, UserRound } from "lucide-react"
+import { Bell, Cake, ChartColumn, ChevronRight, ClipboardCheck, Database, Crown, Globe, Link2, LogOut, Pencil, Plus, Ruler, Scale, Settings, ShieldCheck, Stethoscope, Target, TriangleAlert, UserRound } from "lucide-react"
 import { useApp, useSelfProfile } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { HeaderIconButton, KeyValue, ListGroup, ListRow, PageBody, PageHeader, Section, SectionLink, Surface } from "@/components/app/page"
@@ -68,16 +68,17 @@ export default function ProfilePage() {
           </Surface>
         )}
 
-        <Link href="/subscription" className="flex items-center gap-3.5 rounded-2xl bg-charcoal p-4 text-white transition-colors hover:bg-charcoal/90">
-          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-lime text-charcoal">
+        <Link href="/subscription" className="relative flex items-center gap-3.5 overflow-hidden rounded-2xl bg-forest p-4 text-white shadow-card transition-colors hover:bg-primary-hover">
+          <span className="absolute -right-8 -bottom-12 size-28 rounded-full bg-white/10" aria-hidden />
+          <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-lime text-charcoal">
             <Crown className="size-5" aria-hidden />
           </span>
-          <div className="min-w-0 flex-1">
+          <div className="relative min-w-0 flex-1">
             <p className="text-body font-semibold">{tier === "free" ? "Explore Premium" : "Your subscription"}</p>
-            <p className="text-caption text-white/75">{tier === "free" ? "Coach, smarter swaps, family planning and more" : "Manage plan and billing"}</p>
+            <p className="text-caption text-white/85">{tier === "free" ? "Coach, smarter swaps, family planning and more" : "Manage plan and billing"}</p>
           </div>
-          <TierPill className="bg-white/15 text-white" />
-          <ChevronRight className="size-[18px] shrink-0 text-white/70" aria-hidden />
+          <TierPill className="relative bg-white/20 text-white" />
+          <ChevronRight className="relative size-[18px] shrink-0 text-white/80" aria-hidden />
         </Link>
 
         <Section title="Family" action={<SectionLink href="/profile/family">Manage</SectionLink>}>
@@ -103,9 +104,14 @@ export default function ProfilePage() {
         <Section title="Help and safety">
           <ListGroup>
             <ListRow href="/safety/emergency" icon={<TriangleAlert />} iconTone="safety" title="Emergency guidance" description="When to stop and get medical help" />
-            <ListRow href="/admin/reviews" icon={<ClipboardCheck />} iconTone="muted" title="Clinical review queue" description="Staff view (prototype)" />
-            <ListRow href="/admin/analytics" icon={<ClipboardCheck />} iconTone="muted" title="Analytics and safety metrics" description="Staff view (prototype data)" />
-            <ListRow href="/admin" icon={<ClipboardCheck />} iconTone="muted" title="Admin console" description="Foods, recipes, rules and translations (staff, prototype)" />
+          </ListGroup>
+        </Section>
+
+        <Section title="Staff tools" description="Prototype views for the NutriPlan team">
+          <ListGroup>
+            <ListRow href="/admin/reviews" icon={<ClipboardCheck />} iconTone="muted" title="Clinical review queue" description="Approve rules and flagged plans" />
+            <ListRow href="/admin/analytics" icon={<ChartColumn />} iconTone="muted" title="Analytics and safety metrics" description="Usage and safety signals (prototype data)" />
+            <ListRow href="/admin" icon={<Database />} iconTone="muted" title="Admin console" description="Foods, recipes, rules and translations" />
           </ListGroup>
         </Section>
 

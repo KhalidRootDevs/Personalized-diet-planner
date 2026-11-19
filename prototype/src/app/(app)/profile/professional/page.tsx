@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { IconTile, KeyValue, ListGroup, ListRow, PageBody, PageHeader, Section, Surface } from "@/components/app/page"
-import { PhaseBadge, PremiumGate } from "@/components/app/badges"
+import { PhaseBadge, PremiumGate, useFeature } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { Field, PillGroup } from "@/components/app/controls"
 
@@ -30,6 +30,7 @@ export default function ProfessionalPage() {
   const updateSettings = useApp((s) => s.updateSettings)
   const [code, setCode] = useState("")
   const [scopes, setScopes] = useState<string[]>(["plan", "journal", "progress"])
+  const pro = useFeature("professional")
   const [range, setRange] = useState<"7" | "30" | "90">("30")
 
   return (
@@ -74,13 +75,15 @@ export default function ProfessionalPage() {
                     <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. RD-4821" />
                   </Field>
                   <fieldset>
-                    <legend className="text-callout mb-1 font-medium">What they can see</legend>
+                    <legend className="text-callout mb-1.5 font-medium">What they can see</legend>
+                    <div className="divide-y divide-border/70 rounded-2xl bg-muted px-4">
                     {SCOPES.map((s) => (
-                      <label key={s.id} className="text-body flex min-h-11 cursor-pointer items-center gap-3">
+                      <label key={s.id} className="text-body flex min-h-12 cursor-pointer items-center gap-3">
                         <Checkbox checked={scopes.includes(s.id)} onCheckedChange={(v) => setScopes((x) => (v ? [...x, s.id] : x.filter((y) => y !== s.id)))} />
                         {s.label}
                       </label>
                     ))}
+                    </div>
                   </fieldset>
                   <Button
                     size="lg"
@@ -127,7 +130,7 @@ export default function ProfessionalPage() {
                 <Field label="Period">
                   <PillGroup label="Period" value={range} onChange={setRange} options={[{ value: "7", label: "7 days" }, { value: "30", label: "30 days" }, { value: "90", label: "90 days" }]} />
                 </Field>
-                <ul className="text-callout space-y-2 text-muted-foreground">
+                <ul className="text-callout space-y-2.5 text-charcoal">
                   <li className="flex gap-2"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" />Planned vs recorded intake as ranges</li>
                   <li className="flex gap-2"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" />Record completeness, so gaps aren&apos;t mistaken for low intake</li>
                   <li className="flex gap-2"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-forest" />Allergies, preferences and notes you add</li>
@@ -141,6 +144,16 @@ export default function ProfessionalPage() {
             </Section>
           </div>
         </PremiumGate>
+        {!pro.allowed && (
+          <Section title="How it works">
+            <ListGroup>
+              <ListRow icon={<UserCheck />} iconTone="sky" title="Grant access with a code" description="Your dietitian gives you a code. You choose what they can see." />
+              <ListRow icon={<MessageSquareText />} iconTone="amber" title="Notes from your dietitian" description="Their advice appears here and never changes your plan on its own" />
+              <ListRow icon={<FileText />} iconTone="lime" title="Report for your appointment" description="Planned vs recorded intake as ranges, with record completeness" />
+              <ListRow icon={<ShieldCheck />} iconTone="sage" title="Revoke any time" description="Access ends immediately and is noted in your activity log" />
+            </ListGroup>
+          </Section>
+        )}
       </PageBody>
     </>
   )

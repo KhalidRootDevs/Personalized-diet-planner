@@ -3,7 +3,7 @@
 // Clinical rule library (§7.2–§7.3, §28.3). Each rule shows source, population, reviewer, approval status,
 // version and next review date. Changes are submitted for review — rules never update automatically.
 import { useState } from "react"
-import { CalendarClock, Scale } from "lucide-react"
+import { CalendarClock, FilePen, Hourglass, Scale, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import { CLINICAL_RULES, RULE_STATUS_LABEL, type ClinicalRule } from "@/lib/data/admin"
 import { formatDay, todayISO, uid } from "@/lib/date"
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { KeyValue, PageBody, PageHeader, Pill, Section, Surface, type PillTone } from "@/components/app/page"
+import { IconTile, KeyValue, PageBody, PageHeader, Pill, Section, StatTile, Surface, type PillTone } from "@/components/app/page"
 import { Field } from "@/components/app/controls"
 import { InfoNote } from "@/components/app/alerts"
 
@@ -21,25 +21,39 @@ const STATUS_TONE: Record<ClinicalRule["status"], PillTone> = { approved: "sage"
 export default function RulesPage() {
   const changes = useApp((s) => s.admin?.ruleChanges ?? [])
   const [editing, setEditing] = useState<ClinicalRule | null>(null)
+  const counts = { approved: 0, in_review: 0, draft: 0, retired: 0 }
+  CLINICAL_RULES.forEach((r) => counts[r.status]++)
 
   return (
     <>
       <PageHeader back="/admin" title="Clinical rule library" subtitle={`${CLINICAL_RULES.length} rules · illustrative`} />
       <PageBody>
-        <InfoNote>Guideline changes go through controlled review: source verification → professional review → safety review → approval. Approved versions stay in use until a new version is approved.</InfoNote>
+        <InfoNote title="Controlled review">Guideline changes go through source verification → professional review → safety review → approval. Approved versions stay in use until a new version is approved.</InfoNote>
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile icon={<ShieldCheck />} iconTone="sage" label="Approved" value={counts.approved} className="bg-card shadow-card" />
+          <StatTile icon={<Hourglass />} iconTone="caution" label="In review" value={counts.in_review} className="bg-card shadow-card" />
+          <StatTile icon={<FilePen />} iconTone="muted" label="Draft" value={counts.draft} className="bg-card shadow-card" />
+        </div>
         <Section title="Rules">
           <div className="space-y-3">
             {CLINICAL_RULES.map((r) => {
               const pending = changes.filter((c) => c.ruleId === r.id)
               const overdue = r.nextReview < todayISO()
               return (
-                <Surface key={r.id} className="space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-body font-semibold">{r.title}</p>
-                    <Pill tone={STATUS_TONE[r.status]}>{RULE_STATUS_LABEL[r.status]}</Pill>
+                <Surface key={r.id} className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <IconTile tone="terracotta">
+                      <Scale />
+                    </IconTile>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-body font-semibold">{r.title}</p>
+                        <Pill tone={STATUS_TONE[r.status]}>{RULE_STATUS_LABEL[r.status]}</Pill>
+                      </div>
+                      <p className="text-caption mt-1 text-muted-foreground">{r.summary}</p>
+                    </div>
                   </div>
-                  <p className="text-caption text-muted-foreground">{r.summary}</p>
-                  <div className="divide-y divide-border/70">
+                  <div className="divide-y divide-border/70 rounded-xl bg-muted px-3 py-1">
                     <KeyValue label="Source" value={r.source} />
                     <KeyValue label="Population" value={r.population} />
                     <KeyValue label="Reviewer" value={r.reviewer} />
@@ -51,7 +65,7 @@ export default function RulesPage() {
                       {pending.length} change request{pending.length > 1 ? "s" : ""} submitted for review · latest: “{pending[pending.length - 1].summary}”
                     </div>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => setEditing(r)}>
+                  <Button size="sm" variant="outline" className="w-full" onClick={() => setEditing(r)}>
                     Submit change for review
                   </Button>
                 </Surface>

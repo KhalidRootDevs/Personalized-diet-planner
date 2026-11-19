@@ -7,7 +7,7 @@ import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
 import { EstimateNote } from "@/components/app/nutrition"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { useApp, useSelfProfile } from "@/lib/store"
 import { RECIPES } from "@/lib/data/recipes"
 import { findRecipe, recipeCostPerServing, recipeNutrition, violatesHardConstraints } from "@/lib/nutrition"
@@ -17,12 +17,8 @@ import type { Recipe } from "@/lib/types"
 export default function ComparePage() {
   return (
     <>
-      <PageHeader title="Compare two meals" back />
+      <PageHeader title="Compare two meals" subtitle="Part of the budget optimizer" back action={<FeatureBadge feature="budget_optimizer" />} />
       <PageBody>
-        <div className="flex items-center gap-2">
-          <FeatureBadge feature="budget_optimizer" />
-          <span className="text-caption text-muted-foreground">Part of the budget-aware optimizer</span>
-        </div>
         <PremiumGate feature="budget_optimizer">
           <Suspense fallback={null}>
             <Compare />
@@ -45,8 +41,8 @@ function Compare() {
 
   const picker = (value: string, onChange: (v: string) => void, label: string) => (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full" aria-label={label}>
-        <SelectValue />
+      <SelectTrigger className="h-10 w-full text-[13px]" aria-label={label}>
+        <span className="font-semibold text-forest">Change</span>
       </SelectTrigger>
       <SelectContent>
         {options.map((r) => (
@@ -60,9 +56,23 @@ function Compare() {
 
   return (
     <div className="space-y-7">
-      <div className="grid grid-cols-2 gap-2">
-        {picker(a, setA, "First meal")}
-        {picker(b, setB, "Second meal")}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { r: ra, value: a, set: setA, label: "Meal A" },
+          { r: rb, value: b, set: setB, label: "Meal B" },
+        ].map(({ r, value, set, label }) => (
+          <Surface key={label} padding="sm" className="flex flex-col items-center text-center">
+            <p className="text-overline self-start px-1 text-muted-foreground">{label}</p>
+            {r && <RecipeThumb recipe={r} size="lg" className="mt-1" />}
+            <p className="text-callout mt-2 line-clamp-2 min-h-10 font-semibold">{r?.name}</p>
+            {r && (
+              <Pill className="mt-1.5" tone={r.reviewStatus === "approved" ? "sage" : "neutral"}>
+                {r.reviewStatus === "approved" ? "Verified" : "Not reviewed"}
+              </Pill>
+            )}
+            <div className="mt-3 w-full">{picker(value, set, `Choose ${label.toLowerCase()}`)}</div>
+          </Surface>
+        ))}
       </div>
       {ra && rb && <Table a={ra} b={rb} />}
     </div>
@@ -95,26 +105,21 @@ function Table({ a, b }: { a: Recipe; b: Recipe }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2">
-        {[a, b].map((r) => (
-          <Surface key={r.id} padding="sm" className="flex flex-col items-center text-center">
-            <RecipeThumb recipe={r} size="lg" />
-            <p className="text-callout mt-2 line-clamp-2 font-semibold">{r.name}</p>
-            <Pill className="mt-1.5" tone={r.reviewStatus === "approved" ? "sage" : "neutral"}>
-              {r.reviewStatus === "approved" ? "Verified" : "Not reviewed"}
-            </Pill>
-          </Surface>
-        ))}
-      </div>
       <Section title="Per serving">
         <div className="overflow-hidden rounded-2xl bg-card shadow-card">
           <table className="text-callout w-full">
             <caption className="sr-only">Cost and nutrition per serving for both meals</caption>
-            <thead className="sr-only">
+            <thead className="bg-muted text-caption text-muted-foreground">
               <tr>
-                <th scope="col">Measure</th>
-                <th scope="col">{a.name}</th>
-                <th scope="col">{b.name}</th>
+                <th scope="col" className="px-4 py-2 text-left font-medium">
+                  <span className="sr-only">Measure</span>
+                </th>
+                <th scope="col" className="px-2 py-2 text-right font-semibold text-charcoal">
+                  A<span className="sr-only">: {a.name}</span>
+                </th>
+                <th scope="col" className="px-4 py-2 text-right font-semibold text-charcoal">
+                  B<span className="sr-only">: {b.name}</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/70">
@@ -123,8 +128,8 @@ function Table({ a, b }: { a: Recipe; b: Recipe }) {
                   <th scope="row" className="px-4 py-2.5 text-left font-normal text-muted-foreground">
                     {r.label}
                   </th>
-                  <td className="tabular px-2 py-2.5 text-right font-semibold">{v(r.va, r)}</td>
-                  <td className="tabular px-4 py-2.5 text-right font-semibold">{v(r.vb, r)}</td>
+                  <td className="tabular px-2 py-2.5 text-right font-semibold whitespace-nowrap">{v(r.va, r)}</td>
+                  <td className="tabular px-4 py-2.5 text-right font-semibold whitespace-nowrap">{v(r.vb, r)}</td>
                 </tr>
               ))}
             </tbody>

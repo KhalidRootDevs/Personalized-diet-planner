@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { BadgeCheck, Barcode, ChevronRight, History, Mic, ScanLine, Search, Sparkles } from "lucide-react"
+import { BadgeCheck, Barcode, ChevronRight, History, Mic, ScanLine, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { RECIPES } from "@/lib/data/recipes"
@@ -70,7 +70,7 @@ export function TextStep({ onParsed, initial = "", source = "text" }: { onParsed
       </div>
       {miss && <CautionNote title="We couldn't match those foods">Try simpler names (rice, dal, egg) or use search instead.</CautionNote>}
       <Button className="w-full" size="lg" disabled={!text.trim()} onClick={run}>
-        <Sparkles /> Find foods
+        <Search /> Find foods
       </Button>
       <p className="text-caption text-center text-muted-foreground">You&apos;ll check every item and portion before anything is saved.</p>
     </div>
@@ -300,7 +300,7 @@ export function SavedStep({ mealType, onPick }: { mealType: MealType; onPick: (m
         </button>
       )}
       {sorted.length === 0 ? (
-        <p className="text-callout text-muted-foreground">No saved meals yet. Tick &ldquo;Save as a usual meal&rdquo; when you confirm an entry.</p>
+        <p className="text-callout text-muted-foreground">No saved meals yet. Turn on &ldquo;Save as a usual meal&rdquo; when you confirm an entry.</p>
       ) : (
         <ListGroup label="All saved meals">
           {sorted.map((m) => (

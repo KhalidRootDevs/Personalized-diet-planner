@@ -4,12 +4,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { Check, Clock, Dumbbell, Leaf, Loader2, Lock, Package, Sprout, Users, Wallet } from "lucide-react"
-import { FlowHeader, ListGroup, ListRow, PageBody, PageHeader, Section, StatTile, StickyFooter, Surface } from "@/components/app/page"
+import { Banknote, CalendarDays, Check, Clock, Dumbbell, Flame, Leaf, Loader2, Lock, Package, Sprout, Timer, Users, Wallet } from "lucide-react"
+import { MealTimeRow } from "@/components/plan/meal-time-row"
+import { FlowHeader, IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, StatTile, StickyFooter, Surface } from "@/components/app/page"
 import { ChoiceCard } from "@/components/app/controls"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { FeatureBadge, useFeature } from "@/components/app/badges"
@@ -174,7 +174,24 @@ function Generator({ profile }: { profile: Profile }) {
       />
     )
 
-  const tileCls = (on: boolean) => cn("flex h-16 flex-col items-center justify-center rounded-2xl border transition-colors disabled:opacity-50", on ? "border-forest bg-sage/40 text-forest" : "border-border/80 bg-card hover:bg-muted/50")
+  const tileCls = (on: boolean) =>
+    cn(
+      "flex h-16 flex-col items-center justify-center rounded-2xl border-2 transition-colors disabled:cursor-not-allowed disabled:bg-muted disabled:shadow-none",
+      on ? "border-lime bg-sage text-forest" : "border-transparent bg-card shadow-card hover:bg-muted/50",
+    )
+  const durationTile = (d: (typeof DURATIONS)[number]) => {
+    const locked = !!d.feature && !features[d.feature]?.allowed
+    const on = d.months ? opts.frameworkMonths === d.months : !opts.frameworkMonths && opts.durationDays === d.days
+    return (
+      <button key={`${d.label}${d.unit}`} disabled={locked} onClick={() => setOpts({ ...opts, durationDays: d.days, frameworkMonths: d.months })} aria-pressed={on} className={tileCls(on)}>
+        <span className={cn("tabular text-headline leading-tight", locked && "text-muted-foreground")}>{d.label}</span>
+        <span className="flex items-center gap-0.5 text-[11px] font-medium text-muted-foreground">
+          {locked && <Lock className="size-3" aria-label="Premium" />}
+          {d.unit}
+        </span>
+      </button>
+    )
+  }
   const rules = activeHardRules(profile)
 
   if (!targets.supported) {
@@ -205,28 +222,19 @@ function Generator({ profile }: { profile: Profile }) {
         ))}
 
         <Section title="How long?" badge={<FeatureBadge feature="plan_long" />}>
-          <div className="grid grid-cols-4 gap-2">
-            {DURATIONS.map((d) => {
-              const locked = !!d.feature && !features[d.feature]?.allowed
-              const on = d.months ? opts.frameworkMonths === d.months : !opts.frameworkMonths && opts.durationDays === d.days
-              return (
-                <button key={`${d.label}${d.unit}`} disabled={locked} onClick={() => setOpts({ ...opts, durationDays: d.days, frameworkMonths: d.months })} aria-pressed={on} className={tileCls(on)}>
-                  <span className="tabular text-headline leading-tight">{d.label}</span>
-                  <span className="flex items-center gap-0.5 text-[11px] font-medium text-muted-foreground">
-                    {locked && <Lock className="size-3" />}
-                    {d.unit}
-                  </span>
-                </button>
-              )
-            })}
+          <div className="grid grid-cols-5 gap-2">{DURATIONS.filter((d) => !d.months).map(durationTile)}</div>
+          <p className="text-caption px-1 text-muted-foreground">3- and 7-day plans are free. 1, 14 and 30 days are Premium.</p>
+          <div className="space-y-2 pt-2">
+            <p className="text-overline flex items-center gap-2 px-1 text-muted-foreground">
+              Long-term framework <FeatureBadge feature="plan_framework" />
+            </p>
+            <div className="grid grid-cols-2 gap-2">{DURATIONS.filter((d) => d.months).map(durationTile)}</div>
+            <p className="text-caption px-1 text-muted-foreground">Weekly themes and a fresh 7-day plan each week, not a fixed daily menu.</p>
           </div>
-          <p className="text-caption flex flex-wrap items-center gap-1.5 text-muted-foreground">
-            3- and 7-day plans are free. 1, 14 and 30 days are Premium. <FeatureBadge feature="plan_framework" /> 3–6 months is a framework: weekly themes and a fresh 7-day plan each week, not a fixed daily menu.
-          </p>
-          <div className="space-y-1.5 pt-1">
-            <Label htmlFor="start">Start date</Label>
-            <Input id="start" type="date" value={opts.startDate} min={todayISO()} onChange={(e) => setOpts({ ...opts, startDate: e.target.value })} />
-          </div>
+        </Section>
+
+        <Section title="Start date">
+          <Input id="start" type="date" aria-label="Start date" value={opts.startDate} min={todayISO()} onChange={(e) => setOpts({ ...opts, startDate: e.target.value })} />
         </Section>
 
         <Section title="Meals each day" description={profile.mealsPerDay ? "Defaulted from your profile." : undefined}>
@@ -246,11 +254,7 @@ function Generator({ profile }: { profile: Profile }) {
         <Section title="Meal times" description={profile.workStart && profile.workEnd ? `Suggested from your work hours (${formatTime(profile.workStart)}–${formatTime(profile.workEnd)}).` : "Change any time to fit your day."}>
           <ListGroup>
             {slots.map((s) => (
-              <ListRow
-                key={s}
-                title={<label htmlFor={`t-${s}`}>{MEAL_LABEL[s]}</label>}
-                trailing={<Input id={`t-${s}`} type="time" className="w-32" value={opts.times[s] ?? baseTimes[s]} onChange={(e) => setOpts({ ...opts, times: { ...opts.times, [s]: e.target.value } })} />}
-              />
+              <MealTimeRow key={s} id={`t-${s}`} mealType={s} value={opts.times[s] ?? baseTimes[s]} onChange={(v) => setOpts({ ...opts, times: { ...opts.times, [s]: v } })} />
             ))}
           </ListGroup>
         </Section>
@@ -277,9 +281,11 @@ function Generator({ profile }: { profile: Profile }) {
 
         <Section title="Budget" badge={<FeatureBadge feature="budget_optimizer" />}>
           <ListGroup>
-            <ListRow title={<label htmlFor="budget-on">Keep within my weekly budget</label>} description="Cheaper safe recipes are preferred until the plan fits. Never at the cost of allergy, diet or protein needs." trailing={<Switch id="budget-on" checked={useBudget} onCheckedChange={setUseBudget} />} />
+            <ListRow icon={<Wallet />} iconTone="amber" title={<label htmlFor="budget-on">Keep within my weekly budget</label>} description="Cheaper safe recipes are preferred until the plan fits. Never at the cost of allergy, diet or protein needs." trailing={<Switch id="budget-on" checked={useBudget} onCheckedChange={setUseBudget} />} />
             {useBudget && (
               <ListRow
+                icon={<Banknote />}
+                iconTone="lime"
                 title={<label htmlFor="budget">Weekly food budget</label>}
                 trailing={
                   <div className="flex items-center gap-1.5">
@@ -294,9 +300,14 @@ function Generator({ profile }: { profile: Profile }) {
 
         <Section title="Cooking time">
           <Surface>
-            <div className="text-callout flex items-center justify-between">
-              <span className="text-muted-foreground">Up to</span>
-              <span className="tabular text-headline">{opts.maxPrepMinutes} min per meal</span>
+            <div className="flex items-center gap-3">
+              <IconTile tone="sky">
+                <Timer />
+              </IconTile>
+              <div className="min-w-0 flex-1">
+                <p className="text-caption text-muted-foreground">Up to</p>
+                <p className="tabular text-headline">{opts.maxPrepMinutes} min per meal</p>
+              </div>
             </div>
             <Slider className="mt-4" min={10} max={90} step={5} value={[opts.maxPrepMinutes]} onValueChange={([v]) => setOpts({ ...opts, maxPrepMinutes: v })} aria-label="Maximum cooking time" />
             <p className="text-caption mt-3 text-muted-foreground">We only use recipes within this time. If a meal can&apos;t be filled, we&apos;ll ask before allowing longer.</p>
@@ -380,11 +391,11 @@ function DraftReview({
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          <StatTile label="Days" value={days.length} />
-          <StatTile label="Avg energy" value={`~${Math.round(perDay(totals.energyKcal)).toLocaleString("en-US")}`} unit="kcal" />
-          <StatTile label="Food cost" value={fmt.bdt(cost)} hint="estimate" />
-        </div>
+        <Surface padding="sm" className="grid grid-cols-3 gap-2">
+          <StatTile label="Days" value={days.length} icon={<CalendarDays />} iconTone="lime" />
+          <StatTile label="Avg energy" value={`~${Math.round(perDay(totals.energyKcal)).toLocaleString("en-US")}`} unit="kcal" icon={<Flame />} iconTone="terracotta" />
+          <StatTile label="Food cost" value={fmt.bdt(cost)} hint="estimate" icon={<Wallet />} iconTone="amber" />
+        </Surface>
 
         {!v.safety && (
           <SafetyAlert title="This draft can't be activated">
@@ -402,9 +413,14 @@ function DraftReview({
 
         <Section title="Why these meals">
           <Surface>
-            <ul className="text-callout list-disc space-y-1.5 pl-4">
+            <ul className="text-callout space-y-2.5">
               {(draft.explanation ?? []).map((e) => (
-                <li key={e}>{e}</li>
+                <li key={e} className="flex gap-2.5">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-sage text-forest">
+                    <Check className="size-3" strokeWidth={3} aria-hidden />
+                  </span>
+                  <span>{e}</span>
+                </li>
               ))}
             </ul>
           </Surface>

@@ -67,16 +67,22 @@ function Subscription() {
           </div>
         )}
 
-        <div role="radiogroup" aria-label="Billing cycle" className="grid h-12 grid-cols-2 gap-1 rounded-full bg-card p-1 shadow-card">
+        <div role="radiogroup" aria-label="Billing cycle" className="grid h-11 grid-cols-2 gap-1 rounded-full bg-muted p-1">
           {(["monthly", "yearly"] as const).map((c) => (
             <button
               key={c}
               role="radio"
               aria-checked={cycle === c}
               onClick={() => setCycle(c)}
-              className={cn("text-callout rounded-full font-medium transition-colors", cycle === c ? "bg-lime font-semibold text-charcoal" : "text-muted-foreground hover:text-charcoal")}
+              className={cn("text-callout rounded-full font-medium transition-colors", cycle === c ? "bg-card font-semibold text-charcoal shadow-card" : "text-muted-foreground hover:text-charcoal")}
             >
-              {c === "monthly" ? "Monthly" : "Yearly · 2 months free"}
+              {c === "monthly" ? (
+                "Monthly"
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  Yearly <span className="rounded-full bg-sage px-1.5 py-px text-[11px] font-semibold text-forest">2 months free</span>
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -90,7 +96,7 @@ function Subscription() {
             return (
               <Surface key={t.id} padding="lg" tone={recommended && covers ? "lime" : "default"} className={cn("relative overflow-hidden", highlight && !covers && "opacity-60")}>
                 {recommended && covers && <span className="absolute -top-12 -right-12 size-36 rounded-full bg-white/25" aria-hidden />}
-                <div className="relative flex items-start justify-between gap-3">
+                <div className="relative flex items-start gap-3">
                   <IconTile tone={recommended && covers ? "white" : TIER_LOOK[t.id].tone} size="lg">
                     {TIER_LOOK[t.id].icon}
                   </IconTile>
@@ -98,7 +104,7 @@ function Subscription() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-title">{t.name}</p>
                       {current && <Pill tone="forest">Current</Pill>}
-                      {recommended && covers && !current && <Pill className="bg-charcoal text-white">Suggested</Pill>}
+                      {recommended && covers && !current && <Pill tone="forest">Suggested</Pill>}
                     </div>
                     <p className={cn("text-callout mt-0.5", recommended && covers ? "text-charcoal/80" : "text-muted-foreground")}>{t.tagline}</p>
                   </div>
@@ -110,7 +116,7 @@ function Subscription() {
                 <ul className={cn("text-callout relative mt-4 space-y-2 border-t pt-4", recommended && covers ? "border-charcoal/10" : "border-border/70")}>
                   {t.features.map((f) => (
                     <li key={f} className="flex gap-2.5">
-                      <span className={cn("mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-full", recommended && covers ? "bg-charcoal text-lime" : "bg-sage text-forest")} aria-hidden>
+                      <span className={cn("mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-full", recommended && covers ? "bg-forest text-white" : "bg-sage text-forest")} aria-hidden>
                         <Check className="size-3" strokeWidth={3} />
                       </span>
                       {f}
@@ -123,7 +129,7 @@ function Subscription() {
                       Switch to Free
                     </Button>
                   ) : (
-                    <Button asChild className={cn("relative mt-5 w-full", recommended && covers && "bg-charcoal hover:bg-charcoal/90")} variant={recommended && covers ? "default" : "outline"}>
+                    <Button asChild size={recommended && covers ? "lg" : "default"} className="relative mt-5 w-full" variant={recommended && covers ? "default" : "outline"}>
                       <Link href={`/subscription/checkout?tier=${t.id}&cycle=${cycle}`}>{tier === "free" ? "Start 7-day free trial" : `Switch to ${t.name}`}</Link>
                     </Button>
                   ))}

@@ -14,7 +14,7 @@ npm run dev        # http://localhost:3000 (the service worker is disabled in de
 npm run build && npm start   # production mode, enables the PWA service worker
 ```
 
-On the welcome screen, choose **Explore with demo data** to jump straight into a populated account: an adult profile, a 7‑month‑old child profile, an active 7-day plan, food journal history, habits, a pantry and notifications. **Create account** instead runs the real new-user path: full onboarding → plan setup → an empty journal.
+On the welcome screen, choose **Explore with demo data** to jump straight into a populated account: an adult profile, a 7‑month‑old child profile, an active 7-day plan, food journal history, habits, a pantry and notifications. **Create account** instead runs the real new-user path: a short safety-first onboarding (11 short screens for an adult: who it’s for, age, body, goal, health-data consent, allergies, conditions, life stage, health flags, an emergency check and permissions) → plan setup → an empty journal. Work, schedule, food likes and kitchen are personalized later from Profile.
 
 The **Admin console** (Profile → Admin console) covers clinical review, foods, recipe publishing, the rule library, translations and analytics. Approving a recipe there applies app-wide; food edits stay drafts until reviewed.
 

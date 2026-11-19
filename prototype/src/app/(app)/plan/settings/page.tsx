@@ -3,14 +3,15 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
+import { CalendarSync } from "lucide-react"
 import { ListGroup, ListRow, PageBody, PageHeader, Section, StickyFooter } from "@/components/app/page"
 import { Segmented } from "@/components/app/controls"
 import { InfoNote } from "@/components/app/alerts"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { MealTimeRow } from "@/components/plan/meal-time-row"
 import { Switch } from "@/components/ui/switch"
 import { useActivePlan, useApp, useSelfProfile } from "@/lib/store"
-import { MEAL_LABEL, SLOTS, defaultMealTimes, defaultMealsPerDay, validatePlan } from "@/lib/planning"
+import { SLOTS, defaultMealTimes, defaultMealsPerDay, validatePlan } from "@/lib/planning"
 import { formatTime, todayISO } from "@/lib/date"
 import type { MealType, Profile } from "@/lib/types"
 
@@ -71,20 +72,20 @@ function SettingsForm({ profile }: { profile: Profile }) {
         <Section title="Meal times" description={profile.workStart && profile.workEnd ? `Suggestions are based on your work hours (${formatTime(profile.workStart)}–${formatTime(profile.workEnd)}).` : undefined}>
           <ListGroup>
             {slots.map((s) => (
-              <ListRow key={s} title={<label htmlFor={`st-${s}`}>{MEAL_LABEL[s]}</label>} trailing={<Input id={`st-${s}`} type="time" className="w-32" value={times[s]} onChange={(e) => setTimes({ ...times, [s]: e.target.value })} />} />
+              <MealTimeRow key={s} id={`st-${s}`} mealType={s} value={times[s]} onChange={(v) => setTimes({ ...times, [s]: v })} />
             ))}
           </ListGroup>
         </Section>
         {plan && (
           <ListGroup>
-            <ListRow title={<label htmlFor="apply">Update upcoming meals in my plan</label>} description="Meals you've recorded or moved yourself stay as they are." trailing={<Switch id="apply" checked={applyToPlan} onCheckedChange={setApplyToPlan} />} />
+            <ListRow icon={<CalendarSync />} iconTone="sage" title={<label htmlFor="apply">Update upcoming meals in my plan</label>} description="Meals you've recorded or moved yourself stay as they are." trailing={<Switch id="apply" checked={applyToPlan} onCheckedChange={setApplyToPlan} />} />
           </ListGroup>
         )}
         <InfoNote>Meals are kept at least 90 minutes apart; we&apos;ll tell you if a time is very late or too close to another meal.</InfoNote>
       </PageBody>
       <StickyFooter>
         <Button size="lg" className="w-full" onClick={save}>
-          Save
+          Save meal times
         </Button>
       </StickyFooter>
     </>

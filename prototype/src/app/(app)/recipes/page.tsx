@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { BookHeart, Clock, Flame, Plus, Scale, Search, ShieldCheck } from "lucide-react"
-import { EmptyState, ListLink, PageBody, PageHeader, Pill, Section } from "@/components/app/page"
+import { EmptyState, ListGroup, ListRow, PageBody, PageHeader, Pill, Section } from "@/components/app/page"
 import { SCENE_PHOTO } from "@/lib/data/photos"
 import { cn } from "@/lib/utils"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
@@ -93,29 +93,30 @@ export default function RecipesPage() {
         </div>
 
         {!infant && (
-          <ListLink
-            href="/recipes/library"
-            icon={<BookHeart />}
-            title={
-              <>
-                My recipe library <FeatureBadge feature="recipe_library" />
-              </>
-            }
-            description={userRecipes.length ? `${userRecipes.length} of your own recipes` : "Save family recipes and see their nutrition"}
-          />
-        )}
-        {!infant && (
-          <ListLink
-            href="/recipes/compare"
-            icon={<Scale />}
-            iconTone="amber"
-            title={
-              <>
-                Compare two meals <FeatureBadge feature="budget_optimizer" />
-              </>
-            }
-            description="Cost and nutrition side by side"
-          />
+          <ListGroup>
+            <ListRow
+              href="/recipes/library"
+              icon={<BookHeart />}
+              iconTone="lime"
+              title={
+                <>
+                  My recipe library <FeatureBadge feature="recipe_library" />
+                </>
+              }
+              description={userRecipes.length ? `${userRecipes.length} of your own recipes` : "Save family recipes and see their nutrition"}
+            />
+            <ListRow
+              href="/recipes/compare"
+              icon={<Scale />}
+              iconTone="amber"
+              title={
+                <>
+                  Compare two meals <FeatureBadge feature="budget_optimizer" />
+                </>
+              }
+              description="Cost and nutrition side by side"
+            />
+          </ListGroup>
         )}
 
         {infant && <InfoNote title="Pending clinical review">Infant recipes in this prototype are illustrative and would be published only after pediatric review (§12, §43).</InfoNote>}

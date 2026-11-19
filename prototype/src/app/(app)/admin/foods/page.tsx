@@ -3,7 +3,7 @@
 // Admin food records (§8, §28.1). Edits are saved as drafts that need review before they're published.
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { Search } from "lucide-react"
+import { Search, SearchX } from "lucide-react"
 import { toast } from "sonner"
 import { FOODS, REVIEW_STATUS_LABEL } from "@/lib/data/foods"
 import { useApp } from "@/lib/store"
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { ListGroup, ListRow, PageBody, PageHeader, Pill, Section, type PillTone } from "@/components/app/page"
+import { EmptyState, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, type PillTone } from "@/components/app/page"
 import { Field, PillGroup, Segmented } from "@/components/app/controls"
 import { InfoNote } from "@/components/app/alerts"
 import { FoodTile } from "@/components/log/food-tile"
@@ -46,7 +46,10 @@ export default function AdminFoodsPage() {
           <Segmented label="Filter" value={filter} onChange={setFilter} options={[{ value: "all", label: "All" }, { value: "needs_review", label: "Needs review" }, { value: "drafts", label: "Drafts" }]} />
         </div>
 
-        <Section title={`${list.length} foods`}>
+        <Section title={`${list.length} ${list.length === 1 ? "food" : "foods"}`}>
+          {list.length === 0 ? (
+            <EmptyState icon={<SearchX />} title={filter === "drafts" ? "No draft edits" : "No matching foods"} description={filter === "drafts" ? "Edits you save become drafts here until they're reviewed." : "Try another name, Bangla name or id."} />
+          ) : (
           <ListGroup>
             {list.map((f) => {
               const status = f.reviewStatus ?? "none"
@@ -58,15 +61,19 @@ export default function AdminFoodsPage() {
                   iconTone="white"
                   title={f.name}
                   description={
-                    <span>
-                      <span lang="bn">{f.nameBn}</span> · {f.state} · ~{f.per100g.energyKcal} kcal/100 g
-                    </span>
+                    <>
+                      <span lang="bn">{f.nameBn}</span> · {f.state}
+                      <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span className="tabular">~{f.per100g.energyKcal} kcal/100 g</span>
+                        {overrides[f.id] ? <Pill tone="terracotta">Draft</Pill> : <Pill tone={TONE[status]}>{REVIEW_STATUS_LABEL[status]}</Pill>}
+                      </span>
+                    </>
                   }
-                  trailing={overrides[f.id] ? <Pill tone="terracotta">Draft</Pill> : <Pill tone={TONE[status]}>{REVIEW_STATUS_LABEL[status]}</Pill>}
                 />
               )
             })}
           </ListGroup>
+          )}
         </Section>
       </PageBody>
 

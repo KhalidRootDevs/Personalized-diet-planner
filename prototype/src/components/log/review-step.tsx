@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Camera, ChevronDown, CookingPot, ImagePlus, Plus } from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -303,7 +303,7 @@ export function ReviewStep({
           )}
         </Section>
 
-        {mixed && (
+        {mixed && (mixedIsCurry || matching.length > 0) && (
           <Section
             title={mixedIsCurry ? `What was the main ingredient in the ${mixed.displayName.replace(/ \(.*\)/, "").toLowerCase()}?` : `Is your ${mixed.displayName.replace(/ \(.*\)/, "").toLowerCase()} like one of these recipes?`}
             description="Mixed dishes vary a lot. A matching recipe gives a better estimate than a single food."
@@ -384,9 +384,12 @@ export function ReviewStep({
                 <Label htmlFor="reaction">Any reaction?</Label>
                 <Textarea id="reaction" rows={2} value={child.reaction} onChange={(e) => setChild({ ...child, reaction: e.target.value })} placeholder="e.g. none observed, mild rash around mouth" />
               </div>
-              <label className="text-callout flex items-start gap-3">
-                <Checkbox className="mt-0.5" checked={child.firstTime} onCheckedChange={(v) => setChild({ ...child, firstTime: v === true })} />
-                First time trying this — add to the introduction tracker
+              <label className="flex min-h-11 items-center justify-between gap-3 border-t border-border/70 pt-4">
+                <span className="min-w-0">
+                  <span className="text-callout block font-medium">First time trying this</span>
+                  <span className="text-caption block text-muted-foreground">Adds it to the introduction tracker</span>
+                </span>
+                <Switch checked={child.firstTime} onCheckedChange={(v) => setChild({ ...child, firstTime: v })} aria-label="First time trying this" />
               </label>
             </Surface>
           </Section>
@@ -454,9 +457,12 @@ export function ReviewStep({
               <Input id="when" type="time" value={time} onChange={(e) => setTime(e.target.value)} className="tabular w-36" />
             </div>
             {!isChild && source !== "saved" && (
-              <label className="text-callout flex items-center gap-3 border-t border-border/70 pt-4">
-                <Checkbox checked={saveAsUsual} onCheckedChange={(v) => setSaveAsUsual(v === true)} />
-                Save as a usual meal for quicker logging
+              <label className="flex min-h-11 items-center justify-between gap-3 border-t border-border/70 pt-4">
+                <span className="min-w-0">
+                  <span className="text-callout block font-medium">Save as a usual meal</span>
+                  <span className="text-caption block text-muted-foreground">Log it again in one tap next time</span>
+                </span>
+                <Switch checked={saveAsUsual} onCheckedChange={setSaveAsUsual} aria-label="Save as a usual meal" />
               </label>
             )}
           </Surface>

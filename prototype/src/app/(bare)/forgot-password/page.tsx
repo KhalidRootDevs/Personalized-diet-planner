@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { MailCheck } from "lucide-react"
+import { KeyRound, MailCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field } from "@/components/app/controls"
@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
         </div>
       ) : (
         <form
-          className="space-y-5"
+          className="space-y-5 rounded-2xl bg-card p-4 shadow-card"
           noValidate
           onSubmit={(e) => {
             e.preventDefault()
@@ -48,6 +48,10 @@ export default function ForgotPasswordPage() {
           <Button type="submit" size="lg" className="w-full">
             {tx("Send reset link", "রিসেট লিংক পাঠান")}
           </Button>
+          <p className="text-caption flex items-start gap-2 text-muted-foreground">
+            <KeyRound className="mt-px size-4 shrink-0 text-forest" aria-hidden />
+            {tx("The link expires after 30 minutes. Prototype: no email is sent.", "লিংকটি ৩০ মিনিট পরে মেয়াদোত্তীর্ণ হয়। প্রোটোটাইপ: কোনো ইমেইল পাঠানো হয় না।")}
+          </p>
         </form>
       )}
     </AuthShell>

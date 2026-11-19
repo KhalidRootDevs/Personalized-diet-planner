@@ -20,6 +20,17 @@ export const RECIPE_PHOTO: Record<string, string> = {
   r_inf_banana: "/food/inf-banana.jpg",
   r_inf_egg: "/food/inf-egg.jpg",
   r_inf_khichuri: "/food/inf-khichuri.jpg",
+  // Quick adult recipes: closest placeholder photo until dish photography exists.
+  r_rice_egg_curry: "/food/rice-chicken-dal.jpg",
+  r_roti_dal_lalshak: "/food/roti-chickpea.jpg",
+  r_rice_tilapia_potol: "/food/rice-fish-dal.jpg",
+  r_rice_dal_begun: "/food/bhorta.jpg",
+  r_roti_borboti_egg: "/food/omelette-roti.jpg",
+  r_rice_chicken_lau: "/food/rice-chicken-dal.jpg",
+  r_chira_doi_banana: "/food/doi-guava.jpg",
+  r_muri_chickpea: "/food/tea-chickpea.jpg",
+  r_papaya_peanuts: "/food/fruits.jpg",
+  r_rice_katla_kumra: "/food/rice-fish-dal.jpg",
 }
 
 /** Scene photos for heroes and category tiles. */

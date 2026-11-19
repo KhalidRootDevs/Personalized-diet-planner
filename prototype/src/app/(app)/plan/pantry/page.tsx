@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
-import { CalendarPlus, Package, Pencil, ShieldCheck, Trash2 } from "lucide-react"
+import { CalendarClock, CalendarPlus, Package, Plus, ShieldCheck, Trash2 } from "lucide-react"
+import { FoodTile } from "@/components/log/food-tile"
 import { EmptyState, ListGroup, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { InfoNote } from "@/components/app/alerts"
@@ -64,9 +65,15 @@ function PantryContent() {
         <Section title="Use soon" description="These are close to their best-before date.">
           <ListGroup>
             {soon.map((p) => (
-              <div key={p.id} className="flex min-h-[56px] items-center gap-3 px-4 py-2.5">
-                <span className="text-body min-w-0 flex-1 font-medium">{p.name}</span>
-                <Pill tone="caution">By {formatDay(p.expiresOn!, { day: "numeric", month: "short" })}</Pill>
+              <div key={p.id} className="flex min-h-[60px] items-center gap-3 px-4 py-3">
+                <FoodTile foodId={p.foodId} name={p.name} size="sm" />
+                <span className="min-w-0 flex-1">
+                  <span className="text-body block font-medium">{p.name}</span>
+                  <span className="tabular text-caption block text-muted-foreground">{friendlyGrams(p.grams)} left</span>
+                </span>
+                <Pill tone="caution" icon={<CalendarClock />}>
+                  By {formatDay(p.expiresOn!, { day: "numeric", month: "short" })}
+                </Pill>
               </div>
             ))}
           </ListGroup>
@@ -75,12 +82,12 @@ function PantryContent() {
               <p className="text-overline px-1 pt-2 text-muted-foreground">Recipes that use them</p>
               <div className="no-scrollbar -mx-[var(--gutter)] flex gap-3 overflow-x-auto px-[var(--gutter)] pb-1">
                 {useSoon.map((r) => (
-                  <div key={r.id} className="w-44 shrink-0 overflow-hidden rounded-2xl bg-card shadow-card">
-                    <Link href={`/recipes/${r.id}`} className="block transition-colors hover:bg-muted/40">
-                      <RecipeThumb recipe={r} size="hero" className="h-24 rounded-none" />
-                      <p className="text-callout line-clamp-2 px-3 pt-3 font-medium">{r.name}</p>
+                  <div key={r.id} className="flex w-44 shrink-0 flex-col rounded-2xl bg-card p-2 shadow-card">
+                    <Link href={`/recipes/${r.id}`} className="block rounded-[18px] transition-colors hover:bg-muted/40">
+                      <RecipeThumb recipe={r} size="hero" className="h-24 rounded-[18px]" />
+                      <p className="text-callout line-clamp-2 min-h-10 px-1.5 pt-2.5 leading-snug font-semibold">{r.name}</p>
                     </Link>
-                    <div className="p-3 pt-2">
+                    <div className="mt-auto px-1 pt-2.5 pb-1">
                       <Button size="sm" variant="secondary" className="w-full" onClick={() => setAdding(r)}>
                         <CalendarPlus className="size-4" /> Add to plan
                       </Button>
@@ -93,14 +100,19 @@ function PantryContent() {
         </Section>
       )}
 
-      <Section title="In your kitchen" description="Tap an item to change the amount or date.">
+      <Section
+        title="In your kitchen"
+        badge={pantry.length > 0 ? <span className="tabular grid h-5 min-w-5 place-items-center rounded-full bg-lime px-1.5 text-[11px] font-semibold text-charcoal">{pantry.length}</span> : undefined}
+        description="Tap an item to change the amount or date."
+      >
         {pantry.length === 0 ? (
           <EmptyState icon={<Package />} title="Your pantry is empty" description="Add staples like rice, lentils and oil so shopping lists skip what you already have." />
         ) : (
           <ListGroup>
             {pantry.map((p) => (
               <div key={p.id} className="flex min-h-[60px] items-center gap-1 pr-2">
-                <button type="button" onClick={() => setEditing(p)} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50">
+                <button type="button" onClick={() => setEditing(p)} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50">
+                  <FoodTile foodId={p.foodId} name={p.name} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="text-body block font-medium">{p.name}</span>
                     <span className={cn("tabular text-caption block", soon.some((s) => s.id === p.id) ? "text-caution" : "text-muted-foreground")}>
@@ -108,7 +120,6 @@ function PantryContent() {
                       {p.expiresOn && ` · best before ${formatDay(p.expiresOn, { day: "numeric", month: "short" })}`}
                     </span>
                   </span>
-                  <Pencil className="size-4 shrink-0 text-muted-grey" aria-hidden />
                 </button>
                 <button className="grid size-10 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted" aria-label={`Remove ${p.name}`} onClick={() => remove(p.id)}>
                   <Trash2 className="size-[18px]" />
@@ -147,6 +158,7 @@ function PantryContent() {
             </div>
           </div>
           <Button
+            variant="secondary"
             className="w-full"
             disabled={!foodId || !Number(grams)}
             onClick={() => {
@@ -160,7 +172,7 @@ function PantryContent() {
               setExpires("")
             }}
           >
-            Add to pantry
+            <Plus className="size-4" /> Add to pantry
           </Button>
         </Surface>
       </Section>
@@ -232,9 +244,9 @@ function AddToPlanSheet({ recipe, onClose }: { recipe: Recipe | null; onClose: (
         </SheetHeader>
         <div className="space-y-4 px-5">
           {!plan ? (
-            <p className="text-callout text-muted-foreground">Activate a meal plan first.</p>
+            <EmptyState icon={<CalendarPlus />} title="No active plan" description="Activate a meal plan first, then you can swap this recipe into it." />
           ) : slots.length === 0 ? (
-            <p className="text-callout text-muted-foreground">No matching upcoming meal to replace in the next 3 days.</p>
+            <EmptyState icon={<CalendarPlus />} title="No matching meal" description="There's no upcoming meal of this type to replace in the next 3 days." />
           ) : (
             <ListGroup>
               {slots.map((m) => {

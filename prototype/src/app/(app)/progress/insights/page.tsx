@@ -140,13 +140,13 @@ export default function InsightsPage() {
             {ci.length === 0 && feedback.length === 0 ? (
               <InfoNote>Add a check-in on Progress or rate a meal to see this view.</InfoNote>
             ) : (
-              <Surface>
+              <Surface className="divide-y divide-border/70 py-2">
                 <LevelRow label="Energy" values={ci.map((c) => c.energy)} />
                 <LevelRow label="Hunger" values={ci.map((c) => c.hunger)} />
                 <LevelRow label="Fullness after meals" values={ci.map((c) => c.fullness)} />
-                <KeyValue label="Meals enjoyed" value={feedback.length ? `${feedback.filter((f) => f.enjoyed === "yes").length} of ${feedback.length} rated` : "–"} />
-                <KeyValue label="Portion felt right" value={feedback.length ? `${feedback.filter((f) => f.portion === "right").length} of ${feedback.length} rated` : "–"} />
-                <p className="text-caption border-t border-border/70 pt-2 text-muted-foreground">Based on {ci.length} check-ins and {feedback.length} meal ratings. Self-reports vary with sleep, stress and work.</p>
+                <KeyValue className="py-2.5" label="Meals enjoyed" value={feedback.length ? `${feedback.filter((f) => f.enjoyed === "yes").length} of ${feedback.length} rated` : "–"} />
+                <KeyValue className="py-2.5" label="Portion felt right" value={feedback.length ? `${feedback.filter((f) => f.portion === "right").length} of ${feedback.length} rated` : "–"} />
+                <p className="text-caption pt-3 pb-1 text-muted-foreground">Based on {ci.length} check-ins and {feedback.length} meal ratings. Self-reports vary with sleep, stress and work.</p>
               </Surface>
             )}
           </PremiumGate>
@@ -379,5 +379,20 @@ export default function InsightsPage() {
 function LevelRow({ label, values }: { label: string; values: (Level3 | undefined)[] }) {
   const v = values.filter(Boolean) as Level3[]
   const c = (l: Level3) => v.filter((x) => x === l).length
-  return <KeyValue label={label} value={v.length ? `${c("low")} low · ${c("ok")} OK · ${c("high")} high` : "–"} />
+  const text = v.length ? `${c("low")} low · ${c("ok")} OK · ${c("high")} high` : "–"
+  return (
+    <div className="py-2.5">
+      <div className="text-callout flex items-baseline justify-between gap-4">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="tabular text-right font-medium">{text}</span>
+      </div>
+      {v.length > 0 && (
+        <div className="mt-2 flex h-2 gap-0.5 overflow-hidden rounded-full" aria-hidden>
+          {(["low", "ok", "high"] as Level3[]).map((l) =>
+            c(l) ? <span key={l} className={cn("h-full", { low: "bg-amber-tint", ok: "bg-lime", high: "bg-sky-tint" }[l])} style={{ flexGrow: c(l) }} /> : null,
+          )}
+        </div>
+      )}
+    </div>
+  )
 }

@@ -210,19 +210,18 @@ function RecipeScreen() {
                   <div className="flex items-center gap-3">
                     <FoodTile foodId={i.foodId} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-body">{f?.name ?? i.foodId}</p>
-                      <p className="text-caption text-muted-foreground">
-                        {f && <span className="capitalize">{f.state}</span>}
+                      <p className="text-body leading-snug font-medium">{f?.name ?? i.foodId}</p>
+                      <p className="tabular text-caption mt-0.5 text-muted-foreground">
+                        <span className="font-semibold text-charcoal">{friendlyGrams(grams)}</span>
+                        {unit && ` ≈ ${Math.round(grams / unit.grams)} × ${unit.label.replace(/^1 /, "")}`}
+                        {f && (
+                          <>
+                            {" · "}
+                            <span className="capitalize">{f.state}</span>
+                          </>
+                        )}
                         {i.note && ` · ${i.note}`}
                       </p>
-                    </div>
-                    <div className="tabular shrink-0 text-right">
-                      <p className="text-callout font-semibold">{friendlyGrams(grams)}</p>
-                      {unit && (
-                        <p className="text-caption text-muted-foreground">
-                          ≈ {Math.round(grams / unit.grams)} × {unit.label.replace(/^1 /, "")}
-                        </p>
-                      )}
                     </div>
                     {alts.length > 0 && (
                       <Button size="sm" variant="ghost" aria-expanded={swapping === idx} onClick={() => setSwapping(swapping === idx ? null : idx)}>
@@ -284,9 +283,9 @@ function RecipeScreen() {
         </Section>
 
         <Section title="Steps">
-          <ol className="space-y-4">
+          <ol className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
             {recipe.steps.map((step, i) => (
-              <li key={i} className="flex gap-3.5 rounded-2xl bg-card p-3.5 shadow-card">
+              <li key={i} className="flex gap-3.5 px-4 py-3.5">
                 <span className="tabular text-callout grid size-8 shrink-0 place-items-center rounded-full bg-lime font-bold text-charcoal">{i + 1}</span>
                 <p className="text-body pt-0.5">{step}</p>
               </li>

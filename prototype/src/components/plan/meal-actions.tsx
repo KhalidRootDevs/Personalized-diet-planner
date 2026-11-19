@@ -7,7 +7,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
-import { ArrowLeftRight, BookOpen, CalendarClock, Check, CircleCheck, NotebookPen, RefreshCw, Scale, SkipForward, Timer } from "lucide-react"
+import { ArrowLeftRight, BookOpen, CalendarClock, Check, CircleCheck, NotebookPen, RefreshCw, Scale, SkipForward, Timer, Users } from "lucide-react"
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
 import { EstimateNote } from "@/components/app/nutrition"
-import { BackButton, ListGroup, ListRow, Pill, StatTile } from "@/components/app/page"
+import { BackButton, EmptyState, ListGroup, ListRow, Pill, StatTile, Surface } from "@/components/app/page"
 import { Segmented, Stepper } from "@/components/app/controls"
 import { useApp, useSelfProfile } from "@/lib/store"
 import { MEAL_LABEL, regenerateDay, swapOptions, type SwapMode } from "@/lib/planning"
@@ -106,14 +106,14 @@ export function MealActions({ mealId, onDone, page, initialView = "main" }: { me
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <Surface padding="sm" className="grid grid-cols-3 gap-2">
         <StatTile label="Energy" value={`~${Math.round(n.energyKcal)}`} unit="kcal" />
         <StatTile label="Protein" value={`~${Math.round(n.proteinG)}`} unit="g" />
         <StatTile label="Cost (est.)" value={fmt.bdt(cost)} />
         <StatTile label="Carbs" value={`~${Math.round(n.carbsG)}`} unit="g" />
         <StatTile label="Fat" value={`~${Math.round(n.fatG)}`} unit="g" />
         <StatTile label="Fiber" value={`~${Math.round(n.fiberG)}`} unit="g" />
-      </div>
+      </Surface>
       {recipe.reviewStatus === "personal" && <Pill>Your recipe · not reviewed</Pill>}
       {safety.length > 0 && (
         <CautionNote title="Safety notes">
@@ -127,6 +127,8 @@ export function MealActions({ mealId, onDone, page, initialView = "main" }: { me
 
       <ListGroup>
         <ListRow
+          icon={<Users />}
+          iconTone="amber"
           title="Servings"
           description="Updates nutrition and shopping"
           trailing={
@@ -156,11 +158,12 @@ export function MealActions({ mealId, onDone, page, initialView = "main" }: { me
       )}
 
       <ListGroup>
-        <ListRow icon={<NotebookPen />} title="Log what I ate" description="Photo, search or text" onClick={() => router.push(`/log/new?meal=${meal.id}`)} />
-        <ListRow icon={<ArrowLeftRight />} title="Replace meal" description="Similar, cheaper or quicker options" onClick={() => setView("swap")} />
-        <ListRow icon={<BookOpen />} title="View recipe" description={`${recipe.prepMinutes + recipe.cookMinutes} min · serves ${recipe.servings}`} onClick={() => router.push(`/recipes/${recipe.id}?meal=${meal.id}`)} />
+        <ListRow icon={<NotebookPen />} iconTone="lime" title="Log what I ate" description="Photo, search or text" onClick={() => router.push(`/log/new?meal=${meal.id}`)} />
+        <ListRow icon={<ArrowLeftRight />} iconTone="sky" title="Replace meal" description="Similar, cheaper or quicker options" onClick={() => setView("swap")} />
+        <ListRow icon={<BookOpen />} iconTone="terracotta" title="View recipe" description={`${recipe.prepMinutes + recipe.cookMinutes} min · serves ${recipe.servings}`} onClick={() => router.push(`/recipes/${recipe.id}?meal=${meal.id}`)} />
         <ListRow
           icon={<Timer />}
+          iconTone="amber"
           title="Prepare later"
           description={meal.prepLater ? "In your meal-prep list" : "Add to your meal-prep list"}
           trailing={
@@ -176,7 +179,7 @@ export function MealActions({ mealId, onDone, page, initialView = "main" }: { me
             toast(meal.prepLater ? "Removed from prep list" : "Added to your prep list")
           }}
         />
-        <ListRow icon={<CalendarClock />} title="Reschedule" description="Move to another day or time" onClick={() => setView("reschedule")} />
+        <ListRow icon={<CalendarClock />} iconTone="sage" title="Reschedule" description="Move to another day or time" onClick={() => setView("reschedule")} />
         <ListRow icon={<RefreshCw />} iconTone="sky" title="Regenerate this day" description="New picks for unrecorded meals, same rules" chevron={false} onClick={regenerate} />
         <ListRow
           icon={<SkipForward />}
@@ -226,7 +229,7 @@ function SwapView({ meal, onBack, onDone, page }: { meal: PlannedMeal; onBack: (
 
   const list =
     options.length === 0 ? (
-      <p className="text-callout rounded-2xl bg-card shadow-card p-4 text-center text-muted-foreground">No alternative meets all of your restrictions for this meal.</p>
+      <EmptyState icon={<ArrowLeftRight />} title="No safe alternatives" description="No other meal meets all of your restrictions for this slot. Your current meal stays as it is." />
     ) : (
       <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
         {options.map((o) => {

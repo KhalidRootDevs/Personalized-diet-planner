@@ -1,6 +1,6 @@
 "use client"
 
-import { Leaf } from "lucide-react"
+import { Leaf, Smartphone } from "lucide-react"
 import { BackButton } from "@/components/app/page"
 import { RECIPE_PHOTO } from "@/lib/data/photos"
 
@@ -46,7 +46,16 @@ export function SocialButtons({ onPick }: { onPick: (provider: string) => void }
   return (
     <div className="grid grid-cols-2 gap-3">
       {["Google", "Phone (OTP)"].map((p) => (
-        <button key={p} type="button" onClick={() => onPick(p)} className="h-12 rounded-full bg-card text-[15px] font-semibold text-charcoal shadow-card transition-colors hover:bg-muted">
+        <button key={p} type="button" onClick={() => onPick(p)} className="flex h-12 items-center justify-center gap-2 rounded-full bg-card text-[15px] font-semibold text-charcoal shadow-card transition-colors hover:bg-muted">
+          {p === "Google" ? (
+            <span className="grid size-6 place-items-center rounded-full bg-sky-tint text-[13px] font-bold text-sky-text" aria-hidden>
+              G
+            </span>
+          ) : (
+            <span className="grid size-6 place-items-center rounded-full bg-sage text-forest" aria-hidden>
+              <Smartphone className="size-3.5" />
+            </span>
+          )}
           {p}
         </button>
       ))}

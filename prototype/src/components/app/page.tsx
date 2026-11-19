@@ -359,7 +359,8 @@ export function KeyValue({ label, value, className }: { label: React.ReactNode; 
 /** Bottom action bar for focus flows and forms (one primary action, optional secondary). */
 export function StickyFooter({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("px-gutter sticky bottom-0 z-20 mt-auto border-t border-border/70 bg-background/95 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md", className)}>
+    // Inside the tab layout it sticks above the bottom nav (--tabbar-offset) and leaves room under the raised Food Log button.
+    <div className={cn("px-gutter sticky bottom-[var(--tabbar-offset,0px)] z-20 mt-auto border-t border-border/70 bg-background/95 pt-3 pb-[max(calc(0.75rem+var(--tabbar-fab,0px)),env(safe-area-inset-bottom))] backdrop-blur-md", className)}>
       <div className="flex flex-col gap-2">{children}</div>
     </div>
   )

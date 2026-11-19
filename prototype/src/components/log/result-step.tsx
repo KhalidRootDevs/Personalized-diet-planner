@@ -7,13 +7,15 @@ import { FeatureBadge } from "@/components/app/badges"
 import { Button } from "@/components/ui/button"
 import { EstimateNote, NutrientBar } from "@/components/app/nutrition"
 import { CautionNote } from "@/components/app/alerts"
-import { IconTile, StickyFooter, Surface } from "@/components/app/page"
+import { IconTile, Pill, StickyFooter, Surface } from "@/components/app/page"
 import { useApp, useActivePlan, useSelfProfile } from "@/lib/store"
 import { adultTargets } from "@/lib/nutrition"
 import { nowHHMM, todayISO, uid } from "@/lib/date"
 import { MEAL_LABEL } from "@/lib/planning"
 import { compareWithRecipe, dayRange, describeDiff, entriesFor, entryRange, entryTitle, itemsKey, remainingMeals, sameMealCount, supportiveSuggestion } from "@/lib/area-b-log"
-import { mealStatus, useRecipeLookup } from "@/lib/area-c-utils"
+import { mealStatus, STATUS_STYLE, useRecipeLookup } from "@/lib/area-c-utils"
+import { RecipeThumb } from "@/components/app/recipe-thumb"
+import { cn } from "@/lib/utils"
 
 /** After confirming (§41.4): the meal estimate as a range, today so far, and one supportive suggestion. */
 export function ResultStep({ entryId, firstTime }: { entryId: string; firstTime?: boolean }) {
@@ -84,12 +86,16 @@ export function ResultStep({ entryId, firstTime }: { entryId: string; firstTime?
           </p>
         </Surface>
         {planned && (
-          <Surface>
-            <p className="text-caption text-muted-foreground">Recorded against your planned {MEAL_LABEL[planned.mealType].toLowerCase()}</p>
-            <p className="text-body mt-0.5 font-medium">
-              {plannedRecipe?.name} · {mealStatus(planned).label}
-            </p>
-            {diff && <p className="text-caption mt-1 text-muted-foreground">Compared with the plan: {diff}.</p>}
+          <Surface className="flex items-start gap-3">
+            {plannedRecipe && <RecipeThumb recipe={plannedRecipe} size="sm" />}
+            <div className="min-w-0 flex-1">
+              <p className="text-caption text-muted-foreground">Recorded against your planned {MEAL_LABEL[planned.mealType].toLowerCase()}</p>
+              <p className="text-body mt-0.5 font-medium">{plannedRecipe?.name}</p>
+              <Pill className={cn("mt-1 h-[22px] px-2 text-[11px]", STATUS_STYLE[mealStatus(planned).tone])}>
+                {mealStatus(planned).label}
+              </Pill>
+              {diff && <p className="text-caption mt-1.5 text-muted-foreground">Compared with the plan: {diff}.</p>}
+            </div>
           </Surface>
         )}
         {(offerMemory || memorySaved) && (

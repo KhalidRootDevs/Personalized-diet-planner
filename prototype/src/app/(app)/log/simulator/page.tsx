@@ -10,6 +10,7 @@ import { InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { Button } from "@/components/ui/button"
 import { ItemEditor } from "@/components/log/item-editor"
 import { FoodPickerSheet, FoodSearchList } from "@/components/log/food-picker"
+import { FoodTile } from "@/components/log/food-tile"
 import { ALLERGEN_LABELS, FOOD_MAP } from "@/lib/data/foods"
 import { useApp, useActivePlan, useSelfProfile } from "@/lib/store"
 import { add, adultTargets, foodNutrients, ZERO } from "@/lib/nutrition"
@@ -72,17 +73,18 @@ function Simulator() {
     return (
       <div className="space-y-7">
         <InfoNote>Pick one or more foods to see how they would fit into today, alongside the meals you still have planned. Nothing is logged unless you choose to.</InfoNote>
-        <Section title="Common choices">
+        <Section title="Common choices" description="Tap one to start. You can add more after.">
           <div className="flex flex-wrap gap-2">
             {QUICK.map((id) => (
-              <button key={id} onClick={() => addFood(id)} className="text-callout h-9 rounded-full bg-card px-4 font-medium shadow-card transition-colors hover:bg-muted">
+              <button key={id} onClick={() => addFood(id)} className="text-callout inline-flex h-11 items-center gap-2 rounded-full bg-card pr-4 pl-1.5 font-medium shadow-card transition-colors hover:bg-muted">
+                <FoodTile foodId={id} size="xs" className="size-8" />
                 {FOOD_MAP[id]?.name ?? id}
               </button>
             ))}
           </div>
         </Section>
         <Section title="Or search">
-          <FoodSearchList profile={self} onPick={addFood} />
+          <FoodSearchList profile={self} onPick={addFood} initialLimit={8} />
         </Section>
       </div>
     )
@@ -105,7 +107,7 @@ function Simulator() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {hits.length > 0 && (
         <SafetyAlert title={`Contains ${Array.from(new Set(hits.map((h) => ALLERGEN_LABELS[h.allergen] ?? h.allergen))).join(", ")}`}>
           {listNames(hits.map((h) => h.item.displayName)).replace(/^./, (c) => c.toUpperCase())} include{hits.length === 1 ? "s" : ""} an allergen recorded in your profile. We don&apos;t suggest it.
@@ -160,7 +162,7 @@ function Simulator() {
           <p className="text-caption border-t border-border/70 pt-3 text-muted-foreground">The thin marker shows today including your remaining planned meals (~{r0(plannedRest)} kcal).</p>
         </Surface>
       )}
-      <div className="text-callout flex gap-3 rounded-2xl bg-sage/70 p-4">
+      <Surface tone="sage" className="text-callout flex gap-3">
         <IconTile tone="white" size="sm">
           <Scale />
         </IconTile>
@@ -177,7 +179,7 @@ function Simulator() {
           )}
           {n.proteinG < 5 && n.energyKcal > 150 && <p className="mt-2">Having it with a protein food, like doi or an egg, can help you feel full for longer.</p>}
         </div>
-      </div>
+      </Surface>
       <EstimateNote />
       <div className="grid grid-cols-2 gap-3">
         <Button variant="outline" onClick={() => setItems([])}>

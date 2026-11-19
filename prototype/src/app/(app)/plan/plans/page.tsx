@@ -6,7 +6,7 @@ import { usePendingAdjustments } from "@/lib/area-d-store"
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
-import { Archive, BadgeCheck, Clock, Copy, Eye, Lightbulb, Pause, Play, Plus, RefreshCw, Send, ShieldAlert } from "lucide-react"
+import { Archive, BadgeCheck, CalendarDays, Check, Clock, Copy, Eye, Lightbulb, Pause, Play, Plus, RefreshCw, Send, ShieldAlert } from "lucide-react"
 import { IconTile, KeyValue, ListGroup, ListLink, ListRow, PageBody, PageHeader, Pill, Section, Surface, type PillTone } from "@/components/app/page"
 import { FeatureBadge, PremiumGate } from "@/components/app/badges"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
@@ -105,7 +105,6 @@ export default function PlansPage() {
             </ListGroup>
           </Section>
         )}
-        <ListLink href="/plan/settings" icon={<Clock />} iconTone="sky" title="Meal times & structure" description="Meals per day and when you eat" />
         <Section title="Suggested changes for next week" badge={<FeatureBadge feature="adaptive" />}>
           <PremiumGate feature="adaptive" compact>
             <AdaptiveSuggestions onView={setViewing} />
@@ -120,25 +119,26 @@ export default function PlansPage() {
               return (
                 <li key={p.id}>
                   <Surface className={cn(p.status === "active" && "ring-2 ring-lime")}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-body font-semibold">{p.title}</p>
-                        <p className="text-caption text-muted-foreground">
+                    <div className="flex items-start gap-3">
+                      <IconTile tone={p.status === "active" ? "lime" : p.status === "archived" ? "muted" : "sage"}>
+                        <CalendarDays />
+                      </IconTile>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-body leading-snug font-semibold">{p.title}</p>
+                        <p className="tabular text-caption mt-0.5 text-muted-foreground">
                           {p.durationDays} days · {formatDay(p.startDate, { day: "numeric", month: "short" })} – {formatDay(addDays(p.startDate, p.durationDays - 1), { day: "numeric", month: "short" })}
-                        </p>
-                        <p className="text-caption text-muted-foreground">
-                          Goal: {p.goal.replace(/_/g, " ")} · created {formatDay(p.createdAt.slice(0, 10), { day: "numeric", month: "short" })}
-                          {p.nextReviewDate && ` · review by ${formatDay(p.nextReviewDate, { day: "numeric", month: "short" })}`}
                         </p>
                       </div>
                       <Pill tone={st.tone}>{st.label}</Pill>
                     </div>
-                    {p.framework && <p className="text-caption mt-2 text-muted-foreground">{p.framework.months}-month framework · week 1 of {p.framework.weeks.length}</p>}
-                    {a.resolved > 0 && (
-                      <p className="tabular text-callout mt-3 text-muted-foreground">
-                        {a.completed} of {a.resolved} recorded meals eaten · {a.asPlanned} as planned, {a.modified + a.replaced} changed
-                      </p>
-                    )}
+                    <div className="mt-3 space-y-0 rounded-xl bg-muted px-3 py-1">
+                      <KeyValue label="Goal" value={sentence(p.goal.replace(/_/g, " "))} />
+                      <KeyValue label="Created" value={formatDay(p.createdAt.slice(0, 10), { day: "numeric", month: "short" })} />
+                      {p.nextReviewDate && <KeyValue label="Check-in by" value={formatDay(p.nextReviewDate, { day: "numeric", month: "short" })} />}
+                      {p.framework && <KeyValue label="Framework" value={`${p.framework.months} months · week 1 of ${p.framework.weeks.length}`} />}
+                      {a.resolved > 0 && <KeyValue label="Recorded meals" value={`${a.completed} of ${a.resolved} eaten`} />}
+                      {a.resolved > 0 && <KeyValue label="As planned · changed" value={`${a.asPlanned} · ${a.modified + a.replaced}`} />}
+                    </div>
                     {p.review?.status === "approved" && (
                       <p className="text-callout mt-3 flex items-center gap-1.5 font-medium text-forest">
                         <BadgeCheck className="size-4" /> Reviewed by {p.review.reviewer}
@@ -208,12 +208,14 @@ export default function PlansPage() {
                           <Play className="size-4" /> Resume
                         </Button>
                       )}
+                    </div>
+                    <div className="mt-3 -mb-1 flex flex-wrap gap-x-1 border-t border-border/70 pt-2">
                       <Button size="sm" variant="ghost" onClick={() => duplicate(p)}>
                         <Copy className="size-4" /> Duplicate
                       </Button>
                       {p.status !== "archived" && !p.framework && (
                         <Button size="sm" variant="ghost" onClick={() => revise(p)}>
-                          <RefreshCw className="size-4" /> Generate revised plan
+                          <RefreshCw className="size-4" /> Revise plan
                         </Button>
                       )}
                       {p.status !== "archived" && p.status !== "active" && (
@@ -235,11 +237,14 @@ export default function PlansPage() {
             })}
           </ul>
         </Section>
+        <ListLink href="/plan/settings" icon={<Clock />} iconTone="sky" title="Meal times & structure" description="Meals per day and when you eat" />
       </PageBody>
       <PlanSheet planId={viewing} onClose={() => setViewing(null)} />
     </>
   )
 }
+
+const sentence = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
 
 function order(p: MealPlan) {
   return { active: 0, paused: 1, draft: 2, archived: 3 }[p.status]
@@ -258,11 +263,18 @@ function PlanSheet({ planId, onClose }: { planId: string | null; onClose: () => 
           <div className="space-y-6 overflow-y-auto px-5 pb-8">
             {plan.explanation && (
               <Section title="Why these meals">
-                <ul className="text-callout list-disc space-y-1 pl-4">
-                  {plan.explanation.map((e) => (
-                    <li key={e}>{e}</li>
-                  ))}
-                </ul>
+                <Surface>
+                  <ul className="text-callout space-y-2.5">
+                    {plan.explanation.map((e) => (
+                      <li key={e} className="flex gap-2.5">
+                        <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-sage text-forest">
+                          <Check className="size-3" strokeWidth={3} aria-hidden />
+                        </span>
+                        <span>{e}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Surface>
               </Section>
             )}
             {plan.inputs && (

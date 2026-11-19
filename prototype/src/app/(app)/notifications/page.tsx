@@ -8,7 +8,7 @@ import { useApp } from "@/lib/store"
 import { runReminders } from "@/lib/reminders"
 import { cn } from "@/lib/utils"
 import type { AppNotification } from "@/lib/types"
-import { EmptyState, HeaderIconButton, IconTile, PageBody, PageHeader, Section, SectionLink, type IconTone } from "@/components/app/page"
+import { EmptyState, HeaderIconButton, IconTile, ListGroup, ListRow, PageBody, PageHeader, Section, SectionLink, type IconTone } from "@/components/app/page"
 import { FeatureBadge } from "@/components/app/badges"
 
 // Same surface as ListGroup, rendered as a list for semantics.
@@ -60,7 +60,7 @@ function Item({ n }: { n: AppNotification }) {
             {!n.read && <span className="size-2 shrink-0 rounded-full bg-terracotta" aria-hidden />}
           </div>
           <p className="text-caption mt-0.5 text-muted-foreground">{n.body}</p>
-          <p className="tabular text-caption mt-1.5 text-muted-foreground/90">{localTime(n.createdAt)}</p>
+          <p className="tabular text-caption mt-1.5 text-muted-foreground">{localTime(n.createdAt)}</p>
         </div>
         {n.href && n.read && <ChevronRight className="mt-2.5 size-[18px] shrink-0 text-muted-grey" aria-hidden />}
       </button>
@@ -91,7 +91,12 @@ export default function NotificationsPage() {
   return (
     <>
       <PageHeader
-        title="Notifications"
+        title={
+          <span className="flex items-center gap-2">
+            Notifications <FeatureBadge feature="reminders" />
+          </span>
+        }
+        subtitle={sorted.length ? (unread ? `${unread} unread` : "All caught up") : undefined}
         back="/home"
         action={
           <HeaderIconButton href="/profile/notifications" label="Notification settings">
@@ -104,14 +109,8 @@ export default function NotificationsPage() {
           <EmptyState icon={<Bell />} title="You're all caught up" description="Meal reminders and updates will appear here." />
         ) : (
           <>
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-callout flex items-center gap-2 text-muted-foreground">
-                {unread ? `${unread} unread` : "All read"} <FeatureBadge feature="reminders" />
-              </p>
-              {unread > 0 && <SectionLink onClick={markAll}>Mark all read</SectionLink>}
-            </div>
-            {days.map((d) => (
-              <Section key={d} title={dayLabel(d)}>
+            {days.map((d, i) => (
+              <Section key={d} title={dayLabel(d)} action={i === 0 && unread > 0 && <SectionLink onClick={markAll}>Mark all read</SectionLink>}>
                 <ul className={GROUP}>
                   {sorted
                     .filter((n) => localDay(n.createdAt) === d)
@@ -123,9 +122,9 @@ export default function NotificationsPage() {
             ))}
           </>
         )}
-        <div className="text-center">
-          <SectionLink href="/profile/notifications">Choose which reminders you get</SectionLink>
-        </div>
+        <ListGroup>
+          <ListRow href="/profile/notifications" icon={<Settings />} iconTone="muted" title="Reminder settings" description="Choose which reminders you get and when" />
+        </ListGroup>
       </PageBody>
     </>
   )

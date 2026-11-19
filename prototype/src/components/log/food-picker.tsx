@@ -7,11 +7,13 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 import { FOODS } from "@/lib/data/foods"
 import { infantFlags } from "@/lib/area-b-log"
 import { cn } from "@/lib/utils"
+import { FoodTile } from "@/components/log/food-tile"
 import type { Profile } from "@/lib/types"
 
 /** Searchable list of verified foods (§8). Infant profiles see safety flags inline (§12.4). */
-export function FoodSearchList({ onPick, selectedIds = [], profile, autoFocus }: { onPick: (foodId: string) => void; selectedIds?: string[]; profile?: Profile; autoFocus?: boolean }) {
+export function FoodSearchList({ onPick, selectedIds = [], profile, autoFocus, initialLimit }: { onPick: (foodId: string) => void; selectedIds?: string[]; profile?: Profile; autoFocus?: boolean; initialLimit?: number }) {
   const [q, setQ] = useState("")
+  const [showAll, setShowAll] = useState(false)
   const infant = profile && profile.type !== "adult"
   const list = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -19,6 +21,9 @@ export function FoodSearchList({ onPick, selectedIds = [], profile, autoFocus }:
       .filter((f) => !s || f.name.toLowerCase().includes(s) || f.nameBn.includes(s) || f.category.includes(s))
       .slice(0, 40)
   }, [q, infant])
+  // Before a search, a short list keeps the screen calm; "Show all" reveals the rest.
+  const capped = !q.trim() && !showAll && initialLimit !== undefined && list.length > initialLimit
+  const shown = capped ? list.slice(0, initialLimit) : list
 
   return (
     <div className="space-y-3">
@@ -28,12 +33,13 @@ export function FoodSearchList({ onPick, selectedIds = [], profile, autoFocus }:
       </div>
       <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card shadow-card">
         {list.length === 0 && <li className="text-callout p-4 text-muted-foreground">No match in our verified food list. Try another name.</li>}
-        {list.map((f) => {
+        {shown.map((f) => {
           const flag = infantFlags(f.id, profile)
           const picked = selectedIds.includes(f.id)
           return (
             <li key={f.id}>
               <button onClick={() => onPick(f.id)} className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50 active:bg-muted">
+                <FoodTile foodId={f.id} name={f.name} size="xs" />
                 <div className="min-w-0 flex-1">
                   <p className="text-body font-medium">
                     {f.name} <span lang="bn" className="font-normal text-muted-foreground">· {f.nameBn}</span>
@@ -51,6 +57,13 @@ export function FoodSearchList({ onPick, selectedIds = [], profile, autoFocus }:
             </li>
           )
         })}
+        {capped && (
+          <li>
+            <button type="button" onClick={() => setShowAll(true)} className="text-callout flex min-h-[52px] w-full items-center justify-center font-semibold text-forest transition-colors hover:bg-muted/50">
+              Show all foods
+            </button>
+          </li>
+        )}
       </ul>
     </div>
   )

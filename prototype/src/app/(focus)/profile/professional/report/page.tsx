@@ -4,7 +4,7 @@
 // user's own records as estimates and ranges; it is not a clinical document or diagnosis.
 import { Suspense, useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { Printer } from "lucide-react"
+import { FileText, Printer } from "lucide-react"
 import { useActivePlan, useApp, useSelfProfile } from "@/lib/store"
 import { useAreaD, useAreaDSync } from "@/lib/area-d-store"
 import { lastNDays, mealsInRange, periodSummary } from "@/lib/area-d-stats"
@@ -17,7 +17,8 @@ import { track } from "@/lib/analytics"
 import { CONDITION_LABEL, DIET_LABEL, GOAL_LABEL } from "@/components/profile/options"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { PageHeader, StickyFooter } from "@/components/app/page"
+import { IconTile, PageHeader, StickyFooter } from "@/components/app/page"
+import { InfoNote } from "@/components/app/alerts"
 
 export default function ReportPage() {
   return (
@@ -70,11 +71,19 @@ function Report() {
       <div className="no-print">
         <PageHeader back="/profile/professional" title="Appointment report" subtitle={`Last ${n} days`} />
       </div>
-      <article id="nutriplan-report" className="px-gutter flex-1 space-y-5 pt-2 pb-8 text-charcoal">
-        <header className="border-b border-border pb-3">
-          <p className="text-overline text-muted-foreground">NutriPlan · nutrition record summary</p>
-          <h1 className="text-title mt-1">{self.name}</h1>
-          <p className="text-caption text-muted-foreground tabular">
+      <article id="nutriplan-report" className="px-gutter flex-1 space-y-7 pt-2 pb-8 text-charcoal">
+        <header className="relative overflow-hidden rounded-2xl bg-lime-card p-5 print:bg-transparent print:p-0">
+          <span className="absolute -top-12 -right-12 size-36 rounded-full bg-white/25 print:hidden" aria-hidden />
+          <div className="relative flex items-center gap-3">
+            <IconTile tone="white" size="lg" className="print:hidden">
+              <FileText />
+            </IconTile>
+            <div className="min-w-0">
+              <p className="text-overline text-lime-text">Nutrition record summary</p>
+              <h1 className="text-title mt-0.5">{self.name}</h1>
+            </div>
+          </div>
+          <p className="text-caption relative mt-3 text-charcoal/80 tabular">
             {formatDay(days[0], { day: "numeric", month: "short", year: "numeric" })} – {formatDay(days[days.length - 1], { day: "numeric", month: "short", year: "numeric" })} · generated {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
           </p>
         </header>
@@ -93,14 +102,14 @@ function Report() {
           <Row label="Planned energy (plan days)" value={sum.plannedEnergy ? `~${k(sum.plannedEnergy)} kcal / day` : "–"} />
           <Row label="Protein on logged days" value={sum.loggedDays ? `~${Math.round(sum.protein)} g / day` : "–"} />
           <Row label="Fiber on logged days" value={sum.loggedDays ? `~${Math.round(sum.fiber)} g / day` : "–"} />
-          <p className="text-caption pt-1 text-muted-foreground">Values are estimates from logged meals and the food database; photo-based portions carry extra uncertainty. Unlogged meals are not counted.</p>
+          <p className="text-caption py-2.5 text-muted-foreground">Values are estimates from logged meals and the food database; photo-based portions carry extra uncertainty. Unlogged meals are not counted.</p>
         </ReportSection>
 
         <ReportSection title="Record completeness">
           <Row label="Well-recorded days" value={`${sum.wellRecorded} of ${n}`} />
           <Row label="Days without records" value={`${sum.notEnough}`} />
           <Row label="Entries (from photos)" value={`${sum.entries} (${sum.photoEntries})`} />
-          <p className="text-caption pt-1 text-muted-foreground">Gaps in records should not be read as low intake.</p>
+          <p className="text-caption py-2.5 text-muted-foreground">Gaps in records should not be read as low intake.</p>
         </ReportSection>
 
         <ReportSection title="Planned meals">
@@ -126,14 +135,14 @@ function Report() {
           </ReportSection>
         )}
 
-        <ReportSection title="Questions for my appointment">
+        <ReportSection title="Questions for my appointment" plain>
           <Textarea className="no-print" value={questions} onChange={(e) => setQuestions(e.target.value)} placeholder="Write questions to bring with you…" aria-label="Questions for my appointment" />
           <p className="hidden whitespace-pre-line print:block">{questions || "—"}</p>
         </ReportSection>
 
-        <p className="text-caption border-t border-border pt-3 text-muted-foreground">
+        <InfoNote title="Not a clinical document">
           This summary is generated from self-recorded data. It is not a diagnosis, has not been professionally reviewed, and does not show nutrient status. Clinical testing may be needed to assess deficiencies.
-        </p>
+        </InfoNote>
       </article>
       <div className="no-print">
         <StickyFooter>
@@ -146,18 +155,18 @@ function Report() {
   )
 }
 
-function ReportSection({ title, children }: { title: string; children: React.ReactNode }) {
+function ReportSection({ title, children, plain }: { title: string; children: React.ReactNode; plain?: boolean }) {
   return (
     <section className="break-inside-avoid">
-      <h2 className="text-headline mb-1.5">{title}</h2>
-      <div className="divide-y divide-border/70">{children}</div>
+      <h2 className="text-headline mb-3">{title}</h2>
+      {plain ? children : <div className="divide-y divide-border/70 rounded-2xl bg-card px-4 py-1 shadow-card print:px-0 print:shadow-none">{children}</div>}
     </section>
   )
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="text-callout flex items-baseline justify-between gap-4 py-1.5">
+    <div className="text-callout flex items-baseline justify-between gap-4 py-2.5">
       <span className="text-muted-foreground">{label}</span>
       <span className="tabular text-right font-medium">{value}</span>
     </div>

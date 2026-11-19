@@ -1,8 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Baby, ChefHat, ChevronRight, Flame, Refrigerator } from "lucide-react"
-import { EmptyState, ListGroup, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
+import { Baby, Check, ChefHat, ChevronRight, CookingPot, Flame, Refrigerator, Timer } from "lucide-react"
+import { EmptyState, IconTile, ListGroup, PageBody, PageHeader, Pill, Section, Surface } from "@/components/app/page"
 import { CautionNote, InfoNote } from "@/components/app/alerts"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { FeatureBadge } from "@/components/app/badges"
@@ -54,7 +54,22 @@ export default function PrepPage() {
       <PageBody>
         {paused && <InfoNote title="Your plan is paused">Prep tasks come back when you resume the plan.</InfoNote>}
 
-        <Section title="This week's prep" badge={<FeatureBadge feature="shopping" />} description={tasks.length ? `${done} of ${tasks.length} done · tick tasks off as you go` : undefined}>
+        <Section title="This week's prep" badge={<FeatureBadge feature="shopping" />} description={tasks.length ? "Tick tasks off as you go." : undefined}>
+          {tasks.length > 0 && (
+            <Surface className="flex items-center gap-3">
+              <IconTile tone="lime">
+                <ChefHat />
+              </IconTile>
+              <div className="min-w-0 flex-1">
+                <p className="tabular text-body font-semibold">
+                  {done} of {tasks.length} tasks done
+                </p>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
+                  <div className="h-full rounded-full bg-forest" style={{ width: `${(done / tasks.length) * 100}%` }} />
+                </div>
+              </div>
+            </Surface>
+          )}
           {tasks.length === 0 ? (
             <EmptyState icon={<ChefHat />} title="No prep needed" description="Nothing in the next 7 days needs washing, soaking or cooking ahead." />
           ) : (
@@ -84,7 +99,7 @@ export default function PrepPage() {
 
         <Section title="Marked to prepare" description="Meals you chose to prepare ahead in the next 7 days.">
           {marked.length === 0 ? (
-            <p className="text-callout rounded-2xl bg-card px-4 py-3 text-muted-foreground shadow-card">Open a meal in your plan and choose “Prepare later” to collect it here.</p>
+            <QuietEmpty icon={<Timer />} text="Open a meal in your plan and choose “Prepare later” to collect it here." />
           ) : (
             <ListGroup>
               {marked.map((m) => {
@@ -111,7 +126,7 @@ export default function PrepPage() {
 
         <Section title="Batch-cook this week" description="Meals that repeat — cook once, eat twice (within 2 days, or freeze).">
           {batch.length === 0 ? (
-            <p className="text-callout rounded-2xl bg-card px-4 py-3 text-muted-foreground shadow-card">No repeated meals in the next 7 days.</p>
+            <QuietEmpty icon={<CookingPot />} text="No repeated meals in the next 7 days." />
           ) : (
             <ListGroup>
               {batch.map(({ recipe, meals }) => (
@@ -140,8 +155,8 @@ export default function PrepPage() {
           <Section title="Storing and reheating" description="For the foods in this week's meals.">
             <ListGroup>
               {advice.map((a) => (
-                <div key={a.title} className="space-y-1.5 px-4 py-3">
-                  <p className="text-body font-medium">{a.title}</p>
+                <div key={a.title} className="space-y-1.5 px-4 py-3.5">
+                  <p className="text-body font-semibold">{a.title}</p>
                   <p className="text-caption flex gap-1.5 text-muted-foreground">
                     <Refrigerator className="mt-px size-4 shrink-0 text-sky-text" aria-hidden /> {a.storage}
                   </p>
@@ -156,13 +171,19 @@ export default function PrepPage() {
 
         {hasChild && (
           <Section title="Baby food storage">
-            <Surface tone="sage" className="space-y-2">
-              <p className="text-overline flex items-center gap-1.5 text-forest">
-                <Baby className="size-3.5" aria-hidden /> Extra care for babies
-              </p>
-              <ul className="text-callout list-disc space-y-1 pl-5">
+            <Surface tone="sage" className="space-y-3">
+              <div className="flex items-center gap-3">
+                <IconTile tone="white">
+                  <Baby />
+                </IconTile>
+                <p className="text-body font-semibold">Extra care for babies</p>
+              </div>
+              <ul className="text-callout space-y-2.5">
                 {INFANT_STORAGE.map((t) => (
-                  <li key={t}>{t}</li>
+                  <li key={t} className="flex gap-2.5">
+                    <Check className="mt-0.5 size-4 shrink-0 text-forest" aria-hidden />
+                    <span>{t}</span>
+                  </li>
                 ))}
               </ul>
             </Surface>
@@ -174,5 +195,15 @@ export default function PrepPage() {
         </CautionNote>
       </PageBody>
     </>
+  )
+}
+
+/** Small inline empty note for secondary sections (a full EmptyState would be too loud here). */
+function QuietEmpty({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <Surface tone="outline" className="flex items-center gap-3">
+      <IconTile tone="muted">{icon}</IconTile>
+      <p className="text-callout min-w-0 flex-1 text-muted-foreground">{text}</p>
+    </Surface>
   )
 }

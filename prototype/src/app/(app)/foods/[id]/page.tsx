@@ -4,7 +4,7 @@
 // provenance, confidence, review status and infant suitability. Values are illustrative prototype data.
 import { useState } from "react"
 import { useParams } from "next/navigation"
-import { Baby, Database, Search } from "lucide-react"
+import { Baby, Database, Search, ShieldCheck } from "lucide-react"
 import { ALLERGEN_LABELS, FOOD_MAP, REVIEW_STATUS_LABEL } from "@/lib/data/foods"
 import { useActiveProfile, useApp } from "@/lib/store"
 import { useTx } from "@/lib/i18n"
@@ -63,7 +63,7 @@ export default function FoodDetailPage() {
 
   return (
     <>
-      <PageHeader title={food.name} subtitle={<span lang="bn">{food.nameBn}</span>} back />
+      <PageHeader title={tx("Food details", "খাবারের তথ্য")} back />
       <PageBody>
         <Surface padding="lg" className="flex items-center gap-4">
           <FoodTile foodId={food.id} size="lg" />
@@ -102,11 +102,12 @@ export default function FoodDetailPage() {
               <caption className="sr-only">Nutrients per 100 g and per {unit?.label}</caption>
               <thead className="bg-muted text-caption text-muted-foreground">
                 <tr>
-                  <th scope="col" className="px-4 py-2.5 text-left font-medium">Nutrient</th>
-                  <th scope="col" className="px-2 py-2.5 text-right font-medium">Per 100 g</th>
+                  <th scope="col" className="px-4 py-2.5 text-left align-bottom font-medium">Nutrient</th>
+                  <th scope="col" className="px-2 py-2.5 text-right align-bottom font-medium whitespace-nowrap">Per 100 g</th>
                   {unit && unit.grams > 0 && (
-                    <th scope="col" className="px-4 py-2.5 text-right font-medium">
-                      {unit.label} <span className="tabular">({unit.grams} g)</span>
+                    <th scope="col" className="px-4 py-2.5 text-right align-bottom font-medium">
+                      <span className="block">{unit.label}</span>
+                      <span className="tabular block whitespace-nowrap">{unit.grams} g</span>
                     </th>
                   )}
                 </tr>
@@ -116,11 +117,11 @@ export default function FoodDetailPage() {
                   const v = food.per100g[r.key]
                   return (
                     <tr key={r.key}>
-                      <th scope="row" className={r.key === "sugarsG" ? "py-2 pr-2 pl-7 text-left font-normal text-muted-foreground" : "px-4 py-2 text-left font-medium"}>
+                      <th scope="row" className={r.key === "sugarsG" ? "py-2.5 pr-2 pl-7 text-left font-normal text-muted-foreground" : "px-4 py-2.5 text-left font-medium"}>
                         {r.label}
                       </th>
-                      <td className="tabular px-2 py-2 text-right">{v === undefined ? <span className="text-muted-foreground">no data</span> : `${round(v, r.digits)} ${r.unit}`}</td>
-                      {unit && unit.grams > 0 && <td className="tabular px-4 py-2 text-right">{v === undefined ? <span className="text-muted-foreground">–</span> : `~${round(v * factor, r.digits)} ${r.unit}`}</td>}
+                      <td className="tabular px-2 py-2.5 text-right whitespace-nowrap text-muted-foreground">{v === undefined ? <span className="text-muted-foreground">no data</span> : `${round(v, r.digits)} ${r.unit}`}</td>
+                      {unit && unit.grams > 0 && <td className="tabular px-4 py-2.5 text-right font-semibold whitespace-nowrap">{v === undefined ? <span className="text-muted-foreground">–</span> : `~${round(v * factor, r.digits)} ${r.unit}`}</td>}
                     </tr>
                   )
                 })}
@@ -164,7 +165,14 @@ export default function FoodDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-callout text-muted-foreground">{tx("No common allergens recorded. Check labels and cross-contact for packaged or restaurant food.", "সাধারণ কোনো অ্যালার্জেন নেই। প্যাকেট বা রেস্টুরেন্টের খাবারে লেবেল দেখুন।")}</p>
+            <ListGroup>
+              <ListRow
+                icon={<ShieldCheck />}
+                iconTone="sage"
+                title={tx("No common allergens recorded", "সাধারণ কোনো অ্যালার্জেন নেই")}
+                description={tx("Check labels and cross-contact for packaged or restaurant food.", "প্যাকেট বা রেস্টুরেন্টের খাবারে লেবেল দেখুন।")}
+              />
+            </ListGroup>
           )}
         </Section>
 

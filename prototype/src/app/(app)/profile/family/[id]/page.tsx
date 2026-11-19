@@ -17,7 +17,7 @@ import { todayISO } from "@/lib/date"
 import type { Allergen, Profile } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { EmptyState, PageBody, PageHeader, StickyFooter } from "@/components/app/page"
+import { EmptyState, PageBody, PageHeader, StickyFooter, Surface } from "@/components/app/page"
 import { InfoNote, SafetyAlert } from "@/components/app/alerts"
 import { ChipGroup, Field, FieldGroup, PillGroup } from "@/components/app/controls"
 import { ALLERGENS, CHILD_CONDITIONS, DIETS, FEEDING_DIFFICULTIES } from "@/components/profile/options"
@@ -88,16 +88,20 @@ function MemberForm({ profile }: { profile: Profile }) {
         )}
         <fieldset disabled={readOnly} className="space-y-7 disabled:opacity-70">
           <FieldGroup title="Basics">
+            <Surface className="space-y-4">
             <Field label="Name or nickname" htmlFor="m-name">
               <Input id="m-name" value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
             <Field label="Date of birth" htmlFor="m-dob" hint={isChild ? `${months < 24 ? `${months} months` : `${Math.floor(months / 12)} years`} old` : undefined}>
               <Input id="m-dob" type="date" max={todayISO()} value={dob} onChange={(e) => setDob(e.target.value)} />
             </Field>
+            </Surface>
           </FieldGroup>
 
           <FieldGroup title="Food allergies" description={isChild ? "Allergies a clinician has confirmed or advised you to avoid. These are safety rules for every meal and recipe." : "Restrictions they've shared with you, used to keep shared meals safe."}>
-            <ChipGroup label="Allergies" value={allergies} onChange={setAllergies} options={ALLERGENS} />
+            <Surface>
+              <ChipGroup label="Allergies" value={allergies} onChange={setAllergies} options={ALLERGENS} />
+            </Surface>
             {allergies.length > 0 && <SafetyAlert title="Allergy protection on">Meals, swaps, recipes and shopping lists exclude {allergies.length === 1 ? "this allergen" : "these allergens"} for {name || profile.name}.</SafetyAlert>}
           </FieldGroup>
 
@@ -105,17 +109,23 @@ function MemberForm({ profile }: { profile: Profile }) {
             <>
               {months < 24 && (
                 <FieldGroup title="Milk feeding">
-                  <PillGroup label="Milk feeding" value={feeding} onChange={setFeeding} options={[{ value: "breastfeeding", label: "Breast milk" }, { value: "formula", label: "Formula" }, { value: "both", label: "Both" }]} />
+                  <Surface>
+                    <PillGroup label="Milk feeding" value={feeding} onChange={setFeeding} options={[{ value: "breastfeeding", label: "Breast milk" }, { value: "formula", label: "Formula" }, { value: "both", label: "Both" }]} />
+                  </Surface>
                 </FieldGroup>
               )}
               <FieldGroup title="Diagnosed conditions and feeding difficulties" description="Any of these keeps suggestions general and points you to your clinician.">
-                <ChipGroup label="Conditions" value={conditions} onChange={setConditions} options={[...CHILD_CONDITIONS, ...FEEDING_DIFFICULTIES]} />
+                <Surface>
+                  <ChipGroup label="Conditions" value={conditions} onChange={setConditions} options={[...CHILD_CONDITIONS, ...FEEDING_DIFFICULTIES]} />
+                </Surface>
               </FieldGroup>
             </>
           ) : (
             <>
               <FieldGroup title="Food preferences">
-                <ChipGroup label="Diet" value={diet} onChange={setDiet} options={DIETS} />
+                <Surface>
+                  <ChipGroup label="Diet" value={diet} onChange={setDiet} options={DIETS} />
+                </Surface>
               </FieldGroup>
               {!canSeeHealth && (
                 <InfoNote title="Health information is private">
@@ -128,6 +138,7 @@ function MemberForm({ profile }: { profile: Profile }) {
           )}
         </fieldset>
       </PageBody>
+      {/* Extra bottom space keeps the button clear of the raised Food Log tab button. */}
       <StickyFooter>
         <Button size="lg" onClick={save} disabled={readOnly || !name.trim()}>
           Save changes

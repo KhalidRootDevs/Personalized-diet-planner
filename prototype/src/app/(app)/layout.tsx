@@ -7,7 +7,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <AppFrame>
       <RequireUser>
         <PlanSync />
-        <main className="flex flex-1 flex-col">
+        <main className="flex flex-1 flex-col [--tabbar-fab:1.75rem] [--tabbar-offset:calc(73px+env(safe-area-inset-bottom))]">
           <ScreenTransition>{children}</ScreenTransition>
         </main>
         <BottomNav />

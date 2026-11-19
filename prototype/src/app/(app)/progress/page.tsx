@@ -339,21 +339,32 @@ function BodyCard({ profileId, profileWeight, days }: { profileId: string; profi
         </ListGroup>
       ) : (
         <>
-          {points.length >= 2 ? (
-            <Surface>
-              <LineTrend points={points.map((w) => ({ date: w.date, value: w.weightKg! }))} unit="kg" label="Recorded weight over time" />
-              <p className="text-caption mt-2 text-muted-foreground">
-                {points.length} recordings
-                {waistPoints.length > 0 && ` · waist last recorded ${waistPoints[waistPoints.length - 1].waistCm} cm`}. A single reading isn&apos;t a trend.
-              </p>
-            </Surface>
-          ) : (
-            <ListGroup>
-              <ListRow icon={<Scale />} iconTone="sky" title={<span className="tabular">{last?.weightKg ?? profileWeight ?? "–"} kg</span>} description={last ? `Recorded ${formatDay(last.date, { day: "numeric", month: "short" })}` : "From your profile"} />
-            </ListGroup>
-          )}
-          <Surface className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+          <Surface padding="lg" className="space-y-4">
+            {points.length >= 2 ? (
+              <div>
+                <p className="text-caption flex items-center gap-1.5 text-muted-foreground">
+                  <Scale className="size-4 text-muted-grey" aria-hidden /> Recorded weight · kg
+                </p>
+                <div className="mt-2">
+                  <LineTrend points={points.map((w) => ({ date: w.date, value: w.weightKg! }))} unit="kg" label="Recorded weight over time" />
+                </div>
+                <p className="text-caption mt-2 text-muted-foreground">
+                  {points.length} recordings
+                  {waistPoints.length > 0 && ` · waist last recorded ${waistPoints[waistPoints.length - 1].waistCm} cm`}. A single reading isn&apos;t a trend.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <IconTile tone="sky">
+                  <Scale />
+                </IconTile>
+                <div>
+                  <p className="tabular text-body font-medium">{last?.weightKg ?? profileWeight ?? "–"} kg</p>
+                  <p className="text-caption text-muted-foreground">{last ? `Recorded ${formatDay(last.date, { day: "numeric", month: "short" })}` : "From your profile"}</p>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3 border-t border-border/70 pt-4">
               <Field label="Weight (kg)" htmlFor="wi-weight">
                 <Input id="wi-weight" type="number" inputMode="decimal" step="0.1" min="20" max="300" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder={String(last?.weightKg ?? profileWeight ?? "")} />
               </Field>

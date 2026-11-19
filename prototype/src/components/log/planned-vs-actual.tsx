@@ -1,6 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Section, StatTile } from "@/components/app/page"
 import { RecipeThumb } from "@/components/app/recipe-thumb"
 import { FeatureBadge } from "@/components/app/badges"
@@ -77,43 +79,50 @@ export function PlannedVsActual({ meals, entries }: { meals: PlannedMeal[]; entr
             <StatTile label="Planned" value={`~${r0(plannedSum)}`} unit="kcal" hint={`protein ~${r0(plannedProtein)} g`} className="bg-muted" />
             <StatTile label="Eaten · estimate" value={`~${r0(actualSum)}`} unit="kcal" hint={`protein ~${r0(actualProtein)} g`} className="bg-sage" />
           </div>
-          <p className="text-callout mt-3">
-            {energyMsg} {reasonMsg}
-          </p>
+          <p className="text-callout mt-3">{energyMsg}</p>
+          {reasonMsg && <p className="text-caption mt-1.5 text-muted-foreground">{reasonMsg}</p>}
         </div>
         <ul className="divide-y divide-border/70 border-t border-border/70">
           {rows.map(({ m, recipe, planned, plannedProtein: pp, actual, actualProtein: ap, entry, diff: d, late }) => {
             const st = mealStatus(m)
             return (
-              <li key={m.id} className="flex items-start gap-3 px-4 py-3">
-                {recipe && <RecipeThumb recipe={recipe} size="sm" />}
-                <div className="min-w-0 flex-1">
-                  <p className="text-caption text-muted-foreground">{MEAL_LABEL[m.mealType]}</p>
-                  <p className="text-callout truncate font-medium">{recipe?.name}</p>
-                  <span className={cn("mt-1 inline-flex h-[22px] items-center rounded-full px-2 text-[11px] font-medium", STATUS_STYLE[st.tone])}>{st.label}</span>
-                  {d && <p className="text-caption mt-1 text-muted-foreground">Compared with plan: {d}</p>}
-                  {entry && Math.abs(late) >= 30 && <p className="text-caption mt-0.5 text-muted-foreground">Eaten {timing(late)}</p>}
-                </div>
-                {actual === null ? (
-                  <div className="shrink-0 text-right">
-                    <p className="tabular text-caption text-muted-foreground">Planned ~{r0(planned)}</p>
-                    <Link href={`/log/new?meal=${m.id}`} className="text-callout mt-1 inline-flex h-8 items-center rounded-full bg-lime px-3.5 font-semibold text-charcoal transition-colors hover:bg-lime/85">
-                      Record
-                    </Link>
+              <li key={m.id} className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  {recipe && <RecipeThumb recipe={recipe} size="sm" />}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-caption text-muted-foreground">{MEAL_LABEL[m.mealType]}</p>
+                    <p className="text-callout line-clamp-1 font-medium">{recipe?.name}</p>
+                    <span className={cn("mt-1 inline-flex h-[22px] items-center rounded-full px-2 text-[11px] font-medium", STATUS_STYLE[st.tone])}>{st.label}</span>
                   </div>
-                ) : (
-                  <div className="tabular shrink-0 text-right">
-                    <p className="text-caption text-muted-foreground">
-                      Planned ~{r0(planned)} · {r0(pp)} g
-                    </p>
-                    {entry ? (
-                      <Link href={`/log/entry/${entry.id}`} className="text-callout font-semibold underline-offset-4 hover:underline">
-                        Eaten ~{r0(actual)}
-                      </Link>
-                    ) : (
-                      <p className="text-callout font-semibold">Eaten ~{r0(actual)}</p>
-                    )}
-                    <p className="text-caption text-muted-foreground">protein ~{r0(ap ?? 0)} g</p>
+                  {actual === null ? (
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <p className="tabular text-caption text-muted-foreground">Planned ~{r0(planned)} kcal</p>
+                      <Button asChild size="sm" variant="secondary" className="h-8">
+                        <Link href={`/log/new?meal=${m.id}`}>
+                          <Plus /> Record
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="tabular shrink-0 text-right">
+                      <p className="text-caption text-muted-foreground">Planned ~{r0(planned)}</p>
+                      {entry ? (
+                        <Link href={`/log/entry/${entry.id}`} className="text-callout font-semibold text-forest underline-offset-4 hover:underline">
+                          Eaten ~{r0(actual)}
+                        </Link>
+                      ) : (
+                        <p className="text-callout font-semibold">Eaten ~{r0(actual)}</p>
+                      )}
+                      <p className="text-caption text-muted-foreground">
+                        protein ~{r0(ap ?? 0)} / {r0(pp)} g
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {(d || (entry && Math.abs(late) >= 30)) && (
+                  <div className="text-caption mt-2.5 ml-[60px] rounded-xl bg-muted px-3 py-2 text-muted-foreground">
+                    {d && <p>Compared with plan: {d}</p>}
+                    {entry && Math.abs(late) >= 30 && <p className={d ? "mt-0.5" : ""}>Eaten {timing(late)}</p>}
                   </div>
                 )}
               </li>
@@ -122,7 +131,7 @@ export function PlannedVsActual({ meals, entries }: { meals: PlannedMeal[]; entr
           {unplanned.map((e) => {
             const n = entryRange(e).mid
             return (
-              <li key={e.id} className="flex items-start gap-3 px-4 py-3">
+              <li key={e.id} className="flex items-center gap-3 px-4 py-3">
                 {e.items[0] && <FoodTile foodId={e.items[0].foodId} size="sm" />}
                 <div className="min-w-0 flex-1">
                   <p className="text-caption text-muted-foreground">{MEAL_LABEL[e.mealType]} · not in plan</p>
@@ -130,7 +139,7 @@ export function PlannedVsActual({ meals, entries }: { meals: PlannedMeal[]; entr
                   <span className={cn("mt-1 inline-flex h-[22px] items-center rounded-full px-2 text-[11px] font-medium", STATUS_STYLE.changed)}>Unplanned</span>
                 </div>
                 <div className="tabular shrink-0 text-right">
-                  <Link href={`/log/entry/${e.id}`} className="text-callout font-semibold underline-offset-4 hover:underline">
+                  <Link href={`/log/entry/${e.id}`} className="text-callout font-semibold text-forest underline-offset-4 hover:underline">
                     Eaten ~{r0(n.energyKcal)}
                   </Link>
                   <p className="text-caption text-muted-foreground">protein ~{r0(n.proteinG)} g</p>

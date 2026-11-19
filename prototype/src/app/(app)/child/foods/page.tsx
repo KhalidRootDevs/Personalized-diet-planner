@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Baby, Check, Plus, Sparkles, Stethoscope, Utensils } from "lucide-react"
+import { Baby, Check, Clock, Plus, Sparkles, Sprout, Stethoscope, Utensils } from "lucide-react"
 import { toast } from "sonner"
 import { FOODS } from "@/lib/data/foods"
 import { ageInMonths } from "@/lib/nutrition"
@@ -83,9 +83,9 @@ export default function ChildFoodsPage() {
         }
       />
       <PageBody>
-        <div className="grid grid-cols-2 gap-2">
-          <StatTile className="bg-sage" label={<span className="flex items-center gap-1.5">Foods introduced <FeatureBadge feature="baby_module" /></span>} value={foods.length} />
-          <StatTile className="bg-amber-tint" label="Reactions noted" value={foods.filter((f) => f.reaction && f.reaction !== "None observed").length} />
+        <div className="grid grid-cols-2 gap-3">
+          <StatTile className="bg-sage" icon={<Utensils />} iconTone="white" label={<span className="flex items-center gap-1.5">{stage.baby ? "Foods introduced" : "Foods tried"} <FeatureBadge feature="baby_module" /></span>} value={foods.length} />
+          <StatTile className="bg-amber-tint" icon={<Stethoscope />} iconTone="white" label="Reactions noted" value={foods.filter((f) => f.reaction && f.reaction !== "None observed").length} hint="For your clinician" />
         </div>
 
         {!canEdit && (
@@ -99,7 +99,7 @@ export default function ChildFoodsPage() {
         )}
 
         {candidates.length > 0 && (
-          <Section title="Is this a new food?" description={`Logged for ${child.name} recently but not in the tracker. Adding it keeps one record of first tries (§12.8).`}>
+          <Section title="Is this a new food?" description={`Logged for ${child.name} recently but not in the tracker. Adding it keeps one record of first tries.`}>
             <div id="new-foods" className="scroll-mt-20 space-y-2.5">
               {candidates.map((c) => (
                 <Surface key={c.key}>
@@ -195,7 +195,8 @@ export default function ChildFoodsPage() {
           <Section title="Foods you could try next" description="Introduce one new food at a time and wait a few days before the next, so you can notice any reaction.">
             <div className="flex flex-wrap gap-2">
               {next.map((n) => (
-                <span key={n} className="text-callout inline-flex h-9 items-center rounded-full border border-border/80 bg-card px-3.5">
+                <span key={n} className="text-callout inline-flex h-9 items-center gap-1.5 rounded-full bg-card px-3.5 shadow-card">
+                  <Sprout className="size-4 text-fiber" aria-hidden />
                   {n}
                 </span>
               ))}
@@ -210,8 +211,9 @@ export default function ChildFoodsPage() {
           </InfoNote>
           <ListGroup>
             {ALLERGENS_TO_INTRODUCE.map((a) => {
-              const done = tried.has(a.split(" ")[0].toLowerCase())
-              return <ListRow key={a} title={<span className="text-callout font-medium">{a}</span>} className="min-h-[52px]" trailing={<Pill tone={done ? "sage" : "outline"}>{done ? "Introduced" : "Not yet"}</Pill>} />
+              const key = a.split(" ")[0].toLowerCase()
+              const done = [...tried].some((t) => t.split(/[\s-]+/).includes(key))
+              return <ListRow key={a} icon={done ? <Check /> : <Clock />} iconTone={done ? "sage" : "muted"} title={a} trailing={<Pill tone={done ? "sage" : "outline"}>{done ? "Introduced" : "Not yet"}</Pill>} />
             })}
           </ListGroup>
         </Section>
@@ -364,7 +366,7 @@ function AddFoodSheet({
             </ToggleGroup>
             <p className="text-caption text-muted-foreground">It can take many tries before a child accepts a new food. That&apos;s normal.</p>
           </div>
-          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80">
+          <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-muted">
             <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
               <Label htmlFor="reaction" className="text-body leading-snug font-medium">Did you notice any reaction?</Label>
               <Switch id="reaction" checked={hadReaction} onCheckedChange={setHadReaction} />
