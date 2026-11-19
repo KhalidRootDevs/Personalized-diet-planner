@@ -1,4 +1,5 @@
 import type { Recipe } from "@/lib/types"
+import { BANK_RECIPES } from "./recipe-bank-data"
 
 // Verified-recipe library (§9 Approach A). Content is illustrative for the prototype.
 export const RECIPES: Recipe[] = [
@@ -216,6 +217,8 @@ export const RECIPES: Recipe[] = [
     safetyNotes: ["Milk is a common allergen.", "Choose plain doi without added sugar."], tags: ["snack", "toddler"], reviewStatus: "pending", swatch: "terracotta", icon: "Banana",
   },
 ]
+
+RECIPES.push(...BANK_RECIPES)
 
 export const RECIPE_MAP: Record<string, Recipe> = Object.fromEntries(RECIPES.map((r) => [r.id, r]))
 

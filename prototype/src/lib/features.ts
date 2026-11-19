@@ -8,6 +8,7 @@ export type FeatureId =
   | "swap_similar" | "baby_module" | "weekly_review_basic" | "progress_basic" | "child_profiles"
   | "coach" | "swap_modes" | "voice_logging" | "barcode_logging" | "saved_meals" | "recipe_library" | "ai_recipe_variations"
   | "pantry" | "budget_optimizer" | "what_if" | "habits" | "insights" | "smart_reminders" | "family" | "plan_long" | "google_calendar"
+  | "condition_recipes" | "world_cuisines"
   | "adaptive" | "autopilot" | "twin" | "confidence" | "nutrient_gaps" | "restaurant" | "wearables" | "professional" | "plan_framework"
 
 export interface FeatureInfo {
@@ -48,6 +49,9 @@ export const FEATURES: Record<FeatureId, FeatureInfo> = {
   family: { name: "Family profiles & shared meals", phase: 2, tier: "family", spec: "§42.9" },
   plan_long: { name: "1, 14 and 30-day plans", phase: 2, tier: "premium", spec: "§10.2" },
   google_calendar: { name: "Google Calendar sync", phase: 2, tier: "premium", spec: "§14.4" },
+  // Health is never paywalled in this proposal: condition filters are free but clinically gated (§13, §43 2.18).
+  condition_recipes: { name: "Condition-aware recipe filters", phase: 2, tier: "free", spec: "§13, §43" },
+  world_cuisines: { name: "International cuisines", phase: 3, tier: "free", spec: "§27, §43" },
 
   adaptive: { name: "Adaptive meal plans", phase: 3, tier: "premium", spec: "§42.13" },
   autopilot: { name: "Weekly Nutrition Autopilot", phase: 3, tier: "premium", spec: "§42.14" },

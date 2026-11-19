@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { toast } from "sonner"
 import { Baby, Beef, Bell, CalendarDays, CalendarRange, ChartLine, ChefHat, ClipboardCheck, Droplet, MessageCircle, Minus, Pause, Play, Plus, ShoppingBasket, SlidersHorizontal, Sparkles, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState, HeaderIconButton, IconTile, ListGroup, ListRow, PageBody, Section, SectionLink, Surface, type IconTone } from "@/components/app/page"
@@ -14,10 +13,12 @@ import { InstallPrompt } from "@/components/app/pwa"
 import { ChildHome } from "@/components/child/child-home"
 import { HomeEntryCard, HomeMealCard } from "@/components/home/meal-card"
 import { WeekStrip } from "@/components/app/week-strip"
+import { WaterGlass, useWater, waterStatus } from "@/components/water/water"
+import { cn } from "@/lib/utils"
 import { NextStepCard } from "@/components/home/next-step"
 import { useApp, useActivePlan, useActiveProfile, usePausedPlan, useSelfProfile } from "@/lib/store"
 import { useT } from "@/lib/i18n"
-import { adultTargets, hydrationGuide } from "@/lib/nutrition"
+import { adultTargets } from "@/lib/nutrition"
 import { addDays, formatDay, nowHHMM, todayISO } from "@/lib/date"
 import { MEAL_LABEL } from "@/lib/planning"
 import { useRecipeLookup } from "@/lib/area-c-utils"
@@ -293,45 +294,39 @@ function TaskCard({ href, icon, tone, title, body, time }: { href: string; icon:
 
 /** Water tile (§6.7). Records glasses; no universal fluid prescription when a condition needs individual advice. */
 function WaterTile({ profile }: { profile: Profile }) {
-  const today = todayISO()
-  const glasses = useApp((s) => s.water?.[`${profile.id}:${today}`] ?? 0)
-  const addWater = useApp((s) => s.addWater)
-  const guide = hydrationGuide(profile)
+  const { glasses, guide, add, splash } = useWater(profile)
+  const status = waterStatus(glasses, guide, undefined, profile.schedule?.wake, profile.schedule?.sleep)
+  const range = guide.kind === "range"
+  const reached = range && glasses >= guide.lowGlasses
   return (
-    <div className="rounded-2xl bg-card p-4 shadow-card">
-      <div className="flex items-start justify-between gap-2">
+    <div className="relative flex flex-col rounded-2xl bg-gradient-to-b from-sky-tint/70 to-card p-4 shadow-card">
+      <Link href="/water" className="absolute inset-0 rounded-2xl" aria-label="Open water tracker" />
+      <div className="pointer-events-none relative flex items-start justify-between gap-2">
         <p className="text-callout leading-tight font-medium">
           Drink
           <br />
           water
         </p>
-        <IconTile tone="sky" size="sm">
-          <Droplet />
-        </IconTile>
+        <WaterGlass glasses={glasses} guide={guide} splash={splash} size="sm" className="-mt-1 -mr-1" />
       </div>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="text-[26px] leading-none font-bold tracking-tight tabular">
-          {glasses}
-          <span className="text-caption ml-1 font-medium tracking-normal text-muted-foreground">glass{glasses === 1 ? "" : "es"}</span>
-        </p>
-        <div className="flex gap-1">
-          <button type="button" onClick={() => addWater(profile.id, today, -1)} disabled={!glasses} aria-label="Remove a glass of water" className="grid size-8 place-items-center rounded-full bg-muted transition-colors hover:bg-border disabled:opacity-40">
-            <Minus className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              addWater(profile.id, today, 1)
-              toast(`Water recorded · ${glasses + 1} glass${glasses + 1 === 1 ? "" : "es"} today`)
-            }}
-            aria-label="Add a glass of water"
-            className="grid size-8 place-items-center rounded-full bg-sky-tint text-sky-text transition-colors hover:bg-water/30"
-          >
-            <Plus className="size-4" />
-          </button>
-        </div>
+      <p className="pointer-events-none relative mt-1 text-[26px] leading-none font-bold tracking-tight tabular">
+        {glasses}
+        <span className="text-caption ml-1 font-medium tracking-normal text-muted-foreground">{range ? `/ ${guide.lowGlasses}–${guide.highGlasses}` : glasses === 1 ? "glass" : "glasses"}</span>
+      </p>
+      <p className={cn("text-caption pointer-events-none relative mt-1 line-clamp-1", reached ? "font-semibold text-sky-text" : "text-muted-foreground")}>{range ? status.short : "Follow your care team's advice"}</p>
+      <div className="relative mt-3 flex gap-1.5">
+        <button type="button" onClick={() => add(-1, { toast: false })} disabled={!glasses} aria-label="Remove a glass of water" className="grid size-10 shrink-0 place-items-center rounded-full bg-card shadow-card transition-colors hover:bg-muted disabled:opacity-40">
+          <Minus className="size-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => add(1)}
+          aria-label="Add a glass of water"
+          className="text-callout flex h-10 flex-1 items-center justify-center gap-1 rounded-full bg-water font-semibold text-white shadow-[0_8px_18px_-10px_rgba(14,165,233,0.9)] transition-transform active:scale-95"
+        >
+          <Plus className="size-4" /> Glass
+        </button>
       </div>
-      <p className="text-caption mt-1.5 text-muted-foreground">{guide.kind === "range" ? `General range ${guide.lowGlasses}–${guide.highGlasses} a day` : "Follow your care team's advice"}</p>
     </div>
   )
 }

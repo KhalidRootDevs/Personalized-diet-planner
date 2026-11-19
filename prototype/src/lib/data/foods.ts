@@ -1,4 +1,5 @@
 import type { Food } from "@/lib/types"
+import { WORLD_FOODS } from "./foods-world"
 
 // Illustrative prototype values only — not validated food-composition data (§8, §42.6).
 const SRC = "Prototype sample data (illustrative)"
@@ -92,7 +93,7 @@ const EXTRA_FOODS: Food[] = [
 /** Existing household measures (bowl, plate, piece, scoop, handful) are estimates too (§42.6). */
 const HOUSEHOLD = /bowl|plate|piece|scoop|handful|paratha|pitha|roti|omelette/i
 for (const f of FOODS) for (const u of f.units) if (u.estimate === undefined && HOUSEHOLD.test(u.label)) u.estimate = true
-FOODS.push(...EXTRA_FOODS)
+FOODS.push(...EXTRA_FOODS, ...WORLD_FOODS)
 
 export const FOOD_MAP: Record<string, Food> = Object.fromEntries(FOODS.map((f) => [f.id, f]))
 

@@ -97,7 +97,49 @@ export interface Recipe {
   basedOnId?: string
   /** AI-suggested variation (§9.3B): always personal and not reviewed. */
   aiVariation?: { kind: string; modelVersion: string; validatedAt: string }
+  // ── Recipe bank (§9, §42.11). All optional; see src/lib/recipe-bank.ts for derivation. ──
+  /** Cuisine / national style. Missing = "bangladeshi". */
+  cuisine?: CuisineId
+  /** Life stages the recipe is written for. Missing = derived from `profile` and `minAgeMonths`. */
+  ageGroups?: AgeGroupId[]
+  /**
+   * Health fits declared by the recipe reviewer. A declared fit is only shown when it also passes the
+   * deterministic check in recipe-bank.ts (never trusted on its own, §18). Nutrient fits are computed, not declared.
+   */
+  healthFits?: HealthFitId[]
+  /** 0 = not spicy … 3 = hot. */
+  spiceLevel?: 0 | 1 | 2 | 3
+  /** Short origin / "about this dish" text. */
+  about?: string
+  /** Cook's tips shown under the steps. */
+  tips?: string[]
+  /** Ingredient swaps. Choosing one always triggers recalculation; never assume equivalence (§8.4). */
+  swaps?: { from: string; to: string; toFoodId?: string; note: string }[]
+  /** Minutes for each step (same index as `steps`); null for steps without a timer. Powers Cook mode timers. */
+  stepMinutes?: (number | null)[]
+  /** How to serve / what goes with it. */
+  serveWith?: string
+  /** Practical yield, e.g. "2 plates" or "8 small pancakes". */
+  yieldNote?: string
 }
+
+export type CuisineId = "bangladeshi" | "indian" | "pakistani" | "italian" | "chinese" | "thai" | "japanese" | "middle_eastern" | "mediterranean" | "mexican" | "continental"
+export type AgeGroupId = "infant" | "toddler" | "child" | "teen" | "adult" | "older_adult"
+export type HealthFitId =
+  // Computed from nutrition (deterministic)
+  | "high_protein"
+  | "high_fiber"
+  | "iron_rich"
+  | "calcium_rich"
+  | "lighter"
+  // Declared by a reviewer AND re-checked by rules
+  | "diabetes_aware"
+  | "heart_aware"
+  | "bp_aware"
+  | "pregnancy_friendly"
+  | "gentle_digestion"
+  | "easy_to_chew"
+  | "gluten_free"
 
 export type ScheduleStatus = "upcoming" | "due" | "rescheduled" | "paused"
 export type MealOutcome = "eaten_as_planned" | "eaten_modified" | "replaced" | "skipped" | "unresolved" | null

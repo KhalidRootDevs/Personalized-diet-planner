@@ -261,6 +261,52 @@
   animation: screen-in 180ms ease-out both;
 }
 
+/* Hydration: a slow water-surface wave and a drop that falls into the glass on each add (§44.11: decorative, not numeric). */
+@keyframes water-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@utility animate-water-wave {
+  animation: water-wave 4s linear infinite;
+}
+@utility animate-water-wave-slow {
+  animation: water-wave 7s linear infinite;
+}
+@keyframes water-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(26px) scale(1);
+  }
+}
+@utility animate-water-drop {
+  animation: water-drop 550ms ease-in both;
+}
+@keyframes water-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@utility animate-water-pop {
+  animation: water-pop 320ms ease-out;
+}
+
 /* Respect reduced-motion preferences (§44.11) */
 @media (prefers-reduced-motion: reduce) {
   *,
