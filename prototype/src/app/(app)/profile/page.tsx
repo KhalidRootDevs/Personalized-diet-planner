@@ -2,11 +2,13 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Bell, Cake, ChartColumn, ChevronRight, ClipboardCheck, Database, Crown, Globe, Link2, LogOut, Pencil, Plus, Ruler, Scale, Settings, ShieldCheck, Stethoscope, Target, TriangleAlert, UserRound } from "lucide-react"
+import { Bell, BookHeart, Cake, ChartColumn, Check, ClipboardCheck, Crown, Database, Droplet, Globe, Link2, Lock, LogOut, Pencil, Plus, Ruler, Scale, Settings, ShieldCheck, Sparkles, Stethoscope, Target, TrendingUp, TriangleAlert, UserRound, Users } from "lucide-react"
 import { useApp, useSelfProfile } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { HeaderIconButton, KeyValue, ListGroup, ListRow, PageBody, PageHeader, Section, SectionLink, Surface } from "@/components/app/page"
-import { PhaseBadge, TierPill } from "@/components/app/badges"
+import { HeaderIconButton, IconTile, KeyValue, ListGroup, ListRow, PageBody, PageHeader, Pill, Section, SectionLink, Surface, type IconTone } from "@/components/app/page"
+import { PhaseBadge } from "@/components/app/badges"
+import { TIERS } from "@/lib/features"
+import type { Tier } from "@/lib/types"
 import { ProfileAvatar, profileAgeLabel } from "@/components/app/profile-switcher"
 import { ALLERGENS, GOAL_LABEL } from "@/components/profile/options"
 import { cn } from "@/lib/utils"
@@ -16,7 +18,6 @@ export default function ProfilePage() {
   const self = useSelfProfile()
   const user = useApp((s) => s.user)
   const profiles = useApp((s) => s.profiles)
-  const tier = useApp((s) => s.tier)
   const signOut = useApp((s) => s.signOut)
   const dependents = profiles.filter((p) => p.relation !== "self")
 
@@ -54,32 +55,21 @@ export default function ProfilePage() {
                 }
                 value={GOAL_LABEL[self.goal ?? ""] ?? "Not set"}
               />
-              {self.allergies.length > 0 && (
-                <KeyValue
-                  label={
-                    <span className="flex items-center gap-1.5">
-                      <ShieldCheck className="size-4 text-forest" aria-hidden /> Allergy protection
-                    </span>
-                  }
-                  value={self.allergies.map((a) => ALLERGENS.find((x) => x.value === a)?.label ?? a).join(", ")}
-                />
-              )}
+              <KeyValue
+                label={
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="size-4 text-forest" aria-hidden /> Allergies
+                  </span>
+                }
+                value={self.allergies.length ? self.allergies.map((a) => ALLERGENS.find((x) => x.value === a)?.label ?? a).join(", ") : "None recorded"}
+              />
             </div>
           </Surface>
         )}
 
-        <Link href="/subscription" className="relative flex items-center gap-3.5 overflow-hidden rounded-2xl bg-forest p-4 text-white shadow-card transition-colors hover:bg-primary-hover">
-          <span className="absolute -right-8 -bottom-12 size-28 rounded-full bg-white/10" aria-hidden />
-          <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-lime text-charcoal">
-            <Crown className="size-5" aria-hidden />
-          </span>
-          <div className="relative min-w-0 flex-1">
-            <p className="text-body font-semibold">{tier === "free" ? "Explore Premium" : "Your subscription"}</p>
-            <p className="text-caption text-white/85">{tier === "free" ? "Coach, smarter swaps, family planning and more" : "Manage plan and billing"}</p>
-          </div>
-          <TierPill className="relative bg-white/20 text-white" />
-          <ChevronRight className="relative size-[18px] shrink-0 text-white/80" aria-hidden />
-        </Link>
+        <Shortcuts />
+
+        <SubscriptionSection />
 
         <Section title="Family" action={<SectionLink href="/profile/family">Manage</SectionLink>}>
           <ListGroup>
@@ -150,5 +140,106 @@ function BodyStat({ icon, tone, label, value, unit }: { icon: React.ReactNode; t
         {unit && <span className="text-caption font-normal text-muted-foreground"> {unit}</span>}
       </p>
     </div>
+  )
+}
+
+/** Four everyday destinations, so Profile is a hub and not only settings. */
+function Shortcuts() {
+  const items: { href: string; label: string; icon: React.ReactNode; tone: IconTone }[] = [
+    { href: "/progress", label: "Progress", icon: <TrendingUp />, tone: "lime" },
+    { href: "/water", label: "Water", icon: <Droplet />, tone: "sky" },
+    { href: "/recipes/library", label: "My recipes", icon: <BookHeart />, tone: "terracotta" },
+    { href: "/plan/plans", label: "My plans", icon: <Target />, tone: "amber" },
+  ]
+  return (
+    <nav aria-label="Shortcuts" className="grid grid-cols-4 gap-2.5">
+      {items.map((i) => (
+        <Link key={i.href} href={i.href} className="flex flex-col items-center gap-2 rounded-2xl bg-card px-1 py-3.5 shadow-card transition-colors hover:bg-muted/40">
+          <IconTile tone={i.tone}>{i.icon}</IconTile>
+          <span className="text-caption font-medium text-charcoal">{i.label}</span>
+        </Link>
+      ))}
+    </nav>
+  )
+}
+
+const TIER_LOOK: Record<Tier, { tone: IconTone; card: string; icon: React.ReactNode }> = {
+  free: { tone: "lime", card: "bg-card", icon: <Sparkles /> },
+  premium: { tone: "forest", card: "bg-gradient-to-br from-lime-card to-sage", icon: <Crown /> },
+  family: { tone: "forest", card: "bg-gradient-to-br from-lime-card to-sage", icon: <Users /> },
+  professional: { tone: "forest", card: "bg-gradient-to-br from-lime-card to-sage", icon: <Stethoscope /> },
+}
+
+/** Current plan, what it includes and the next step (§30). Tiers and prices are the §43.7 proposal in features.ts. */
+function SubscriptionSection() {
+  const tierId = useApp((s) => s.tier)
+  const cycle = useApp((s) => s.billingCycle)
+  const tier = TIERS.find((t) => t.id === tierId) ?? TIERS[0]
+  const premium = TIERS.find((t) => t.id === "premium")!
+  const look = TIER_LOOK[tier.id]
+  const free = tier.id === "free"
+  const price = cycle === "yearly" ? `৳${tier.yearly.toLocaleString("en-US")} / year` : `৳${tier.monthly.toLocaleString("en-US")} / month`
+
+  return (
+    <Section title="Your subscription" action={<SectionLink href="/subscription">{free ? "Compare plans" : "Manage"}</SectionLink>}>
+      <div className={cn("relative overflow-hidden rounded-2xl p-5 shadow-card", look.card)}>
+        <span className="absolute -top-12 -right-12 size-36 rounded-full bg-lime/25" aria-hidden />
+        <div className="relative flex items-center gap-3">
+          <IconTile tone={look.tone} size="lg">
+            {look.icon}
+          </IconTile>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-title truncate">NutriPlan {tier.name}</p>
+              <Pill tone={free ? "neutral" : "forest"}>{free ? "Current" : "Active"}</Pill>
+            </div>
+            <p className="text-callout text-muted-foreground">{free ? tier.tagline : `${price} · billed ${cycle}`}</p>
+          </div>
+        </div>
+
+        <div className="relative mt-4 rounded-xl bg-white/80 p-3.5">
+          <p className="text-overline text-lime-text">{free ? "Included in your plan" : "Your plan includes"}</p>
+          <ul className="mt-2 space-y-2">
+            {tier.features.slice(0, 4).map((f) => (
+              <li key={f} className="text-callout flex items-start gap-2.5">
+                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-lime text-charcoal">
+                  <Check className="size-3" strokeWidth={3} aria-hidden />
+                </span>
+                {f}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {free && (
+          <div className="relative mt-3 rounded-xl border border-dashed border-border bg-background/60 p-3.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-overline text-muted-foreground">With Premium</p>
+              <p className="text-caption tabular font-semibold text-charcoal">from ৳{premium.monthly} / month</p>
+            </div>
+            <ul className="mt-2 space-y-2">
+              {premium.features.slice(0, 3).map((f) => (
+                <li key={f} className="text-callout flex items-start gap-2.5 text-charcoal/80">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-muted text-muted-grey">
+                    <Lock className="size-3" aria-hidden />
+                  </span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="relative mt-4 flex gap-2">
+          <Button asChild size="lg" className="flex-1">
+            <Link href="/subscription">{free ? "See Premium" : "Manage plan"}</Link>
+          </Button>
+        </div>
+
+        <p className="text-caption relative mt-3 flex items-center gap-1.5 text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0 text-forest" aria-hidden /> Allergy and safety protection is free on every plan.
+        </p>
+      </div>
+    </Section>
   )
 }
